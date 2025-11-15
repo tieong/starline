@@ -28,9 +28,9 @@ export default function Home() {
     fetchTrending();
   }, []);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
+  const handleSearch = async () => {
+    const query = searchQuery.trim();
+    if (query) {
       try {
         setLoading(true);
         setError(null);
@@ -39,33 +39,49 @@ export default function Home() {
         // If no results found, automatically trigger analysis
         if (results.length === 0) {
           console.log(`No results for "${query}", triggering analysis...`);
+
+          // Show analyzing message immediately
+          setError(`Analyzing "${query}"... Discovering social profiles, timeline, and connections.`);
+          setLoading(false); // Stop loading spinner, show analyzing message
+
           try {
             const analysisResult = await apiClient.analyzeInfluencer(query);
 
             // Check if analysis is in progress or completed
             if ('status' in analysisResult && analysisResult.status === 'analyzing') {
-              setError(`Analyzing "${query}"... This may take 20-30 seconds. Please check back shortly.`);
+              setError(`Analyzing "${query}"... This may take 20-30 seconds. Please refresh to see results.`);
             } else {
-              // Analysis completed, search again
+              // Analysis completed successfully, search again to get the new data
+              setLoading(true);
+              setError(null);
               const newResults = await apiClient.searchInfluencers(query);
               setSearchResults(newResults);
+              setLoading(false);
+
+              if (newResults.length === 0) {
+                setError(`Analysis complete but no data found for "${query}". Please try again.`);
+              }
             }
-          } catch (analysisErr) {
+          } catch (analysisErr: any) {
             console.error('Analysis failed:', analysisErr);
-            setError(`Could not find or analyze "${query}". Please try again.`);
+            setError(`Analysis failed: ${analysisErr.message || 'Unknown error'}. Please try a different name.`);
           }
         } else {
           setSearchResults(results);
+          setLoading(false);
         }
       } catch (err) {
         console.error('Search failed:', err);
         setError('Search failed');
         setSearchResults([]);
-      } finally {
         setLoading(false);
       }
-    } else {
-      setSearchResults([]);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
@@ -94,23 +110,30 @@ export default function Home() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search for influencers..."
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search for influencers (press Enter)..."
               className="w-full px-6 py-4 text-lg rounded-full border-2 border-gray-200 focus:border-blue-500 focus:outline-none shadow-lg transition-all"
             />
-            <svg
-              className="absolute right-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              onClick={handleSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 transition-all shadow-md hover:shadow-lg"
+              aria-label="Search"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 

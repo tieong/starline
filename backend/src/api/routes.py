@@ -78,9 +78,13 @@ async def search_influencers(
     Search for influencers in the database.
 
     Returns cached influencers matching the query.
+    Only returns completed analyses.
     """
+    # Only return influencers with completed analysis
+    # Avoid partial matches for very short queries
     influencers = db.query(Influencer).filter(
-        Influencer.name.ilike(f"%{q}%")
+        Influencer.name.ilike(f"%{q}%"),
+        Influencer.analysis_complete == True  # Only show completed analyses
     ).limit(10).all()
 
     return {

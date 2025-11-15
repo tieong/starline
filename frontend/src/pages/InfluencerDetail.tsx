@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { apiClient, type InfluencerDetail as InfluencerDetailType } from '../services/api';
 
@@ -21,7 +21,20 @@ export default function InfluencerDetail() {
         setLoading(true);
         setError(null);
         const data = await apiClient.getInfluencer(id);
-        setInfluencer(data);
+
+        // Add defensive checks and default values
+        const normalizedData = {
+          ...data,
+          platforms: data.platforms || [],
+          timeline: data.timeline || [],
+          products: data.products || [],
+          connections: data.connections || [],
+          bio: data.bio || 'No bio available',
+          avatar_url: data.avatar_url || 'https://i.pravatar.cc/150',
+        };
+
+        console.log('Fetched influencer data:', normalizedData);
+        setInfluencer(normalizedData);
       } catch (err: any) {
         console.error('Failed to fetch influencer:', err);
 
@@ -40,7 +53,18 @@ export default function InfluencerDetail() {
             } else {
               // Analysis completed successfully, fetch the data again
               const freshData = await apiClient.getInfluencer(id);
-              setInfluencer(freshData);
+
+              const normalizedFreshData = {
+                ...freshData,
+                platforms: freshData.platforms || [],
+                timeline: freshData.timeline || [],
+                products: freshData.products || [],
+                connections: freshData.connections || [],
+                bio: freshData.bio || 'No bio available',
+                avatar_url: freshData.avatar_url || 'https://i.pravatar.cc/150',
+              };
+
+              setInfluencer(normalizedFreshData);
               setError(null);
             }
           } catch (analysisErr: any) {
@@ -57,6 +81,37 @@ export default function InfluencerDetail() {
 
     fetchInfluencer();
   }, [id]);
+
+  // Build network graph data from connections (memoized to prevent re-renders)
+  // MUST be before any conditional returns to follow Rules of Hooks
+  const networkData = useMemo(() => {
+    if (!influencer?.connections || influencer.connections.length === 0) {
+      return null;
+    }
+
+    return {
+      nodes: [
+        { id: influencer.id, name: influencer.name, val: 30, color: '#3b82f6' },
+        ...influencer.connections.map((conn, idx) => ({
+          id: `conn-${idx}`,
+          name: conn.name,
+          val: 10 + (conn.strength || 1),
+          color: conn.type === 'collaboration' ? '#10b981' : '#8b5cf6',
+        })),
+      ],
+      links: influencer.connections.map((conn, idx) => ({
+        source: influencer.id,
+        target: `conn-${idx}`,
+        value: conn.strength || 1,
+      })),
+    };
+  }, [influencer?.connections, influencer?.id, influencer?.name]);
+
+  const handleNodeClick = useCallback((node: any) => {
+    setSelectedNode(node.id);
+  }, []);
+
+  const getLinkColor = useCallback(() => '#cbd5e1', []);
 
   if (loading) {
     return (
@@ -114,55 +169,10 @@ export default function InfluencerDetail() {
     );
   }
 
-  // Build network graph data from connections
-  const networkData = influencer.connections.length > 0 ? {
-    nodes: [
-      { id: influencer.id, name: influencer.name, val: 30, color: '#3b82f6' },
-      ...influencer.connections.map((conn, idx) => ({
-        id: `conn-${idx}`,
-        name: conn.name,
-        val: 10 + conn.strength,
-        color: conn.type === 'collaboration' ? '#10b981' : '#8b5cf6',
-      })),
-    ],
-    links: influencer.connections.map((conn, idx) => ({
-      source: influencer.id,
-      target: `conn-${idx}`,
-      value: conn.strength,
-    })),
-  } : null;
-
-  const handleNodeClick = useCallback((node: any) => {
-    setSelectedNode(node.id);
-  }, []);
-
   const getTrustScoreColor = (score: number) => {
     if (score >= 85) return 'text-green-600';
     if (score >= 70) return 'text-yellow-600';
     return 'text-red-600';
-  };
-
-  const getMetricColor = (score: number) => {
-    if (score >= 85) return 'bg-green-500';
-    if (score >= 70) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <svg
-            key={star}
-            className={`w-4 h-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-    );
   };
 
   const getMilestoneIcon = (type: string) => {
@@ -274,15 +284,21 @@ export default function InfluencerDetail() {
                 <div>
                   <p className="text-sm text-gray-500">Total Followers</p>
                   <p className="text-2xl font-bold">
-                    {influencer.platforms.reduce((sum, p) => sum + p.followers, 0) >= 1000000
-                      ? `${(influencer.platforms.reduce((sum, p) => sum + p.followers, 0) / 1000000).toFixed(1)}M`
-                      : `${(influencer.platforms.reduce((sum, p) => sum + p.followers, 0) / 1000).toFixed(0)}K`}
+                    {(() => {
+                      const totalFollowers = influencer.platforms?.reduce((sum, p) => sum + (p.followers || 0), 0) || 0;
+                      if (totalFollowers >= 1000000) {
+                        return `${(totalFollowers / 1000000).toFixed(1)}M`;
+                      } else if (totalFollowers >= 1000) {
+                        return `${(totalFollowers / 1000).toFixed(0)}K`;
+                      }
+                      return totalFollowers.toString();
+                    })()}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Trust Score</p>
-                  <p className={`text-4xl font-bold ${getTrustScoreColor(influencer.trust_score)}`}>
-                    {influencer.trust_score}
+                  <p className={`text-4xl font-bold ${getTrustScoreColor(influencer.trust_score || 0)}`}>
+                    {influencer.trust_score || 0}
                   </p>
                 </div>
               </div>
@@ -367,7 +383,7 @@ export default function InfluencerDetail() {
                   nodeColor="color"
                   nodeRelSize={6}
                   linkWidth={2}
-                  linkColor={() => '#cbd5e1'}
+                  linkColor={getLinkColor}
                   onNodeClick={handleNodeClick}
                   width={500}
                   height={400}
