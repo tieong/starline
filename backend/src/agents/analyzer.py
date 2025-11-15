@@ -22,6 +22,7 @@ from src.models.database import (
     Platform,
     Product,
     ProductReview,
+    ReputationComment,
     TimelineEvent,
 )
 from src.config.settings import settings
@@ -220,6 +221,20 @@ class InfluencerAnalyzer:
                 influencer.country = platforms_data.get("country")
                 if influencer.country:
                     logger.info(f"   🌍 Country detected: {influencer.country}")
+
+                # Validate minimum follower threshold (10k+)
+                total_followers = sum(p.follower_count for p in influencer.platforms)
+                if total_followers < 10000:
+                    logger.warning(f"⚠️  Influencer '{influencer_name}' has only {total_followers:,} followers (below 10k threshold)")
+                    influencer.is_analyzing = False
+                    self.db.commit()
+
+                    # Clean up the influencer record
+                    if not influencer.analysis_complete:
+                        self.db.delete(influencer)
+                        self.db.commit()
+
+                    raise Exception(f"Influencer '{influencer_name}' does not meet the minimum follower threshold (10,000+ required, found {total_followers:,}). This prevents volatility and ensures established presence.")
 
                 # Fetch profile picture only if not already stored
                 if not influencer.avatar_data:
@@ -463,7 +478,10 @@ class InfluencerAnalyzer:
         # Clear existing timeline
         self.db.query(TimelineEvent).filter(TimelineEvent.influencer_id == influencer.id).delete()
 
-        for event_data in data.get("timeline", []):
+        # Limit to maximum 7 timeline events to control API costs
+        timeline_events = data.get("timeline", [])[:7]
+
+        for event_data in timeline_events:
             try:
                 event_date = datetime.strptime(event_data.get("date", ""), "%Y-%m-%d")
             except:
@@ -694,6 +712,7 @@ class InfluencerAnalyzer:
             "country": influencer.country,
             "verified": influencer.verified,
             "trust_score": influencer.trust_score,
+            "overall_sentiment": influencer.overall_sentiment,
             "avatar_url": influencer.avatar_url,
             "platforms": [
                 {
@@ -1106,3 +1125,91 @@ class InfluencerAnalyzer:
                 for n in sorted(influencer.news_articles, key=lambda x: x.date or datetime.min, reverse=True)
             ]
         }
+
+    async def fetch_reputation(self, influencer_id: int) -> Dict[str, Any]:
+        """
+        Fetch reputation sentiment on-demand for an influencer.
+
+        Args:
+            influencer_id: ID of the influencer
+
+        Returns:
+            Dict with overall sentiment and comments
+        """
+        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        if not influencer:
+            raise ValueError(f"Influencer with ID {influencer_id} not found")
+
+        # Get platform data
+        platforms_data = {
+            "platforms": [
+                {
+                    "platform": p.platform_name,
+                    "username": p.username,
+                    "followers": p.follower_count,
+                    "url": p.url
+                }
+                for p in influencer.platforms
+            ]
+        }
+
+        # Fetch reputation from AI
+        logger.info(f"🔍 Fetching reputation for: {influencer.name}")
+        reputation_data = await self._run_in_thread(
+            self.ai_client.analyze_reputation,
+            influencer.name,
+            platforms_data
+        )
+
+        # Save reputation comments
+        if isinstance(reputation_data, dict):
+            await self._save_reputation(influencer, reputation_data)
+            logger.info(f"   ✓ Saved reputation comments")
+
+        return {
+            "influencer_id": influencer_id,
+            "overall_sentiment": reputation_data.get("overall_sentiment", "neutral"),
+            "comments": [
+                {
+                    "id": c.id,
+                    "author": c.author,
+                    "comment": c.comment,
+                    "platform": c.platform,
+                    "sentiment": c.sentiment,
+                    "url": c.url,
+                    "date": c.date.isoformat() if c.date else None,
+                }
+                for c in influencer.reputation_comments
+            ]
+        }
+
+    async def _save_reputation(self, influencer: Influencer, data: Dict[str, Any]):
+        """Save reputation comments to database."""
+        # Clear existing reputation comments
+        self.db.query(ReputationComment).filter(ReputationComment.influencer_id == influencer.id).delete()
+
+        # Save overall sentiment to influencer record
+        overall_sentiment = data.get("overall_sentiment", "neutral")
+        influencer.overall_sentiment = overall_sentiment
+
+        # Limit to maximum 10 comments
+        comments = data.get("comments", [])[:10]
+
+        for comment_data in comments:
+            try:
+                comment_date = datetime.strptime(comment_data.get("date", ""), "%Y-%m-%d")
+            except:
+                comment_date = None
+
+            comment = ReputationComment(
+                influencer_id=influencer.id,
+                author=comment_data.get("author", ""),
+                comment=comment_data.get("comment", ""),
+                platform=comment_data.get("platform", ""),
+                sentiment=comment_data.get("sentiment", "neutral"),
+                url=comment_data.get("url"),
+                date=comment_date,
+            )
+            self.db.add(comment)
+
+        self.db.commit()

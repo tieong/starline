@@ -220,8 +220,10 @@ Platform data: {json.dumps(platforms_data, indent=2)}
 Find:
 1. Their first viral video/post/content
 2. The breakthrough moment that launched their career
-3. Key milestones in their growth (chronological order)
+3. Top 5-6 most significant milestones in their growth (chronological order)
 4. Major collaborations or turning points
+
+IMPORTANT: Limit timeline to 5-6 most significant events only (no more than 6).
 
 Return ONLY valid JSON:
 {{
@@ -472,6 +474,68 @@ IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 5 reviews 
             return json.loads(json_str)
         except json.JSONDecodeError:
             return {"reviews": []}
+
+    def analyze_reputation(self, influencer_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze the influencer's reputation based on social media sentiment.
+
+        Args:
+            influencer_name: Name of the influencer
+            platforms_data: Platform information
+
+        Returns:
+            Dict with overall sentiment and social media comments
+        """
+        prompt = f"""Analyze the general reputation and public sentiment around '{influencer_name}' based on social media.
+
+Platform data: {json.dumps(platforms_data, indent=2)}
+
+Search Twitter/X, Reddit, YouTube comments, TikTok for what people say about this influencer.
+
+For each comment found, provide:
+- author: Username or display name
+- comment: The actual text of their comment
+- platform: Where it was posted (twitter, reddit, youtube, tiktok)
+- sentiment: "positive", "negative", or "neutral"
+- url: Link to the comment if available (or null)
+- date: When it was posted (YYYY-MM-DD format, or null if unknown)
+
+Return ONLY valid JSON:
+{{
+    "overall_sentiment": "good",
+    "comments": [
+        {{
+            "author": "username123",
+            "comment": "Actual comment text here",
+            "platform": "twitter",
+            "sentiment": "positive",
+            "url": "https://twitter.com/...",
+            "date": "2024-01-15"
+        }}
+    ]
+}}
+
+overall_sentiment must be one of: "good", "neutral", "negative"
+IMPORTANT: Limit to MAXIMUM 8-10 most representative comments."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that analyzes influencer reputation from social media. Always return valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.2, max_tokens=1500)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            return {"overall_sentiment": "neutral", "comments": []}
 
 
 # Global client instance

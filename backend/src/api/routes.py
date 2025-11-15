@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.agents.analyzer import InfluencerAnalyzer
-from src.models.database import Influencer, NewsArticle, get_db
+from src.models.database import Connection, Influencer, NewsArticle, Product, get_db
 
 router = APIRouter()
 
@@ -831,69 +831,6 @@ async def get_influencer_avatar(
         }
     )
 
-
-@router.get(
-    "/api/news",
-    response_model=None,
-    summary="Get news and drama articles",
-    description="""
-Get news and drama articles across all influencers.
-
-**Filters:**
-- `limit`: Maximum number of articles (default: 50)
-- `influencer_id`: Filter by specific influencer
-- `article_type`: Filter by type (news, drama, controversy, achievement, collaboration, legal)
-- `sentiment`: Filter by sentiment (positive, negative, neutral)
-
-**Sorting:** Articles are sorted by date (newest first) and severity (highest first).
-
-**Returns:** List of news articles with metadata (title, description, sentiment, severity, source, etc.)
-""",
-    tags=["News"],
-)
-async def get_all_news(
-    limit: int = Query(50, description="Maximum number of articles", ge=1, le=200),
-    influencer_id: int = Query(None, description="Filter by influencer ID"),
-    article_type: str = Query(None, description="Filter by article type", enum=["news", "drama", "controversy", "achievement", "collaboration", "legal"]),
-    sentiment: str = Query(None, description="Filter by sentiment", enum=["positive", "negative", "neutral"]),
-    db: Session = Depends(get_db)
-):
-    query = db.query(NewsArticle)
-
-    # Apply filters
-    if influencer_id:
-        query = query.filter(NewsArticle.influencer_id == influencer_id)
-    if article_type:
-        query = query.filter(NewsArticle.article_type == article_type)
-    if sentiment:
-        query = query.filter(NewsArticle.sentiment == sentiment)
-
-    # Order by date (newest first) and severity (highest first)
-    articles = query.order_by(
-        NewsArticle.date.desc().nullslast(),
-        NewsArticle.severity.desc()
-    ).limit(limit).all()
-
-    return {
-        "news": [
-            {
-                "id": article.id,
-                "influencer_id": article.influencer_id,
-                "title": article.title,
-                "description": article.description,
-                "article_type": article.article_type,
-                "date": article.date.isoformat() if article.date else None,
-                "source": article.source,
-                "url": article.url,
-                "sentiment": article.sentiment,
-                "severity": article.severity,
-                "created_at": article.created_at.isoformat(),
-            }
-            for article in articles
-        ]
-    }
-
-
 @router.get("/api/influencers/{influencer_id}/news")
 async def get_influencer_news(
     influencer_id: int,
@@ -1116,3 +1053,194 @@ async def fetch_news(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/api/influencers/{influencer_id}/reputation",
+    summary="Get influencer reputation",
+    description="""
+    Retrieve cached reputation data for an influencer from the database.
+
+    Returns:
+    - Overall sentiment: "good", "neutral", or "negative"
+    - Sample comments from social media representing public opinion
+
+    Use POST /reputation/fetch to analyze and fetch new data.
+    """,
+    tags=["Data Retrieval"],
+)
+async def get_reputation(
+    influencer_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get cached influencer reputation data."""
+    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
+    if not influencer:
+        raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    return {
+        "influencer_id": influencer_id,
+        "overall_sentiment": influencer.overall_sentiment or "neutral",
+        "comments": [
+            {
+                "id": c.id,
+                "author": c.author,
+                "comment": c.comment,
+                "platform": c.platform,
+                "sentiment": c.sentiment,
+                "url": c.url,
+                "date": c.date.isoformat() if c.date else None,
+            }
+            for c in influencer.reputation_comments
+        ]
+    }
+
+
+@router.post(
+    "/api/influencers/{influencer_id}/reputation/fetch",
+    summary="Fetch influencer reputation",
+    description="""
+    Analyze influencer reputation from social media using AI.
+
+    This endpoint:
+    - Searches Twitter/X, Reddit, YouTube, TikTok for what people say about the influencer
+    - Analyzes sentiment and determines overall reputation (good/neutral/negative)
+    - Extracts 8-10 representative comments
+    - Saves everything to the database for future retrieval
+
+    **Cost:** ~1,500 tokens per analysis
+    """,
+    tags=["On-Demand Analysis"],
+)
+async def fetch_reputation(
+    influencer_id: int,
+    db: Session = Depends(get_db)
+):
+    """Fetch and analyze influencer reputation via AI."""
+    try:
+        analyzer = InfluencerAnalyzer(db)
+        result = await analyzer.fetch_reputation(influencer_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============= Data Retrieval Endpoints =============
+
+@router.get(
+    "/api/influencers/{influencer_id}/timeline",
+    summary="Get influencer timeline",
+    description="Retrieve timeline events for an influencer",
+    tags=["Data Retrieval"],
+)
+async def get_timeline(influencer_id: int, db: Session = Depends(get_db)):
+    """Get timeline events for an influencer."""
+    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
+    if not influencer:
+        raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    return {
+        "influencer_id": influencer_id,
+        "timeline": [
+            {
+                "id": t.id,
+                "date": t.date.isoformat() if t.date else None,
+                "event_type": t.event_type,
+                "title": t.title,
+                "description": t.description,
+                "platform": t.platform,
+                "views": t.views,
+                "likes": t.likes,
+                "url": t.url,
+            }
+            for t in influencer.timeline
+        ]
+    }
+
+
+@router.get(
+    "/api/influencers/{influencer_id}/connections",
+    summary="Get influencer connections",
+    description="Retrieve network connections for an influencer",
+    tags=["Data Retrieval"],
+)
+async def get_connections(influencer_id: int, db: Session = Depends(get_db)):
+    """Get network connections for an influencer."""
+    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
+    if not influencer:
+        raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    return {
+        "influencer_id": influencer_id,
+        "connections": [
+            {
+                "name": c.entity_name,
+                "entity_type": c.entity_type,
+                "connection_type": c.connection_type,
+                "strength": c.strength,
+                "description": c.description,
+                "connected_influencer_id": c.connected_influencer_id,
+            }
+            for c in influencer.connections
+        ]
+    }
+
+
+@router.get(
+    "/api/products/{product_id}/reviews",
+    summary="Get product reviews",
+    description="Retrieve user reviews for a product",
+    tags=["Data Retrieval"],
+)
+async def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
+    """Get reviews for a product."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail=f"Product with ID {product_id} not found")
+
+    return {
+        "product_id": product_id,
+        "product_name": product.name,
+        "reviews": [
+            {
+                "id": r.id,
+                "author": r.author,
+                "comment": r.comment,
+                "platform": r.platform,
+                "sentiment": r.sentiment,
+                "url": r.url,
+                "date": r.date.isoformat() if r.date else None,
+            }
+            for r in product.reviews
+        ]
+    }
+
+
+@router.get(
+    "/api/products/{product_id}/openfoodfacts",
+    summary="Get OpenFoodFacts data",
+    description="Retrieve OpenFoodFacts nutritional data for a product",
+    tags=["Data Retrieval"],
+)
+async def get_openfoodfacts(product_id: int, db: Session = Depends(get_db)):
+    """Get OpenFoodFacts data for a product."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail=f"Product with ID {product_id} not found")
+
+    import json
+    openfoodfacts_data = None
+    if product.openfoodfacts_data:
+        try:
+            openfoodfacts_data = json.loads(product.openfoodfacts_data)
+        except:
+            openfoodfacts_data = None
+
+    return {
+        "product_id": product_id,
+        "product_name": product.name,
+        "category": product.category,
+        "openfoodfacts_data": openfoodfacts_data
+    }

@@ -249,9 +249,9 @@ Platform data: {json.dumps(platforms_data, indent=2)}
 
 Find:
 1. Their breakthrough moment that launched their career
-2. Top 3 most significant milestones in their growth (chronological order)
+2. Top 5-6 most significant milestones in their growth (chronological order)
 
-IMPORTANT: Limit timeline to TOP 3 most significant events only.
+IMPORTANT: Limit timeline to 5-6 most significant events only (no more than 6).
 
 Return ONLY valid JSON:
 {{
@@ -475,7 +475,7 @@ REQUIREMENTS:
 2. Only include people who became famous through social media (NOT traditional celebrities, athletes, or movie/TV actors)
 3. EXCLUDE: Movie actors, TV stars, athletes, musicians who became famous through traditional media
 4. INCLUDE: YouTubers, TikTokers, Instagram creators, Twitter personalities who built their fame online
-5. Only include REAL influencers with verified large followings (>5M followers)
+5. MINIMUM FOLLOWER THRESHOLD: Only include influencers with at least 10,000 total followers across all platforms (this prevents volatility and ensures established presence)
 6. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
 7. Provide a diverse mix from different niches (gaming, beauty, lifestyle, comedy, tech, etc.)
 8. Use their most commonly known name/handle
@@ -596,6 +596,74 @@ IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 2 reviews 
             return json.loads(json_str)
         except json.JSONDecodeError:
             return {"reviews": []}
+
+    def analyze_reputation(self, influencer_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze the influencer's reputation based on social media sentiment.
+
+        Args:
+            influencer_name: Name of the influencer
+            platforms_data: Platform information
+
+        Returns:
+            Dict with overall sentiment and social media comments
+        """
+        logger.info(f"   🤖 Perplexity: Analyzing reputation from social media...")
+        prompt = f"""Analyze the general reputation and public sentiment around '{influencer_name}' based on social media.
+
+Platform data: {json.dumps(platforms_data, indent=2)}
+
+CRITICAL REQUIREMENTS:
+1. Search Twitter/X, Reddit, YouTube comments, TikTok for what people say about this influencer
+2. Find REAL user comments - DO NOT make up fake comments
+3. Include diverse perspectives (positive, neutral, negative)
+4. Determine the OVERALL sentiment (good/neutral/negative)
+5. Only return real, verifiable comments you can find
+
+For each comment found, provide:
+- author: Username or display name
+- comment: The actual text of their comment
+- platform: Where it was posted (twitter, reddit, youtube, tiktok)
+- sentiment: "positive", "negative", or "neutral"
+- url: Link to the comment if available (or null)
+- date: When it was posted (YYYY-MM-DD format, or null if unknown)
+
+Return ONLY valid JSON:
+{{
+    "overall_sentiment": "good",
+    "comments": [
+        {{
+            "author": "username123",
+            "comment": "Actual comment text here",
+            "platform": "twitter",
+            "sentiment": "positive",
+            "url": "https://twitter.com/...",
+            "date": "2024-01-15"
+        }}
+    ]
+}}
+
+overall_sentiment must be one of: "good", "neutral", "negative"
+IMPORTANT: Limit to MAXIMUM 8-10 most representative comments."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that analyzes influencer reputation from social media. CRITICAL: Only return REAL, VERIFIABLE comments from actual users. DO NOT make up fake comments. Always return valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.2, max_tokens=1500)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            return {"overall_sentiment": "neutral", "comments": []}
 
 
 # Global client instance

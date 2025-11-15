@@ -40,6 +40,7 @@ class Influencer(Base):
     avatar_data = Column(LargeBinary)  # Store actual image data
     avatar_content_type = Column(String)  # e.g., 'image/jpeg', 'image/png'
     trending_score = Column(Integer, default=0)
+    overall_sentiment = Column(String)  # good, neutral, negative (from reputation analysis)
 
     # Cache control
     last_analyzed = Column(DateTime, default=datetime.utcnow)
@@ -58,6 +59,7 @@ class Influencer(Base):
     products = relationship("Product", back_populates="influencer", cascade="all, delete-orphan")
     connections = relationship("Connection", foreign_keys="Connection.influencer_id", back_populates="influencer", cascade="all, delete-orphan")
     news_articles = relationship("NewsArticle", back_populates="influencer", cascade="all, delete-orphan")
+    reputation_comments = relationship("ReputationComment", back_populates="influencer", cascade="all, delete-orphan")
 
 
 class Platform(Base):
@@ -192,6 +194,26 @@ class NewsArticle(Base):
 
     # Relationships
     influencer = relationship("Influencer", back_populates="news_articles")
+
+
+class ReputationComment(Base):
+    """Social media comments about an influencer's reputation."""
+
+    __tablename__ = "reputation_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
+    author = Column(String)  # Username/name of commenter
+    comment = Column(Text, nullable=False)  # The actual comment
+    platform = Column(String)  # twitter, reddit, youtube, tiktok, etc.
+    sentiment = Column(String)  # positive, negative, neutral
+    url = Column(String)  # Link to the comment if available
+    date = Column(DateTime)  # When the comment was posted
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    influencer = relationship("Influencer", back_populates="reputation_comments")
 
 
 class Review(Base):

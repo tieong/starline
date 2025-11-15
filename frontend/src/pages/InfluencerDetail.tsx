@@ -405,12 +405,12 @@ export default function InfluencerDetail() {
         {influencer.timeline && influencer.timeline.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <h2 className="text-2xl font-bold mb-2 text-gray-800">Growth Timeline</h2>
-            <p className="text-gray-600 mb-6">Hover over points to see key milestones and events</p>
+            <p className="text-gray-600 mb-6">Tracking content performance over time - hover over points to see details</p>
 
             <ResponsiveContainer width="100%" height={400}>
               <AreaChart
                 data={influencer.timeline
-                  .filter(event => event.date) // Remove events without dates
+                  .filter(event => event.date && (event.views > 0 || event.likes > 0)) // Only include events with metrics
                   .sort((a, b) => {
                     const dateA = new Date(a.date).getTime();
                     const dateB = new Date(b.date).getTime();

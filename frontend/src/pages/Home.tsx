@@ -25,7 +25,7 @@ export default function Home() {
 
       try {
         setLoadingTop(true);
-        const response = await apiClient.getTopInfluencers({ limit: 5, country: 'FR', auto_discover: true });
+        const response = await apiClient.getTopInfluencers({ limit: 3, country: 'FR', auto_discover: true });
         setTopInfluencers(response.influencers);
 
         // Show message if auto-discovery happened
@@ -231,12 +231,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* Top 5 French Influencers - Show when no search */}
+        {/* Top 3 French Influencers - Show when no search */}
         {!searchQuery && (
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                Top 5 French Influencers
+                Top 3 French Influencers
               </h2>
               <p className="text-gray-600">Most influential creators in France</p>
               {autoDiscovering && (
@@ -255,7 +255,7 @@ export default function Home() {
                 <p className="text-gray-500 text-sm mt-2">This may take a moment if discovering new influencers</p>
               </div>
             ) : topInfluencers.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {topInfluencers.map((influencer, index) => (
                 <div
                   key={influencer.id}
