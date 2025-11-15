@@ -417,7 +417,7 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
 
     def discover_top_influencers(self, country: str = None, limit: int = 10) -> Dict[str, Any]:
         """
-        Discover top/trending influencers globally or by country.
+        Discover top/trending influencers globally or by country using Perplexity search.
 
         Args:
             country: Country name (optional, global if not provided)
@@ -426,37 +426,48 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
         Returns:
             Dict with list of influencer names
         """
-        location = f"in {country}" if country else "globally"
-        logger.info(f"   🤖 Perplexity: Discovering top {limit} influencers {location}...")
+        from datetime import datetime
+        current_year = datetime.now().year
 
-        prompt = f"""Find the top {limit} most popular and trending social media influencers {location} right now.
+        location = f"in {country}" if country else "globally"
+        logger.info(f"   🤖 Perplexity: Searching for top {limit} influencers of {current_year} {location}...")
+
+        # Use web search to get current information
+        if country:
+            search_query = f"Top {limit} social media influencers of {current_year} in {country}"
+        else:
+            search_query = f"Top {limit} social media influencers of {current_year}"
+
+        prompt = f"""Search the web for: "{search_query}"
+
+Based on the latest search results, list the top {limit} social media influencers.
 
 REQUIREMENTS:
-1. Focus on influencers who are currently active and trending (not historical figures)
-2. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
-3. Only include REAL influencers with significant following (>1M followers)
-4. Provide a diverse mix of influencers from different niches (gaming, beauty, lifestyle, comedy, etc.)
-5. If country is specified, prioritize influencers based in that country
+1. Use ONLY information from current {current_year} sources
+2. Only include REAL influencers with verified large followings (>5M followers)
+3. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
+4. Provide a diverse mix from different niches (gaming, beauty, lifestyle, comedy, tech, etc.)
+5. Use their most commonly known name/handle
 
 For each influencer, provide:
-- name: Their full name or most commonly known name
+- name: Their full name or most commonly known name (e.g., "MrBeast", "Charli D'Amelio")
 - primary_platform: Their main platform (youtube, tiktok, instagram, twitter)
-- estimated_followers: Approximate total followers across all platforms
-- niche: Their content category (gaming, beauty, comedy, tech, etc.)
+- estimated_followers: Total followers across all platforms (approximate)
+- niche: Content category (gaming, beauty, comedy, tech, lifestyle, etc.)
 
-Return ONLY valid JSON:
+Return ONLY valid JSON with NO additional text:
 {{
     "influencers": [
         {{
             "name": "MrBeast",
             "primary_platform": "youtube",
-            "estimated_followers": 200000000,
+            "estimated_followers": 250000000,
             "niche": "entertainment"
         }}
     ]
 }}
 
-IMPORTANT: Only return REAL, CURRENTLY ACTIVE influencers. Do not make up fake names."""
+CRITICAL: Return ONLY the JSON object. Do NOT include any explanatory text before or after."""
 
         messages = [
             {"role": "system", "content": "You are an AI assistant that discovers trending social media influencers. Use web search to find current, accurate information about popular influencers. Always return valid JSON with real influencer names."},

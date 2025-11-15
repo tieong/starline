@@ -150,9 +150,17 @@ class ImageSearchService:
                 if generic in url_lower:
                     score -= 20  # Penalty for generic image sites
 
-            # Heavily penalize Instagram lookaside/blocked URLs
-            blocked_instagram = ['lookaside.fbsbx.com', 'lookaside.instagram.com', 'scontent.cdninstagram.com']
-            for blocked in blocked_instagram:
+            # Heavily penalize Instagram/TikTok lookaside/blocked URLs
+            blocked_cdns = [
+                'lookaside.fbsbx.com',
+                'lookaside.instagram.com',
+                'scontent.cdninstagram.com',
+                'p16-sign',  # TikTok CDN
+                'p77-sign',  # TikTok CDN
+                'tiktokcdn.com',
+                'tiktok.com/avatar'
+            ]
+            for blocked in blocked_cdns:
                 if blocked in url_lower:
                     score -= 100  # Heavy penalty - these don't work
 
@@ -388,8 +396,16 @@ class ImageSearchService:
 
         lower_url = url.lower()
 
-        # Filter out Instagram/Facebook blocked URLs early
-        blocked_patterns = ['lookaside.fbsbx.com', 'lookaside.instagram.com', 'scontent.cdninstagram.com']
+        # Filter out Instagram/Facebook/TikTok blocked URLs early
+        blocked_patterns = [
+            'lookaside.fbsbx.com',
+            'lookaside.instagram.com',
+            'scontent.cdninstagram.com',
+            'p16-sign',  # TikTok CDN
+            'p77-sign',  # TikTok CDN
+            'tiktokcdn.com',
+            'tiktok.com/avatar'
+        ]
         if any(pattern in lower_url for pattern in blocked_patterns):
             return False
 

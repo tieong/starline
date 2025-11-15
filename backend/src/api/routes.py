@@ -187,11 +187,20 @@ async def get_top_influencers(
     if country:
         query = query.filter(Influencer.country.ilike(country))
 
-    # Order by trending_score, then trust_score as tiebreaker
-    influencers = query.order_by(
-        Influencer.trending_score.desc(),
-        Influencer.trust_score.desc()
-    ).limit(limit).all()
+    # Get all matching influencers (we'll sort by follower count in Python)
+    influencers = query.all()
+
+    # Calculate total followers for each influencer and sort
+    influencers_with_followers = []
+    for inf in influencers:
+        total_followers = sum(p.follower_count or 0 for p in inf.platforms)
+        influencers_with_followers.append((inf, total_followers))
+
+    # Sort by total followers (descending)
+    influencers_with_followers.sort(key=lambda x: x[1], reverse=True)
+
+    # Take top N
+    influencers = [inf for inf, _ in influencers_with_followers[:limit]]
 
     # If we have enough results, return them
     if len(influencers) >= limit or not auto_discover:

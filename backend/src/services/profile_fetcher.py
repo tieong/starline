@@ -33,18 +33,22 @@ class ProfilePictureFetcher:
         if "placeholder" in url.lower() or "example.com" in url.lower():
             return False
 
-        # Skip Instagram/Facebook lookaside crawler blocker URLs
+        # Skip Instagram/Facebook/TikTok lookaside crawler blocker URLs
         # These URLs return 200 but serve a blocker page instead of actual images
         blocked_patterns = [
             "lookaside.fbsbx.com",  # Facebook/Instagram crawler blocker
             "lookaside.instagram.com",  # Instagram crawler blocker
             "scontent.cdninstagram.com",  # Instagram CDN (often blocked)
+            "p16-sign",  # TikTok CDN (blocks crawlers)
+            "p77-sign",  # TikTok CDN (blocks crawlers)
+            "tiktokcdn.com",  # TikTok CDN (often blocked)
+            "tiktok.com/avatar",  # TikTok direct avatar links (blocked)
         ]
 
         url_lower = url.lower()
         for pattern in blocked_patterns:
             if pattern in url_lower:
-                logger.info(f"   ⚠ Skipping Instagram/FB blocker URL: {url[:60]}...")
+                logger.info(f"   ⚠ Skipping blocked CDN URL (Instagram/TikTok/FB): {url[:60]}...")
                 return False
 
         try:
