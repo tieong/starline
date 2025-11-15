@@ -6,31 +6,77 @@ This document explains the Continuous Integration and Continuous Deployment (CI/
 
 The project uses GitHub Actions to automatically build and publish Docker images to GitHub Container Registry (ghcr.io) whenever code changes are pushed to the repository.
 
-## Workflow File
+## Workflow Files
 
-Location: `.github/workflows/publish-frontend.yml`
+The project uses two GitHub Actions workflows:
+
+1. **`.github/workflows/ci.yml`** - Runs quality checks (lint, type check, build) on all frontend changes
+2. **`.github/workflows/publish-frontend.yml`** - Builds and publishes Docker images to ghcr.io
 
 ## How It Works
 
-### 1. Triggers
+### CI Workflow (Quality Checks)
 
-The workflow is triggered by:
+The CI workflow runs automatically on:
+- **Push to main or develop** with frontend changes
+- **Pull requests to main or develop** with frontend changes
 
-- **Push to main branch**: Automatically builds and publishes the image with `latest` and `main` tags
+**Quality Checks Performed:**
+
+1. **ESLint**: Checks code style and identifies potential errors
+   ```bash
+   npm run lint
+   ```
+
+2. **TypeScript Type Check**: Validates type correctness without emitting files
+   ```bash
+   npx tsc --noEmit
+   ```
+
+3. **Build Test**: Ensures the application builds successfully
+   ```bash
+   npm run build
+   ```
+
+4. **Tests**: Runs unit/integration tests (when configured)
+   ```bash
+   npm test
+   ```
+
+**Path Filtering**: Only runs when files in `frontend/` directory or the workflow file itself are modified.
+
+### Publish Workflow (Docker Build & Push)
+
+#### 1. Triggers
+
+The publish workflow is triggered by:
+
+- **Push to main branch** with frontend changes: Automatically builds and publishes the image with `latest` and `main` tags
 - **Push of version tags**: Publishing tags like `v1.0.0` creates versioned releases
-- **Pull requests to main**: Builds the image for testing but does NOT publish
+- **Pull requests to main** with frontend changes: Builds the image for testing but does NOT publish
 - **Manual workflow dispatch**: Can be triggered manually from the GitHub Actions tab
 
-### 2. Build Process
+#### 2. Build Process
 
-The workflow performs the following steps:
+The publish workflow has two jobs that run sequentially:
 
+**Job 1: Quality Checks** (runs first)
+1. **Checkout**: Clones the repository code
+2. **Setup Node.js**: Installs Node.js 18 with npm caching
+3. **Install dependencies**: Runs `npm ci` for clean install
+4. **Run ESLint**: Validates code style and quality
+5. **Type check**: Runs TypeScript compiler in check-only mode
+6. **Build test**: Ensures the application builds successfully
+
+**Job 2: Build and Push** (runs only if quality checks pass)
 1. **Checkout**: Clones the repository code
 2. **Set up Docker Buildx**: Enables advanced Docker build features (multi-platform builds, caching)
 3. **Login to ghcr.io**: Authenticates with GitHub Container Registry using the automatic `GITHUB_TOKEN`
 4. **Extract metadata**: Generates appropriate tags and labels based on the git ref (branch, tag, or PR)
 5. **Build and push**: Builds the Docker image and pushes it to ghcr.io
 6. **Generate attestation**: Creates a cryptographic attestation for supply chain security
+
+**Important**: If any quality check fails, the Docker build is skipped, preventing broken code from being published.
 
 ### 3. Image Tags
 
@@ -69,6 +115,31 @@ The workflow uses GitHub Actions cache to speed up builds:
 - Caches Docker layers between builds
 - Significantly reduces build time for subsequent runs
 - Automatically managed by GitHub
+
+## Running Quality Checks Locally
+
+Before pushing code, you can run the same quality checks locally to catch issues early:
+
+```bash
+cd frontend
+
+# Install dependencies
+npm ci
+
+# Run linter
+npm run lint
+
+# Fix auto-fixable linting issues
+npm run lint -- --fix
+
+# Run type checking
+npx tsc --noEmit
+
+# Test build
+npm run build
+```
+
+**Recommended**: Run these checks before committing to avoid CI failures.
 
 ## Usage
 
@@ -177,15 +248,55 @@ The workflow uses `GITHUB_TOKEN`, which is automatically provided by GitHub Acti
 
 ## Troubleshooting
 
-### Build Fails
+### Quality Checks Fail
+
+**ESLint Errors:**
+```bash
+# View linting errors
+cd frontend
+npm run lint
+
+# Auto-fix issues (when possible)
+npm run lint -- --fix
+
+# Check for remaining errors
+npm run lint
+```
+
+**TypeScript Errors:**
+```bash
+# Run type checking locally
+cd frontend
+npx tsc --noEmit
+
+# Common fixes:
+# - Add missing type definitions
+# - Fix type mismatches
+# - Update @types/* packages
+```
+
+**Build Fails:**
+```bash
+# Test build locally
+cd frontend
+npm run build
+
+# Clean install if issues persist
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+### Docker Build Fails
 
 1. Check the GitHub Actions logs for specific errors
-2. Verify the Dockerfile builds locally:
+2. Ensure quality checks passed (green checkmark)
+3. Verify the Dockerfile builds locally:
    ```bash
    cd frontend
    docker build -t test .
    ```
-3. Ensure all dependencies are properly specified in `package.json`
+4. Ensure all dependencies are properly specified in `package.json`
 
 ### Permission Denied When Pushing
 
@@ -224,24 +335,34 @@ The workflow uses `GITHUB_TOKEN`, which is automatically provided by GitHub Acti
 
 ## Best Practices
 
-1. **Semantic Versioning**: Use semantic versioning for releases (v1.0.0, v1.1.0, v2.0.0)
-2. **Test Before Tagging**: Ensure the code works before creating version tags
-3. **Descriptive Tags**: Use annotated tags with messages: `git tag -a v1.0.0 -m "message"`
-4. **Review Workflow Logs**: Check workflow logs even when successful
-5. **Pin Dependencies**: Use specific versions in package.json for reproducible builds
-6. **Small Images**: Keep the Docker image size small (currently ~50MB)
+1. **Run Checks Locally First**: Always run `npm run lint` and `npx tsc --noEmit` before pushing
+2. **Semantic Versioning**: Use semantic versioning for releases (v1.0.0, v1.1.0, v2.0.0)
+3. **Test Before Tagging**: Ensure all quality checks pass before creating version tags
+4. **Descriptive Tags**: Use annotated tags with messages: `git tag -a v1.0.0 -m "message"`
+5. **Review Workflow Logs**: Check workflow logs even when successful
+6. **Pin Dependencies**: Use specific versions in package.json for reproducible builds
+7. **Small Images**: Keep the Docker image size small (currently ~50MB)
+8. **Fix Linting Issues**: Address ESLint warnings, not just errors
+9. **Type Safety**: Maintain strict TypeScript configuration
+10. **CI Green Before Merge**: Never merge PRs with failing CI checks
 
 ## Future Enhancements
 
 Potential improvements to the CI/CD pipeline:
 
-- [ ] Add automated testing before building
-- [ ] Security scanning with Trivy or similar
-- [ ] Automated dependency updates with Dependabot
-- [ ] Deploy to staging environment
-- [ ] Slack/Discord notifications on successful deployments
-- [ ] Performance benchmarking
+- [x] Add automated linting (ESLint) - ✅ Implemented
+- [x] Add TypeScript type checking - ✅ Implemented
+- [x] Path filtering to only run on relevant changes - ✅ Implemented
+- [ ] Add unit/integration tests with Vitest or Jest
+- [ ] Security scanning with Trivy or Snyk
+- [ ] Code coverage reporting with Codecov
+- [ ] Automated dependency updates with Dependabot or Renovate
+- [ ] Deploy to staging environment (Vercel, Netlify, or cloud provider)
+- [ ] Slack/Discord notifications on deployments
+- [ ] Performance benchmarking with Lighthouse CI
+- [ ] Bundle size tracking
 - [ ] Automatic changelog generation
+- [ ] E2E tests with Playwright or Cypress
 - [ ] Backend service publishing when implemented
 
 ## References
