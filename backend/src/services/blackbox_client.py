@@ -155,10 +155,12 @@ If the influencer is not found, return:
 
 Based on their social media presence: {json.dumps(platforms_data, indent=2)}
 
-Find:
+Find their TOP 2 MOST SIGNIFICANT products/brands:
 1. Products they sell (merch, food, cosmetics, etc.)
 2. Major sponsorships/brand deals
 3. Product categories
+
+IMPORTANT: Return ONLY the 2 most significant products, not all of them.
 
 For each product, provide:
 - Name
@@ -445,7 +447,7 @@ Return ONLY valid JSON:
     ]
 }}
 
-IMPORTANT: Only return REAL comments you can verify. Limit to 10 most relevant/recent reviews."""
+IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 5 reviews (most relevant/recent only)."""
 
         messages = [
             {"role": "system", "content": "You are an AI assistant that searches social media for product reviews. CRITICAL: Only return REAL, VERIFIABLE comments from actual users. DO NOT make up fake reviews. If you cannot find reviews, return an empty array. Always return valid JSON."},
