@@ -6,9 +6,15 @@ on:
       - main
     tags:
       - 'v*'
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend.yml'
   workflow_dispatch:
 
 env:
