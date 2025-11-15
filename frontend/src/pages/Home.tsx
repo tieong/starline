@@ -152,9 +152,13 @@ export default function Home() {
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <img
-                      src={influencer.avatar_url || 'https://i.pravatar.cc/150'}
+                      src={influencer.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M='}
                       alt={influencer.name}
-                      className="w-16 h-16 rounded-full"
+                      className="w-16 h-16 rounded-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=';
+                      }}
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -241,9 +245,13 @@ export default function Home() {
 
                   <div className="flex flex-col items-center text-center mt-4">
                     <img
-                      src={influencer.avatar_url || 'https://i.pravatar.cc/150'}
+                      src={influencer.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M='}
                       alt={influencer.name}
-                      className="w-24 h-24 rounded-full border-4 border-blue-500 shadow-lg mb-4"
+                      className="w-24 h-24 rounded-full border-4 border-blue-500 shadow-lg mb-4 object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=';
+                      }}
                     />
 
                     <div className="flex items-center gap-2 mb-2">

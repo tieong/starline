@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { apiClient, type InfluencerDetail as InfluencerDetailType } from '../services/api';
 
 export default function InfluencerDetail() {
@@ -30,7 +31,7 @@ export default function InfluencerDetail() {
           products: data.products || [],
           connections: data.connections || [],
           bio: data.bio || 'No bio available',
-          avatar_url: data.avatar_url || 'https://i.pravatar.cc/150',
+          avatar_url: data.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
         };
 
         console.log('Fetched influencer data:', normalizedData);
@@ -61,7 +62,7 @@ export default function InfluencerDetail() {
                 products: freshData.products || [],
                 connections: freshData.connections || [],
                 bio: freshData.bio || 'No bio available',
-                avatar_url: freshData.avatar_url || 'https://i.pravatar.cc/150',
+                avatar_url: freshData.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
               };
 
               setInfluencer(normalizedFreshData);
@@ -175,53 +176,6 @@ export default function InfluencerDetail() {
     return 'text-red-600';
   };
 
-  const getMilestoneIcon = (type: string) => {
-    switch (type) {
-      case 'video':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-          </svg>
-        );
-      case 'tweet':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-          </svg>
-        );
-      case 'instagram':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-          </svg>
-        );
-      case 'tiktok':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
-          </svg>
-        );
-      case 'achievement':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        );
-      case 'collaboration':
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-          </svg>
-        );
-      default:
-        return (
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-          </svg>
-        );
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -259,9 +213,13 @@ export default function InfluencerDetail() {
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
           <div className="flex items-start gap-6">
             <img
-              src={influencer.avatar_url || 'https://i.pravatar.cc/150'}
+              src={influencer.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M='}
               alt={influencer.name}
-              className="w-32 h-32 rounded-full"
+              className="w-32 h-32 rounded-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=';
+              }}
             />
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -306,64 +264,102 @@ export default function InfluencerDetail() {
           </div>
         </div>
 
-        {/* Success Timeline */}
+        {/* Growth Chart */}
         {influencer.timeline && influencer.timeline.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-bold mb-8 text-gray-800">Success Timeline</h2>
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500"></div>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800">Growth Timeline</h2>
+            <p className="text-gray-600 mb-6">Hover over points to see key milestones and events</p>
 
-              {/* Timeline items */}
-              <div className="space-y-8">
-                {influencer.timeline.map((milestone) => (
-                  <div key={milestone.id} className="relative pl-20">
-                    {/* Icon */}
-                    <div className="absolute left-0 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white shadow-lg">
-                      {getMilestoneIcon(milestone.type)}
-                    </div>
-
-                    {/* Content */}
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-lg p-6 shadow-md hover:shadow-lg transition-all border border-gray-100">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-1">{milestone.title}</h3>
-                          <p className="text-sm text-blue-600 font-semibold mb-2">{formatDate(milestone.date)}</p>
+            <ResponsiveContainer width="100%" height={400}>
+              <AreaChart
+                data={influencer.timeline.map((event, idx) => ({
+                  date: new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                  views: event.views || 0,
+                  likes: event.likes || 0,
+                  title: event.title,
+                  description: event.description,
+                  platform: event.platform,
+                  type: event.type,
+                }))}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="date"
+                  stroke="#6b7280"
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis
+                  stroke="#6b7280"
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                    return value;
+                  }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white border-2 border-blue-500 rounded-lg p-4 shadow-xl max-w-sm">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              data.type === 'video' ? 'bg-red-500' :
+                              data.type === 'collaboration' ? 'bg-green-500' :
+                              data.type === 'achievement' ? 'bg-yellow-500' :
+                              'bg-blue-500'
+                            }`} />
+                            <p className="font-bold text-gray-900">{data.title}</p>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{data.date}</p>
+                          <p className="text-sm text-gray-700 mb-3">{data.description}</p>
+                          <div className="flex gap-4 text-xs">
+                            {data.views > 0 && (
+                              <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                </svg>
+                                <span className="font-semibold">{formatNumber(data.views)}</span>
+                              </div>
+                            )}
+                            {data.likes > 0 && (
+                              <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                </svg>
+                                <span className="font-semibold">{formatNumber(data.likes)}</span>
+                              </div>
+                            )}
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">
+                              {data.platform}
+                            </span>
+                          </div>
                         </div>
-                        <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                          {milestone.platform}
-                        </span>
-                      </div>
-
-                      <p className="text-gray-700 mb-3">{milestone.description}</p>
-
-                      {/* Stats */}
-                      {(milestone.views || milestone.likes) && (
-                        <div className="flex gap-4 mt-4">
-                          {milestone.views && (
-                            <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                              <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                              </svg>
-                              <span className="font-semibold text-gray-700">{formatNumber(milestone.views)} views</span>
-                            </div>
-                          )}
-                          {milestone.likes && (
-                            <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                              <svg className="w-5 h-5 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                              </svg>
-                              <span className="font-semibold text-gray-700">{formatNumber(milestone.likes)} likes</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  fill="url(#colorViews)"
+                  dot={{ fill: '#3b82f6', r: 6, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 8, strokeWidth: 3 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         )}
 

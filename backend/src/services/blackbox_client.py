@@ -60,14 +60,32 @@ class BlackboxClient:
         """
         prompt = f"""Find all social media accounts for the influencer '{influencer_name}'.
 
+CRITICAL REQUIREMENTS:
+1. ALL platforms MUST belong to the SAME person/influencer
+2. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
+3. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
+
 Search across YouTube, TikTok, Instagram, Twitter/X, and other relevant platforms.
 
 For each platform found, provide:
 1. Platform name (youtube, tiktok, instagram, twitter, etc.)
-2. Username/handle
+2. Username/handle (must be the SAME person across all platforms)
 3. Approximate follower count
 4. Whether the account is verified
-5. Profile URL
+5. Direct profile URL
+
+PROFILE PICTURE REQUIREMENT:
+- You MUST find the ACTUAL, DIRECT profile picture URL from their platform's CDN
+- Examples of VALID URLs:
+  * YouTube: https://yt3.googleusercontent.com/ytc/AIdro_k...
+  * Instagram: https://scontent.cdninstagram.com/v/t51...
+  * Twitter: https://pbs.twimg.com/profile_images/...
+  * TikTok: https://p16-sign-sg.tiktokcdn.com/...
+- The URL MUST be a complete, working image URL from the platform's actual CDN
+- DO NOT use placeholder text like "ACTUAL_PROFILE_IMAGE_URL" or "COMPLETE_URL_HERE"
+- DO NOT use unavatar.io or any proxy service
+- DO NOT return the URL if you cannot find a real one - just omit the field or set it to null
+- Research the influencer's actual profile page to extract the real CDN URL
 
 Return ONLY a valid JSON object in this exact format:
 {{
@@ -82,8 +100,11 @@ Return ONLY a valid JSON object in this exact format:
     ],
     "primary_platform": "youtube",
     "total_followers": 5000000,
-    "bio": "Short bio description"
+    "bio": "Short bio description",
+    "profile_picture_url": "https://yt3.googleusercontent.com/ACTUAL_COMPLETE_CDN_URL"
 }}
+
+If you cannot find a real profile picture URL, set profile_picture_url to null.
 
 If the influencer is not found, return:
 {{
@@ -92,7 +113,7 @@ If the influencer is not found, return:
 }}"""
 
         messages = [
-            {"role": "system", "content": "You are an AI assistant that researches social media influencers. Always return valid JSON."},
+            {"role": "system", "content": "You are an AI assistant that researches social media influencers. CRITICAL: Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
             {"role": "user", "content": prompt}
         ]
 

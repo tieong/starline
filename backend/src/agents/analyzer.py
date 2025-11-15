@@ -13,6 +13,7 @@ from src.models.database import (
     TimelineEvent,
 )
 from src.services.blackbox_client import blackbox_client
+from src.services.profile_fetcher import profile_fetcher
 
 
 class InfluencerAnalyzer:
@@ -77,6 +78,10 @@ class InfluencerAnalyzer:
             if platforms_data.get("platforms"):
                 await self._save_platforms(influencer, platforms_data)
                 influencer.bio = platforms_data.get("bio", "")
+
+                # Fetch profile picture directly from platforms
+                avatar_url = await self._fetch_profile_picture(platforms_data)
+                influencer.avatar_url = avatar_url
 
             # Run remaining analyses in parallel
             results = await asyncio.gather(
@@ -203,6 +208,31 @@ class InfluencerAnalyzer:
             self.db.add(connection)
 
         self.db.commit()
+
+    async def _fetch_profile_picture(self, platforms_data: Dict[str, Any]) -> str:
+        """
+        Use the profile picture URL provided by AI from platform CDN.
+
+        Args:
+            platforms_data: Platform information including profile_picture_url
+
+        Returns:
+            Profile picture URL or None
+        """
+        # Try to use the profile picture URL provided by the AI
+        profile_pic_url = platforms_data.get("profile_picture_url")
+
+        if profile_pic_url and isinstance(profile_pic_url, str):
+            # Validate the URL actually works
+            is_valid = await self._run_in_thread(
+                profile_fetcher.validate_url,
+                profile_pic_url
+            )
+            if is_valid:
+                return profile_pic_url
+
+        # If AI didn't provide a valid URL, return None (will show fallback)
+        return None
 
     def _calculate_trust_score(self, platforms_data: Dict[str, Any], products_data: Dict[str, Any]) -> int:
         """Calculate basic trust score."""
