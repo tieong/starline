@@ -415,6 +415,69 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
         except json.JSONDecodeError:
             return {"news": []}
 
+    def discover_top_influencers(self, country: str = None, limit: int = 10) -> Dict[str, Any]:
+        """
+        Discover top/trending influencers globally or by country.
+
+        Args:
+            country: Country name (optional, global if not provided)
+            limit: Number of influencers to discover
+
+        Returns:
+            Dict with list of influencer names
+        """
+        location = f"in {country}" if country else "globally"
+        logger.info(f"   🤖 Perplexity: Discovering top {limit} influencers {location}...")
+
+        prompt = f"""Find the top {limit} most popular and trending social media influencers {location} right now.
+
+REQUIREMENTS:
+1. Focus on influencers who are currently active and trending (not historical figures)
+2. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
+3. Only include REAL influencers with significant following (>1M followers)
+4. Provide a diverse mix of influencers from different niches (gaming, beauty, lifestyle, comedy, etc.)
+5. If country is specified, prioritize influencers based in that country
+
+For each influencer, provide:
+- name: Their full name or most commonly known name
+- primary_platform: Their main platform (youtube, tiktok, instagram, twitter)
+- estimated_followers: Approximate total followers across all platforms
+- niche: Their content category (gaming, beauty, comedy, tech, etc.)
+
+Return ONLY valid JSON:
+{{
+    "influencers": [
+        {{
+            "name": "MrBeast",
+            "primary_platform": "youtube",
+            "estimated_followers": 200000000,
+            "niche": "entertainment"
+        }}
+    ]
+}}
+
+IMPORTANT: Only return REAL, CURRENTLY ACTIVE influencers. Do not make up fake names."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that discovers trending social media influencers. Use web search to find current, accurate information about popular influencers. Always return valid JSON with real influencer names."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.3, max_tokens=2000)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse influencer discovery response")
+            return {"influencers": []}
+
     def analyze_product_reviews(self, influencer_name: str, product_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Find real user reviews and comments about an influencer's product from social media.

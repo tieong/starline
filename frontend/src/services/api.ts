@@ -8,6 +8,7 @@ export interface InfluencerSearchResult {
   id: string;
   name: string;
   bio: string;
+  country?: string;
   trust_score: number;
   avatar_url: string;
   platforms: Array<{
@@ -18,6 +19,8 @@ export interface InfluencerSearchResult {
 
 export interface TrendingInfluencer extends InfluencerSearchResult {
   trending_score: number;
+  verified?: boolean;
+  total_followers?: number;
 }
 
 export interface InfluencerDetail {
@@ -150,6 +153,37 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to analyze influencer');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get top influencers globally or by country
+   */
+  async getTopInfluencers(options?: {
+    country?: string;
+    limit?: number;
+    auto_discover?: boolean;
+  }): Promise<{
+    country: string;
+    limit: number;
+    count: number;
+    auto_discovered: boolean;
+    newly_analyzed_count?: number;
+    influencers: TrendingInfluencer[];
+  }> {
+    const params = new URLSearchParams();
+    if (options?.country) params.set('country', options.country);
+    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.auto_discover !== undefined) params.set('auto_discover', options.auto_discover.toString());
+
+    const response = await fetch(
+      `${this.baseUrl}/api/influencers/top${params.toString() ? `?${params.toString()}` : ''}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch top influencers');
     }
 
     return response.json();

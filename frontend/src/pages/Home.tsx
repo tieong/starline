@@ -5,27 +5,35 @@ import { apiClient, type InfluencerSearchResult, type TrendingInfluencer } from 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<InfluencerSearchResult[]>([]);
-  const [trendingInfluencers, setTrendingInfluencers] = useState<TrendingInfluencer[]>([]);
+  const [topInfluencers, setTopInfluencers] = useState<TrendingInfluencer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTop, setLoadingTop] = useState(false);
+  const [autoDiscovering, setAutoDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch trending influencers on mount
+  // Fetch top 10 global influencers on mount
   useEffect(() => {
-    const fetchTrending = async () => {
+    const fetchTopInfluencers = async () => {
       try {
-        setLoading(true);
-        const trending = await apiClient.getTrendingInfluencers(3);
-        setTrendingInfluencers(trending);
+        setLoadingTop(true);
+        const response = await apiClient.getTopInfluencers({ limit: 10, auto_discover: true });
+        setTopInfluencers(response.influencers);
+
+        // Show message if auto-discovery happened
+        if (response.auto_discovered && response.newly_analyzed_count) {
+          setAutoDiscovering(true);
+          setTimeout(() => setAutoDiscovering(false), 5000); // Clear message after 5 seconds
+        }
       } catch (err) {
-        console.error('Failed to fetch trending:', err);
-        setError('Failed to load trending influencers');
+        console.error('Failed to fetch top influencers:', err);
+        setError('Failed to load top influencers');
       } finally {
-        setLoading(false);
+        setLoadingTop(false);
       }
     };
 
-    fetchTrending();
+    fetchTopInfluencers();
   }, []);
 
   const handleSearch = async () => {
@@ -215,86 +223,109 @@ export default function Home() {
           </div>
         )}
 
-        {/* Top 3 Trending Influencers - Show when no search */}
-        {!searchQuery && trendingInfluencers.length > 0 && (
-          <div className="max-w-6xl mx-auto">
+        {/* Top 10 Global Influencers - Show when no search */}
+        {!searchQuery && (
+          <div className="max-w-7xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                Trending Now
+                Top 10 Global Influencers
               </h2>
-              <p className="text-gray-600">Most searched influencers this week</p>
+              <p className="text-gray-600">Most influential creators worldwide</p>
+              {autoDiscovering && (
+                <div className="mt-4 inline-block bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <p className="text-blue-700 text-sm">
+                    🔄 Discovered and analyzed new influencers for you!
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {trendingInfluencers.map((influencer, index) => (
+            {loadingTop ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+                <p className="text-gray-600 text-lg">Loading top influencers...</p>
+                <p className="text-gray-500 text-sm mt-2">This may take a moment if discovering new influencers</p>
+              </div>
+            ) : topInfluencers.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                {topInfluencers.map((influencer, index) => (
                 <div
                   key={influencer.id}
                   onClick={() => navigate(`/influencer/${influencer.id}`)}
-                  className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer p-6 border-2 border-gray-100 hover:border-blue-300 relative overflow-hidden"
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer p-4 border-2 border-gray-100 hover:border-blue-300 relative overflow-hidden"
                 >
-                  {/* Trending badge */}
+                  {/* Ranking badge */}
                   <div className="absolute top-0 right-0">
-                    <div className={`px-4 py-2 rounded-bl-2xl font-bold text-white ${
-                      index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
-                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400' :
-                      'bg-gradient-to-br from-orange-300 to-orange-400'
+                    <div className={`px-3 py-1 rounded-bl-xl font-bold text-sm ${
+                      index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white' :
+                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white' :
+                      index === 2 ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white' :
+                      'bg-gray-100 text-gray-600'
                     }`}>
                       #{index + 1}
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center text-center mt-4">
+                  <div className="flex flex-col items-center text-center mt-2">
                     <img
                       src={influencer.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M='}
                       alt={influencer.name}
-                      className="w-24 h-24 rounded-full border-4 border-blue-500 shadow-lg mb-4 object-cover"
+                      className="w-20 h-20 rounded-full border-4 border-blue-500 shadow-md mb-3 object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=';
                       }}
                     />
 
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">{influencer.name}</h3>
-                    </div>
+                    <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-1">
+                      {influencer.name}
+                    </h3>
 
-                    <p className="text-blue-600 font-semibold mb-2">
-                      {influencer.platforms[0]?.platform || 'Multi-platform'}
+                    <p className="text-xs text-blue-600 font-semibold mb-2">
+                      {influencer.platforms[0]?.platform || 'Multi'}
                     </p>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{influencer.bio}</p>
 
-                    <div className="w-full space-y-3 mb-4">
-                      <div className="bg-gray-50 rounded-lg px-4 py-2">
+                    {influencer.country && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        🌍 {influencer.country}
+                      </p>
+                    )}
+
+                    <div className="w-full space-y-2 mb-3">
+                      <div className="bg-gray-50 rounded-lg px-3 py-1.5">
                         <p className="text-xs text-gray-500">Followers</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {influencer.platforms[0]?.followers
+                        <p className="text-sm font-bold text-gray-900">
+                          {influencer.total_followers
+                            ? influencer.total_followers >= 1000000
+                              ? `${(influencer.total_followers / 1000000).toFixed(1)}M`
+                              : `${(influencer.total_followers / 1000).toFixed(0)}K`
+                            : influencer.platforms[0]?.followers
                             ? influencer.platforms[0].followers >= 1000000
-                              ? `${(influencer.platforms[0].followers / 1000000).toFixed(0)}M`
+                              ? `${(influencer.platforms[0].followers / 1000000).toFixed(1)}M`
                               : `${(influencer.platforms[0].followers / 1000).toFixed(0)}K`
                             : 'N/A'}
                         </p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg px-4 py-2">
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg px-3 py-1.5">
                         <p className="text-xs text-gray-500">Trust Score</p>
-                        <p className={`text-2xl font-bold ${getTrustScoreColor(influencer.trust_score)}`}>
+                        <p className={`text-lg font-bold ${getTrustScoreColor(influencer.trust_score)}`}>
                           {influencer.trust_score}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg px-4 py-2">
-                        <p className="text-xs text-orange-700 font-semibold">Searches</p>
-                        <p className="text-lg font-bold text-orange-600">
-                          {influencer.trending_score?.toLocaleString() || 'N/A'}
                         </p>
                       </div>
                     </div>
 
-                    <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-full transition-all shadow-md hover:shadow-lg">
+                    <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md">
                       View Profile
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No influencers found</p>
+              </div>
+            )}
           </div>
         )}
       </div>

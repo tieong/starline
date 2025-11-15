@@ -155,6 +155,7 @@ async def get_trending(
 async def get_top_influencers(
     country: str = None,
     limit: int = 10,
+    auto_discover: bool = True,
     db: Session = Depends(get_db)
 ):
     """
@@ -163,8 +164,13 @@ async def get_top_influencers(
     Query parameters:
     - country: ISO country code or country name (optional, returns global if not provided)
     - limit: Number of influencers to return (default: 10, max: 50)
+    - auto_discover: If true, automatically discover and analyze new influencers if database has insufficient results (default: true)
 
     Returns influencers sorted by trending_score (descending).
+    If auto_discover is enabled and database is empty/insufficient, this endpoint will:
+    1. Use AI to discover top trending influencers
+    2. Analyze them in real-time
+    3. Return the results
     """
     # Enforce max limit of 50
     if limit > 50:
@@ -187,10 +193,101 @@ async def get_top_influencers(
         Influencer.trust_score.desc()
     ).limit(limit).all()
 
+    # If we have enough results, return them
+    if len(influencers) >= limit or not auto_discover:
+        return {
+            "country": country or "global",
+            "limit": limit,
+            "count": len(influencers),
+            "auto_discovered": False,
+            "influencers": [
+                {
+                    "id": inf.id,
+                    "name": inf.name,
+                    "bio": inf.bio,
+                    "country": inf.country,
+                    "trust_score": inf.trust_score,
+                    "trending_score": inf.trending_score,
+                    "verified": inf.verified,
+                    "avatar_url": inf.avatar_url,
+                    "platforms": [
+                        {
+                            "platform": p.platform_name,
+                            "username": p.username,
+                            "followers": p.follower_count,
+                            "verified": p.verified,
+                            "url": p.url
+                        }
+                        for p in inf.platforms
+                    ],
+                    "total_followers": sum(p.follower_count or 0 for p in inf.platforms)
+                }
+                for inf in influencers
+            ]
+        }
+
+    # Auto-discover and analyze new influencers
+    import asyncio
+    from src.services.perplexity_client import perplexity_client
+
+    # Calculate how many we need to discover
+    needed = limit - len(influencers)
+
+    # Discover top influencers using AI
+    def discover():
+        return perplexity_client.discover_top_influencers(country, needed)
+
+    discovered_data = await asyncio.to_thread(discover)
+    discovered_influencers = discovered_data.get("influencers", [])
+
+    # Analyze each discovered influencer
+    analyzer = InfluencerAnalyzer(db)
+    newly_analyzed = []
+
+    for inf_data in discovered_influencers[:needed]:  # Limit to what we need
+        try:
+            # Check if already exists
+            existing = db.query(Influencer).filter(
+                Influencer.name.ilike(inf_data["name"])
+            ).first()
+
+            if existing and existing.analysis_complete:
+                newly_analyzed.append(existing)
+                continue
+
+            # Analyze the influencer
+            result = await analyzer.analyze_influencer(inf_data["name"])
+
+            # Fetch the analyzed influencer from database
+            inf = db.query(Influencer).filter(
+                Influencer.name.ilike(inf_data["name"])
+            ).first()
+
+            if inf:
+                newly_analyzed.append(inf)
+
+        except Exception as e:
+            # Log error but continue with other influencers
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to analyze {inf_data.get('name')}: {str(e)}")
+            continue
+
+    # Combine existing and newly analyzed influencers
+    all_influencers = list(influencers) + newly_analyzed
+
+    # Sort by trending_score
+    all_influencers.sort(key=lambda x: (x.trending_score or 0, x.trust_score or 0), reverse=True)
+
+    # Limit to requested amount
+    all_influencers = all_influencers[:limit]
+
     return {
         "country": country or "global",
         "limit": limit,
-        "count": len(influencers),
+        "count": len(all_influencers),
+        "auto_discovered": len(newly_analyzed) > 0,
+        "newly_analyzed_count": len(newly_analyzed),
         "influencers": [
             {
                 "id": inf.id,
@@ -213,7 +310,7 @@ async def get_top_influencers(
                 ],
                 "total_followers": sum(p.follower_count or 0 for p in inf.platforms)
             }
-            for inf in influencers
+            for inf in all_influencers
         ]
     }
 
