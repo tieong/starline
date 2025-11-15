@@ -454,14 +454,7 @@ class DataService {
         }
       };
 
-      // Fetch all influencers from database
-      const apiInfluencers = await apiService.getTopInfluencers(undefined, 30);
-      console.log('[DataService] Fetched influencers with scores:', apiInfluencers.slice(0, 5).map(inf => ({
-        name: inf.name,
-        trust_score: inf.trust_score
-      })));
-
-      // If specific influencer ID provided, process it first with detailed network
+      // If specific influencer ID provided, fetch their detailed network
       if (influencerId) {
         const numericId = typeof influencerId === 'string' ? parseInt(influencerId) : influencerId;
 
@@ -503,17 +496,63 @@ class DataService {
         } catch (error) {
           console.error('Failed to fetch detailed network for central influencer:', error);
         }
-      }
+      } else {
+        // No specific influencer - show top influencers with basic network
+        const apiInfluencers = await apiService.getTopInfluencers(undefined, 50);
+        console.log('[DataService] Fetched influencers with scores:', apiInfluencers.slice(0, 5).map(inf => ({
+          name: inf.name,
+          trust_score: inf.trust_score
+        })));
 
-      // Process all influencers and fetch their connections
-      for (const inf of apiInfluencers) {
-        await processInfluencerConnections(
-          inf.id,
-          inf.name,
-          inf.avatar_url,
-          inf.trust_score,
-          false // Don't fetch 2nd level for all influencers to avoid too many requests
-        );
+        // Create basic nodes for all influencers
+        for (const inf of apiInfluencers) {
+          const nodeId = `influencer-${inf.id}`;
+          if (!nodeMap.has(nodeId)) {
+            nodes.push({
+              id: nodeId,
+              name: inf.name,
+              type: 'influencer',
+              avatar: inf.avatar_url || `/api/influencers/${inf.id}/avatar`,
+              score: inf.trust_score,
+              size: Math.max(30, Math.min(80, inf.trust_score)),
+            });
+            nodeMap.set(nodeId, true);
+          }
+
+          // If they have cached connections, use them (don't fetch)
+          if (inf.connections && inf.connections.length > 0) {
+            inf.connections.forEach(conn => {
+              const connId = `${conn.entity_type}-${conn.name.replace(/\s+/g, '-').toLowerCase()}`;
+
+              if (!nodeMap.has(connId)) {
+                let nodeType: 'influencer' | 'agency' | 'brand' | 'event' = 'brand';
+                if (conn.entity_type === 'management' || conn.entity_type === 'agency') {
+                  nodeType = 'agency';
+                } else if (conn.entity_type === 'influencer') {
+                  nodeType = 'influencer';
+                } else if (conn.entity_type === 'event') {
+                  nodeType = 'event';
+                }
+
+                nodes.push({
+                  id: connId,
+                  name: conn.name,
+                  type: nodeType,
+                  size: Math.max(40, Math.min(70, conn.strength * 100)),
+                });
+                nodeMap.set(connId, true);
+              }
+
+              relationships.push({
+                source: nodeId,
+                target: connId,
+                type: conn.type || conn.entity_type,
+                strength: conn.strength,
+                label: conn.description,
+              });
+            });
+          }
+        }
       }
 
       console.log('Graph data built from API:', {
