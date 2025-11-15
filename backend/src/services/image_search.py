@@ -144,11 +144,17 @@ class ImageSearchService:
                         score += 25  # Bonus for any platform CDN
                         break
 
-            # Score 3: Penalize generic image hosting sites
+            # Score 3: Penalize generic image hosting sites and blocked CDNs
             generic_hosts = ['imgur', 'purepeople', 'gettyimages', 'shutterstock', 'wikimedia']
             for generic in generic_hosts:
                 if generic in url_lower:
                     score -= 20  # Penalty for generic image sites
+
+            # Heavily penalize Instagram lookaside/blocked URLs
+            blocked_instagram = ['lookaside.fbsbx.com', 'lookaside.instagram.com', 'scontent.cdninstagram.com']
+            for blocked in blocked_instagram:
+                if blocked in url_lower:
+                    score -= 100  # Heavy penalty - these don't work
 
             # Score 4: Prefer URLs with "profile" or "avatar" in them
             if 'profile' in url_lower or 'avatar' in url_lower:
@@ -380,9 +386,15 @@ class ImageSearchService:
         if not url or len(url) < 10:
             return False
 
+        lower_url = url.lower()
+
+        # Filter out Instagram/Facebook blocked URLs early
+        blocked_patterns = ['lookaside.fbsbx.com', 'lookaside.instagram.com', 'scontent.cdninstagram.com']
+        if any(pattern in lower_url for pattern in blocked_patterns):
+            return False
+
         # Check if it's a reasonable image URL
         image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
-        lower_url = url.lower()
 
         # Must be http/https
         if not (url.startswith('http://') or url.startswith('https://')):
