@@ -53,19 +53,25 @@ async def health_check():
 @router.post("/api/influencers/analyze")
 async def analyze_influencer(
     request: InfluencerSearchRequest,
+    analysis_level: str = "basic",
     db: Session = Depends(get_db)
 ):
     """
     Analyze an influencer in real-time.
 
+    Query parameters:
+    - analysis_level: "basic" (platforms, products, connections) or "full" (adds timeline, news, reviews)
+
     This endpoint will:
     1. Check if the influencer is cached
     2. If not, trigger real-time AI analysis
-    3. Return complete profile data
+    3. Return profile data based on analysis_level
+
+    Note: Use "basic" for initial discovery (saves ~60% tokens), then fetch timeline/reviews on-demand.
     """
     try:
         analyzer = InfluencerAnalyzer(db)
-        result = await analyzer.analyze_influencer(request.name)
+        result = await analyzer.analyze_influencer(request.name, analysis_level=analysis_level)
         return result
     except Exception as e:
         error_msg = str(e)
@@ -504,3 +510,45 @@ async def get_influencer_news(
             for article in articles
         ]
     }
+
+
+@router.post("/api/influencers/{influencer_id}/timeline/fetch")
+async def fetch_timeline(
+    influencer_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch timeline events on-demand for an influencer.
+
+    This endpoint triggers AI analysis to fetch and store timeline events.
+    Use when timeline data is not yet available or needs updating.
+    """
+    try:
+        analyzer = InfluencerAnalyzer(db)
+        result = await analyzer.fetch_timeline(influencer_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/products/{product_id}/reviews/fetch")
+async def fetch_product_reviews(
+    product_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch product reviews on-demand.
+
+    This endpoint triggers AI analysis to fetch and store product reviews.
+    Use when review data is not yet available or needs updating.
+    """
+    try:
+        analyzer = InfluencerAnalyzer(db)
+        result = await analyzer.fetch_product_reviews(product_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

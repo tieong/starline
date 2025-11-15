@@ -44,17 +44,18 @@ class InfluencerAnalyzer:
         else:
             self.ai_client = blackbox_client
 
-    async def analyze_influencer(self, influencer_name: str) -> Dict[str, Any]:
+    async def analyze_influencer(self, influencer_name: str, analysis_level: str = "basic") -> Dict[str, Any]:
         """
-        Perform complete real-time analysis of an influencer.
+        Perform real-time analysis of an influencer.
 
         Args:
             influencer_name: Name of the influencer to analyze
+            analysis_level: "basic" (platforms, products, connections) or "full" (includes timeline, news, reviews)
 
         Returns:
-            Complete influencer profile data
+            Influencer profile data
         """
-        logger.info(f"🔍 Starting analysis for: {influencer_name}")
+        logger.info(f"🔍 Starting {analysis_level} analysis for: {influencer_name}")
 
         # Check if influencer exists in cache
         influencer = self.db.query(Influencer).filter(
@@ -145,23 +146,39 @@ class InfluencerAnalyzer:
                     logger.info(f"   📥 Downloading image from: {avatar_url}")
                     await self._download_and_store_image(influencer, avatar_url)
 
-            # Run remaining analyses in parallel
-            logger.info(f"🔄 Step 2/6: Running parallel analyses (products, timeline, connections, news)...")
-            results = await asyncio.gather(
-                self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
-                self._run_in_thread(self.ai_client.analyze_breakthrough_moment, influencer_name, platforms_data),
-                self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
-                self._run_in_thread(self.ai_client.analyze_news_drama, influencer_name, platforms_data),
-                return_exceptions=True
-            )
-            logger.info(f"   ✓ Parallel analyses complete")
+            # Run analyses based on level
+            if analysis_level == "full":
+                logger.info(f"🔄 Step 2/6: Running full parallel analyses (products, timeline, connections, news)...")
+                results = await asyncio.gather(
+                    self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
+                    self._run_in_thread(self.ai_client.analyze_breakthrough_moment, influencer_name, platforms_data),
+                    self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
+                    self._run_in_thread(self.ai_client.analyze_news_drama, influencer_name, platforms_data),
+                    return_exceptions=True
+                )
+                products_data, timeline_data, connections_data, news_data = results
+            else:
+                # Basic analysis: only products and connections (skip timeline and news)
+                logger.info(f"🔄 Step 2/6: Running basic parallel analyses (products, connections)...")
+                results = await asyncio.gather(
+                    self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
+                    self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
+                    return_exceptions=True
+                )
+                products_data, connections_data = results
+                timeline_data = None
+                news_data = None
 
-            products_data, timeline_data, connections_data, news_data = results
+            logger.info(f"   ✓ Parallel analyses complete")
 
             # Save all data
             if isinstance(products_data, dict):
-                logger.info(f"📦 Step 3/6: Saving products and fetching reviews...")
-                await self._save_products(influencer, products_data, platforms_data)
+                if analysis_level == "full":
+                    logger.info(f"📦 Step 3/6: Saving products and fetching reviews...")
+                    await self._save_products(influencer, products_data, platforms_data, fetch_reviews=True)
+                else:
+                    logger.info(f"📦 Step 3/6: Saving products (skipping reviews)...")
+                    await self._save_products(influencer, products_data, platforms_data, fetch_reviews=False)
                 logger.info(f"   ✓ Saved {len(products_data.get('products', []))} products")
 
             if isinstance(timeline_data, dict):
@@ -218,8 +235,8 @@ class InfluencerAnalyzer:
 
         self.db.commit()
 
-    async def _save_products(self, influencer: Influencer, data: Dict[str, Any], platforms_data: Dict[str, Any]):
-        """Save product data to database and fetch reviews."""
+    async def _save_products(self, influencer: Influencer, data: Dict[str, Any], platforms_data: Dict[str, Any], fetch_reviews: bool = False):
+        """Save product data to database and optionally fetch reviews."""
         # Clear existing products and their reviews
         self.db.query(Product).filter(Product.influencer_id == influencer.id).delete()
 
@@ -270,64 +287,65 @@ class InfluencerAnalyzer:
                 except Exception as e:
                     logger.warning(f"      ⚠️  OpenFoodFacts lookup failed: {str(e)}")
 
-            # Fetch reviews for this product
-            try:
-                logger.info(f"   🔍 Searching for reviews of '{product.name}'...")
-                reviews_data = await self._run_in_thread(
-                    self.ai_client.analyze_product_reviews,
-                    influencer.name,
-                    product.name,
-                    platforms_data
-                )
+            # Fetch reviews for this product (only if requested)
+            if fetch_reviews:
+                try:
+                    logger.info(f"   🔍 Searching for reviews of '{product.name}'...")
+                    reviews_data = await self._run_in_thread(
+                        self.ai_client.analyze_product_reviews,
+                        influencer.name,
+                        product.name,
+                        platforms_data
+                    )
 
-                if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
-                    sentiments = []
+                    if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
+                        sentiments = []
 
-                    # Limit to 2 reviews to reduce token consumption
-                    reviews_list = reviews_data.get("reviews", [])[:2]
+                        # Limit to 2 reviews to reduce token consumption
+                        reviews_list = reviews_data.get("reviews", [])[:2]
 
-                    for review_item in reviews_list:
-                        try:
-                            # Parse date if provided
-                            if review_item.get("date"):
-                                review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
-                            else:
+                        for review_item in reviews_list:
+                            try:
+                                # Parse date if provided
+                                if review_item.get("date"):
+                                    review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
+                                else:
+                                    review_date = None
+                            except:
                                 review_date = None
-                        except:
-                            review_date = None
 
-                        sentiment = review_item.get("sentiment", "neutral")
-                        sentiments.append(sentiment)
+                            sentiment = review_item.get("sentiment", "neutral")
+                            sentiments.append(sentiment)
 
-                        review = ProductReview(
-                            product_id=product.id,
-                            author=review_item.get("author", "Anonymous"),
-                            comment=review_item.get("comment", ""),
-                            platform=review_item.get("platform", ""),
-                            sentiment=sentiment,
-                            url=review_item.get("url"),
-                            date=review_date,
-                        )
-                        self.db.add(review)
+                            review = ProductReview(
+                                product_id=product.id,
+                                author=review_item.get("author", "Anonymous"),
+                                comment=review_item.get("comment", ""),
+                                platform=review_item.get("platform", ""),
+                                sentiment=sentiment,
+                                url=review_item.get("url"),
+                                date=review_date,
+                            )
+                            self.db.add(review)
 
-                    # Update review count (limited to 2)
-                    product.review_count = len(reviews_list)
+                        # Update review count (limited to 2)
+                        product.review_count = len(reviews_list)
 
-                    # Calculate sentiment score (-1 to 1)
-                    if sentiments:
-                        positive = sentiments.count("positive")
-                        negative = sentiments.count("negative")
-                        neutral = sentiments.count("neutral")
-                        total = len(sentiments)
+                        # Calculate sentiment score (-1 to 1)
+                        if sentiments:
+                            positive = sentiments.count("positive")
+                            negative = sentiments.count("negative")
+                            neutral = sentiments.count("neutral")
+                            total = len(sentiments)
 
-                        # Sentiment score: (positive - negative) / total
-                        product.sentiment_score = (positive - negative) / total
-                        logger.info(f"      ✓ Found {product.review_count} reviews (😊 {positive} / 😐 {neutral} / 😞 {negative}) - Sentiment: {product.sentiment_score:.2f}")
-                    else:
-                        logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
-            except Exception as e:
-                # If review fetching fails, just continue without reviews
-                logger.warning(f"      ⚠️  Failed to fetch reviews for {product.name}: {str(e)}")
+                            # Sentiment score: (positive - negative) / total
+                            product.sentiment_score = (positive - negative) / total
+                            logger.info(f"      ✓ Found {product.review_count} reviews (😊 {positive} / 😐 {neutral} / 😞 {negative}) - Sentiment: {product.sentiment_score:.2f}")
+                        else:
+                            logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
+                except Exception as e:
+                    # If review fetching fails, just continue without reviews
+                    logger.warning(f"      ⚠️  Failed to fetch reviews for {product.name}: {str(e)}")
 
         self.db.commit()
 
@@ -664,4 +682,164 @@ class InfluencerAnalyzer:
             ],
             "last_analyzed": influencer.last_analyzed.isoformat() if influencer.last_analyzed else None,
             "analysis_complete": influencer.analysis_complete,
+        }
+
+    async def fetch_timeline(self, influencer_id: int) -> Dict[str, Any]:
+        """
+        Fetch timeline events on-demand for an influencer.
+
+        Args:
+            influencer_id: ID of the influencer
+
+        Returns:
+            Dict with timeline events
+        """
+        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        if not influencer:
+            raise ValueError(f"Influencer with ID {influencer_id} not found")
+
+        # Get platform data
+        platforms_data = {
+            "platforms": [
+                {
+                    "platform": p.platform_name,
+                    "username": p.username,
+                    "followers": p.follower_count,
+                    "url": p.url
+                }
+                for p in influencer.platforms
+            ]
+        }
+
+        # Fetch timeline from AI
+        logger.info(f"🔍 Fetching timeline for: {influencer.name}")
+        timeline_data = await self._run_in_thread(
+            self.ai_client.analyze_breakthrough_moment,
+            influencer.name,
+            platforms_data
+        )
+
+        # Save timeline
+        if isinstance(timeline_data, dict):
+            await self._save_timeline(influencer, timeline_data)
+            logger.info(f"   ✓ Saved timeline events")
+
+        return {
+            "influencer_id": influencer_id,
+            "timeline": [
+                {
+                    "id": t.id,
+                    "date": t.date.isoformat() if t.date else None,
+                    "event_type": t.event_type,
+                    "title": t.title,
+                    "description": t.description,
+                    "platform": t.platform,
+                    "views": t.views,
+                    "likes": t.likes,
+                    "url": t.url,
+                }
+                for t in sorted(influencer.timeline_events, key=lambda x: x.date or datetime.min, reverse=True)
+            ]
+        }
+
+    async def fetch_product_reviews(self, product_id: int) -> Dict[str, Any]:
+        """
+        Fetch reviews for a specific product on-demand.
+
+        Args:
+            product_id: ID of the product
+
+        Returns:
+            Dict with product reviews
+        """
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise ValueError(f"Product with ID {product_id} not found")
+
+        influencer = self.db.query(Influencer).filter(Influencer.id == product.influencer_id).first()
+        if not influencer:
+            raise ValueError(f"Influencer not found for product {product_id}")
+
+        # Get platform data
+        platforms_data = {
+            "platforms": [
+                {
+                    "platform": p.platform_name,
+                    "username": p.username,
+                    "followers": p.follower_count,
+                    "url": p.url
+                }
+                for p in influencer.platforms
+            ]
+        }
+
+        # Clear existing reviews
+        self.db.query(ProductReview).filter(ProductReview.product_id == product_id).delete()
+
+        # Fetch reviews from AI
+        logger.info(f"🔍 Fetching reviews for: {product.name}")
+        reviews_data = await self._run_in_thread(
+            self.ai_client.analyze_product_reviews,
+            influencer.name,
+            product.name,
+            platforms_data
+        )
+
+        # Save reviews
+        if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
+            sentiments = []
+            reviews_list = reviews_data.get("reviews", [])[:2]
+
+            for review_item in reviews_list:
+                try:
+                    if review_item.get("date"):
+                        review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
+                    else:
+                        review_date = None
+                except:
+                    review_date = None
+
+                sentiment = review_item.get("sentiment", "neutral")
+                sentiments.append(sentiment)
+
+                review = ProductReview(
+                    product_id=product.id,
+                    author=review_item.get("author", "Anonymous"),
+                    comment=review_item.get("comment", ""),
+                    platform=review_item.get("platform", ""),
+                    sentiment=sentiment,
+                    url=review_item.get("url"),
+                    date=review_date,
+                )
+                self.db.add(review)
+
+            product.review_count = len(reviews_list)
+
+            if sentiments:
+                positive = sentiments.count("positive")
+                negative = sentiments.count("negative")
+                neutral = sentiments.count("neutral")
+                total = len(sentiments)
+                product.sentiment_score = (positive - negative) / total
+
+            self.db.commit()
+            logger.info(f"   ✓ Saved {len(reviews_list)} reviews")
+
+        return {
+            "product_id": product_id,
+            "product_name": product.name,
+            "review_count": product.review_count,
+            "sentiment_score": product.sentiment_score,
+            "reviews": [
+                {
+                    "id": r.id,
+                    "author": r.author,
+                    "comment": r.comment,
+                    "platform": r.platform,
+                    "sentiment": r.sentiment,
+                    "url": r.url,
+                    "date": r.date.isoformat() if r.date else None,
+                }
+                for r in product.reviews
+            ]
         }

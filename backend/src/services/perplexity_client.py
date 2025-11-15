@@ -130,7 +130,7 @@ If the influencer is not found, return:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=2000)
+        response = self.chat(messages, temperature=0.3, max_tokens=1200)
 
         # Try to parse JSON from response
         try:
@@ -193,7 +193,7 @@ Return ONLY valid JSON:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=1500)
+        response = self.chat(messages, temperature=0.3, max_tokens=900)
 
         try:
             if "```json" in response:
@@ -224,10 +224,10 @@ Return ONLY valid JSON:
 Platform data: {json.dumps(platforms_data, indent=2)}
 
 Find:
-1. Their first viral video/post/content
-2. The breakthrough moment that launched their career
-3. Key milestones in their growth (chronological order)
-4. Major collaborations or turning points
+1. Their breakthrough moment that launched their career
+2. Top 3 most significant milestones in their growth (chronological order)
+
+IMPORTANT: Limit timeline to TOP 3 most significant events only.
 
 Return ONLY valid JSON:
 {{
@@ -255,7 +255,7 @@ Return ONLY valid JSON:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=2000)
+        response = self.chat(messages, temperature=0.3, max_tokens=1200)
 
         try:
             if "```json" in response:
@@ -281,7 +281,7 @@ Return ONLY valid JSON:
             Dict with connection information
         """
         logger.info(f"   🤖 Perplexity: Finding connections (influencers, agencies, brands)...")
-        prompt = f"""Find ALL connections for '{influencer_name}' including:
+        prompt = f"""Find the TOP 5 MOST SIGNIFICANT connections for '{influencer_name}' including:
 1. Other influencers they collaborate with
 2. Ad agencies representing them
 3. Brands they're sponsored by or partnered with
@@ -291,6 +291,8 @@ Return ONLY valid JSON:
 7. Any other business entities they're connected to
 
 Platform data: {json.dumps(platforms_data, indent=2)}
+
+IMPORTANT: Limit to TOP 5 most significant connections only.
 
 For EACH connection, provide:
 - name: Full name of the entity/person
@@ -331,7 +333,7 @@ Return ONLY valid JSON:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=1500)
+        response = self.chat(messages, temperature=0.3, max_tokens=900)
 
         try:
             if "```json" in response:
@@ -357,16 +359,16 @@ Return ONLY valid JSON:
             Dict with news and drama information
         """
         logger.info(f"   🤖 Perplexity: Searching for news and drama...")
-        prompt = f"""Research all recent and significant news, drama, and controversies about '{influencer_name}'.
+        prompt = f"""Research the TOP 3 MOST SIGNIFICANT news items, drama, and controversies about '{influencer_name}'.
 
 Platform data: {json.dumps(platforms_data, indent=2)}
 
-Find:
+Find (limit to 3 most significant):
 1. Recent news articles about them (within last 2 years)
 2. Any drama, controversies, or scandals they were involved in
 3. Major achievements or positive news
-4. Collaborations that made headlines
-5. Any legal issues or public disputes
+
+IMPORTANT: Limit to TOP 3 most significant news items only.
 
 For each item, provide:
 - title: Concise headline
@@ -401,7 +403,7 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=3000)
+        response = self.chat(messages, temperature=0.3, max_tokens=1800)
 
         try:
             if "```json" in response:
@@ -474,7 +476,7 @@ CRITICAL: Return ONLY the JSON object. Do NOT include any explanatory text befor
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.3, max_tokens=2000)
+        response = self.chat(messages, temperature=0.3, max_tokens=1200)
 
         try:
             if "```json" in response:
@@ -542,7 +544,7 @@ IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 2 reviews 
             {"role": "user", "content": prompt}
         ]
 
-        response = self.chat(messages, temperature=0.2, max_tokens=2000)
+        response = self.chat(messages, temperature=0.2, max_tokens=1200)
 
         try:
             if "```json" in response:
