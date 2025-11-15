@@ -22,13 +22,13 @@ class ImageSearchService:
         }
         self.timeout = 10
 
-    def _make_request_with_backoff(self, url: str, max_total_time: int = 300) -> Optional[requests.Response]:
+    def _make_request_with_backoff(self, url: str, max_total_time: int = 120) -> Optional[requests.Response]:
         """
         Make HTTP request with exponential backoff for 429 errors.
 
         Args:
             url: URL to fetch
-            max_total_time: Maximum total time to spend retrying (default: 300 seconds = 5 minutes)
+            max_total_time: Maximum total time to spend retrying (default: 120 seconds = 2 minutes)
 
         Returns:
             Response object or None if all retries failed

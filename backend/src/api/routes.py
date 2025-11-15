@@ -552,3 +552,27 @@ async def fetch_product_reviews(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/products/{product_id}/openfoodfacts/fetch")
+async def fetch_openfoodfacts_data(
+    product_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch OpenFoodFacts nutritional/safety data for a product on-demand.
+
+    This endpoint queries OpenFoodFacts API for:
+    - Food products: NutriScore, NOVA group, Ecoscore, ingredients, allergens
+    - Cosmetics: Safety ratings, ingredient analysis
+
+    Only works for products with category: food, cosmetics, or beauty.
+    """
+    try:
+        analyzer = InfluencerAnalyzer(db)
+        result = await analyzer.fetch_openfoodfacts_data(product_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

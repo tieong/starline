@@ -843,3 +843,63 @@ class InfluencerAnalyzer:
                 for r in product.reviews
             ]
         }
+
+    async def fetch_openfoodfacts_data(self, product_id: int) -> Dict[str, Any]:
+        """
+        Fetch OpenFoodFacts nutritional/safety data for a product on-demand.
+
+        Args:
+            product_id: ID of the product
+
+        Returns:
+            Dict with OpenFoodFacts data
+        """
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise ValueError(f"Product with ID {product_id} not found")
+
+        category = product.category.lower() if product.category else ""
+        if category not in ["food", "cosmetics", "beauty"]:
+            return {
+                "product_id": product_id,
+                "product_name": product.name,
+                "category": product.category,
+                "error": "Product category must be 'food', 'cosmetics', or 'beauty' for OpenFoodFacts lookup"
+            }
+
+        logger.info(f"🔍 Fetching OpenFoodFacts data for: {product.name}")
+
+        from src.services.openfoodfacts import openfoodfacts_client
+
+        # Determine API category
+        api_category = "food" if category == "food" else "cosmetics"
+
+        # Search for product
+        def search_product():
+            return openfoodfacts_client.search_product(product.name, api_category)
+
+        off_data = await self._run_in_thread(search_product)
+
+        if off_data:
+            # Store the data as JSON
+            import json
+            product.openfoodfacts_data = json.dumps(off_data)
+            product.quality_score = off_data.get("quality_score", 70)
+            self.db.commit()
+
+            logger.info(f"   ✓ Updated OpenFoodFacts data (quality score: {product.quality_score})")
+
+            return {
+                "product_id": product_id,
+                "product_name": product.name,
+                "category": product.category,
+                "openfoodfacts_data": off_data,
+                "quality_score": product.quality_score
+            }
+        else:
+            return {
+                "product_id": product_id,
+                "product_name": product.name,
+                "category": product.category,
+                "error": "Product not found in OpenFoodFacts database"
+            }
