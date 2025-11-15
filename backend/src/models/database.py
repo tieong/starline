@@ -200,7 +200,7 @@ class Review(Base):
     __tablename__ = "reviews"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
     user_name = Column(String, nullable=False)
     rating = Column(Integer, nullable=False)  # 1-5
     comment = Column(Text)
