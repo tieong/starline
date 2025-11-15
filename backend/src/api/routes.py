@@ -66,7 +66,12 @@ async def analyze_influencer(
         result = await analyzer.analyze_influencer(request.name)
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        # Return 404 for "not found" errors, 500 for other errors
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=404, detail=error_msg)
+        else:
+            raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.get("/api/influencers/search")

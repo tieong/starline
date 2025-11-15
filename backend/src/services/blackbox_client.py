@@ -61,9 +61,13 @@ class BlackboxClient:
         prompt = f"""Find all social media accounts for the influencer '{influencer_name}'.
 
 CRITICAL REQUIREMENTS:
-1. ALL platforms MUST belong to the SAME person/influencer
-2. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
-3. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
+1. ONLY return data if this is a REAL, VERIFIED influencer with actual social media presence
+2. If you cannot find ANY social media accounts, return {{"platforms": [], "error": "Influencer not found"}}
+3. DO NOT make up or hallucinate data - if unsure, return empty platforms array
+4. ALL platforms MUST belong to the SAME person/influencer
+5. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
+6. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
+7. The influencer MUST have at least one verified platform or significant follower count (>10,000) to be considered real
 
 Search across YouTube, TikTok, Instagram, Twitter/X, and other relevant platforms.
 
@@ -113,7 +117,7 @@ If the influencer is not found, return:
 }}"""
 
         messages = [
-            {"role": "system", "content": "You are an AI assistant that researches social media influencers. CRITICAL: Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
+            {"role": "system", "content": "You are an AI assistant that researches social media influencers. CRITICAL: Only return data for REAL influencers with verifiable social media presence. If you cannot find the influencer or verify their identity, return empty platforms array with an error message. DO NOT hallucinate or make up data. Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
             {"role": "user", "content": prompt}
         ]
 
@@ -254,7 +258,7 @@ Return ONLY valid JSON:
 
     def analyze_connections(self, influencer_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Find influencer's most frequent collaborators and connections.
+        Find influencer's connections including other influencers, agencies, brands, and business entities.
 
         Args:
             influencer_name: Name of the influencer
@@ -263,23 +267,47 @@ Return ONLY valid JSON:
         Returns:
             Dict with connection information
         """
-        prompt = f"""Find the most frequent collaborators and connections for '{influencer_name}'.
+        prompt = f"""Find ALL connections for '{influencer_name}' including:
+1. Other influencers they collaborate with
+2. Ad agencies representing them
+3. Brands they're sponsored by or partnered with
+4. Management companies managing them
+5. Record labels (if musician)
+6. Networks or media companies they work with
+7. Any other business entities they're connected to
 
 Platform data: {json.dumps(platforms_data, indent=2)}
 
-Find influencers they:
-1. Collaborate with most often
-2. Are frequently mentioned with
-3. Have done major projects with
+For EACH connection, provide:
+- name: Full name of the entity/person
+- entity_type: One of: "influencer", "ad_agency", "brand", "management", "record_label", "network", "studio", "other"
+- connection_type: One of: "collaboration", "sponsorship", "managed_by", "signed_to", "partnership", "contracted_to", "owned_by"
+- strength: 1-10 (how strong/significant is this relationship?)
+- description: Brief description of the relationship
 
 Return ONLY valid JSON:
 {{
     "connections": [
         {{
-            "name": "Collaborator Name",
-            "type": "collaboration",
+            "name": "Night Media",
+            "entity_type": "management",
+            "connection_type": "managed_by",
             "strength": 10,
-            "description": "Worked together on X project"
+            "description": "Talent management company representing the influencer"
+        }},
+        {{
+            "name": "MrBeast",
+            "entity_type": "influencer",
+            "connection_type": "collaboration",
+            "strength": 8,
+            "description": "Frequent collaborator on videos"
+        }},
+        {{
+            "name": "GFuel",
+            "entity_type": "brand",
+            "connection_type": "sponsorship",
+            "strength": 7,
+            "description": "Long-term brand sponsorship deal"
         }}
     ]
 }}"""
@@ -371,6 +399,72 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
             return json.loads(json_str)
         except json.JSONDecodeError:
             return {"news": []}
+
+    def analyze_product_reviews(self, influencer_name: str, product_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Find real user reviews and comments about an influencer's product from social media.
+
+        Args:
+            influencer_name: Name of the influencer
+            product_name: Name of the product
+            platforms_data: Platform information
+
+        Returns:
+            Dict with user reviews from social media
+        """
+        prompt = f"""Search social media for REAL user reviews and comments about "{product_name}" by {influencer_name}.
+
+Platform data: {json.dumps(platforms_data, indent=2)}
+
+CRITICAL REQUIREMENTS:
+1. Search Twitter/X, Reddit, YouTube comments, TikTok comments for mentions of this product
+2. Find ACTUAL user comments - DO NOT make up fake reviews
+3. Include both positive and negative feedback
+4. Only return real, verifiable comments you can find
+5. If you cannot find any reviews, return empty array
+
+For each review found, provide:
+- author: Username or display name of the reviewer
+- comment: The actual text of their comment/review
+- platform: Where it was posted (twitter, reddit, youtube, tiktok)
+- sentiment: "positive", "negative", or "neutral" based on the comment
+- url: Link to the comment if available (or null)
+- date: When it was posted (YYYY-MM-DD format, or null if unknown)
+
+Return ONLY valid JSON:
+{{
+    "reviews": [
+        {{
+            "author": "username123",
+            "comment": "Actual comment text here",
+            "platform": "twitter",
+            "sentiment": "positive",
+            "url": "https://twitter.com/...",
+            "date": "2024-01-15"
+        }}
+    ]
+}}
+
+IMPORTANT: Only return REAL comments you can verify. Limit to 10 most relevant/recent reviews."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that searches social media for product reviews. CRITICAL: Only return REAL, VERIFIABLE comments from actual users. DO NOT make up fake reviews. If you cannot find reviews, return an empty array. Always return valid JSON."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.2, max_tokens=2000)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            return {"reviews": []}
 
 
 # Global client instance

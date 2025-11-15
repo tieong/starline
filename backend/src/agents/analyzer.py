@@ -1,9 +1,18 @@
 """Influencer analyzer orchestrator."""
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from sqlalchemy.orm import Session
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 from src.models.database import (
     Connection,
@@ -11,6 +20,7 @@ from src.models.database import (
     NewsArticle,
     Platform,
     Product,
+    ProductReview,
     TimelineEvent,
 )
 from src.config.settings import settings
@@ -42,6 +52,8 @@ class InfluencerAnalyzer:
         Returns:
             Complete influencer profile data
         """
+        logger.info(f"🔍 Starting analysis for: {influencer_name}")
+
         # Check if influencer exists in cache
         influencer = self.db.query(Influencer).filter(
             Influencer.name.ilike(f"%{influencer_name}%")
@@ -49,10 +61,12 @@ class InfluencerAnalyzer:
 
         # If cached and not expired, return cached data
         if influencer and influencer.cache_expires and influencer.cache_expires > datetime.utcnow():
+            logger.info(f"✅ Returning cached data for: {influencer_name}")
             return self._build_response(influencer)
 
         # If analysis is in progress, return status
         if influencer and influencer.is_analyzing:
+            logger.info(f"⏳ Analysis already in progress for: {influencer_name}")
             return {
                 "status": "analyzing",
                 "message": "Analysis in progress, please wait...",
@@ -77,21 +91,52 @@ class InfluencerAnalyzer:
 
         try:
             # Run all analysis tasks in parallel
+            logger.info(f"📱 Step 1/6: Discovering social media platforms for {influencer_name}...")
             platforms_data = await self._run_in_thread(
                 self.ai_client.analyze_influencer_platforms,
                 influencer_name
             )
+            logger.info(f"   ✓ Found {len(platforms_data.get('platforms', []))} platforms")
+
+            # Validate that influencer exists - check if we found any real platforms
+            if not platforms_data.get("platforms") or len(platforms_data.get("platforms", [])) == 0:
+                # No platforms found = influencer doesn't exist or couldn't be verified
+                logger.warning(f"❌ No platforms found for {influencer_name} - influencer may not exist")
+                influencer.is_analyzing = False
+                self.db.commit()
+
+                # Clean up the influencer record if it was just created
+                if not influencer.analysis_complete:
+                    self.db.delete(influencer)
+                    self.db.commit()
+
+                raise Exception(f"Influencer '{influencer_name}' not found. Please verify the name and try again.")
+
+            # Check if AI explicitly returned an error
+            if platforms_data.get("error"):
+                logger.warning(f"❌ Error from AI: {platforms_data.get('error')}")
+                influencer.is_analyzing = False
+                self.db.commit()
+
+                if not influencer.analysis_complete:
+                    self.db.delete(influencer)
+                    self.db.commit()
+
+                raise Exception(f"Influencer '{influencer_name}' not found: {platforms_data.get('error')}")
 
             # Save platform data
             if platforms_data.get("platforms"):
+                logger.info(f"💾 Saving platform data...")
                 await self._save_platforms(influencer, platforms_data)
                 influencer.bio = platforms_data.get("bio", "")
 
                 # Fetch profile picture directly from platforms
+                logger.info(f"🖼️  Fetching profile picture...")
                 avatar_url = await self._fetch_profile_picture(platforms_data)
                 influencer.avatar_url = avatar_url
 
             # Run remaining analyses in parallel
+            logger.info(f"🔄 Step 2/6: Running parallel analyses (products, timeline, connections, news)...")
             results = await asyncio.gather(
                 self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
                 self._run_in_thread(self.ai_client.analyze_breakthrough_moment, influencer_name, platforms_data),
@@ -99,31 +144,43 @@ class InfluencerAnalyzer:
                 self._run_in_thread(self.ai_client.analyze_news_drama, influencer_name, platforms_data),
                 return_exceptions=True
             )
+            logger.info(f"   ✓ Parallel analyses complete")
 
             products_data, timeline_data, connections_data, news_data = results
 
             # Save all data
             if isinstance(products_data, dict):
-                await self._save_products(influencer, products_data)
+                logger.info(f"📦 Step 3/6: Saving products and fetching reviews...")
+                await self._save_products(influencer, products_data, platforms_data)
+                logger.info(f"   ✓ Saved {len(products_data.get('products', []))} products")
 
             if isinstance(timeline_data, dict):
+                logger.info(f"📅 Step 4/6: Saving timeline events...")
                 await self._save_timeline(influencer, timeline_data)
+                logger.info(f"   ✓ Saved {len(timeline_data.get('timeline', []))} timeline events")
 
             if isinstance(connections_data, dict):
+                logger.info(f"🔗 Step 5/6: Saving network connections...")
                 await self._save_connections(influencer, connections_data)
+                logger.info(f"   ✓ Saved {len(connections_data.get('connections', []))} connections")
 
             if isinstance(news_data, dict):
+                logger.info(f"📰 Step 6/6: Saving news and drama...")
                 await self._save_news(influencer, news_data)
+                logger.info(f"   ✓ Saved {len(news_data.get('news', []))} news articles")
 
             # Calculate trust score (basic for now)
+            logger.info(f"🎯 Calculating trust score...")
             influencer.trust_score = self._calculate_trust_score(platforms_data, products_data)
             influencer.is_analyzing = False
             influencer.analysis_complete = True
             self.db.commit()
 
+            logger.info(f"✅ Analysis complete for {influencer_name}! Trust score: {influencer.trust_score}")
             return self._build_response(influencer)
 
         except Exception as e:
+            logger.error(f"❌ Analysis failed for {influencer_name}: {str(e)}")
             influencer.is_analyzing = False
             self.db.commit()
             raise Exception(f"Analysis failed: {str(e)}")
@@ -151,8 +208,11 @@ class InfluencerAnalyzer:
 
         self.db.commit()
 
-    async def _save_products(self, influencer: Influencer, data: Dict[str, Any]):
-        """Save product data to database."""
+    async def _save_products(self, influencer: Influencer, data: Dict[str, Any], platforms_data: Dict[str, Any]):
+        """Save product data to database and fetch reviews."""
+        # Clear existing products and their reviews
+        self.db.query(Product).filter(Product.influencer_id == influencer.id).delete()
+
         for product_data in data.get("products", []):
             product = Product(
                 influencer_id=influencer.id,
@@ -162,6 +222,46 @@ class InfluencerAnalyzer:
                 quality_score=70,  # Default, will be updated by sentiment analysis
             )
             self.db.add(product)
+            self.db.flush()  # Flush to get product ID
+
+            # Fetch reviews for this product
+            try:
+                logger.info(f"   🔍 Searching for reviews of '{product.name}'...")
+                reviews_data = await self._run_in_thread(
+                    self.ai_client.analyze_product_reviews,
+                    influencer.name,
+                    product.name,
+                    platforms_data
+                )
+
+                if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
+                    for review_item in reviews_data.get("reviews", []):
+                        try:
+                            # Parse date if provided
+                            if review_item.get("date"):
+                                review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
+                            else:
+                                review_date = None
+                        except:
+                            review_date = None
+
+                        review = ProductReview(
+                            product_id=product.id,
+                            author=review_item.get("author", "Anonymous"),
+                            comment=review_item.get("comment", ""),
+                            platform=review_item.get("platform", ""),
+                            sentiment=review_item.get("sentiment", "neutral"),
+                            url=review_item.get("url"),
+                            date=review_date,
+                        )
+                        self.db.add(review)
+
+                    # Update review count
+                    product.review_count = len(reviews_data.get("reviews", []))
+                    logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
+            except Exception as e:
+                # If review fetching fails, just continue without reviews
+                logger.warning(f"      ⚠️  Failed to fetch reviews for {product.name}: {str(e)}")
 
         self.db.commit()
 
@@ -192,31 +292,52 @@ class InfluencerAnalyzer:
         self.db.commit()
 
     async def _save_connections(self, influencer: Influencer, data: Dict[str, Any]):
-        """Save connection data to database."""
+        """Save connection data to database (both influencers and entities like agencies/brands)."""
+        # Clear existing connections
+        self.db.query(Connection).filter(Connection.influencer_id == influencer.id).delete()
+
         for conn_data in data.get("connections", []):
-            # Create connected influencer if doesn't exist
-            connected_name = conn_data.get("name", "")
-            connected_id = connected_name.lower().replace(" ", "_")
+            entity_name = conn_data.get("name", "")
+            entity_type = conn_data.get("entity_type", "influencer")
+            connection_type = conn_data.get("connection_type", conn_data.get("type", "collaboration"))
 
-            connected_influencer = self.db.query(Influencer).filter(
-                Influencer.id == connected_id
-            ).first()
+            # If it's an influencer, create or link to influencer record
+            if entity_type == "influencer":
+                connected_id = entity_name.lower().replace(" ", "_")
 
-            if not connected_influencer:
-                connected_influencer = Influencer(
-                    id=connected_id,
-                    name=connected_name,
+                connected_influencer = self.db.query(Influencer).filter(
+                    Influencer.id == connected_id
+                ).first()
+
+                if not connected_influencer:
+                    connected_influencer = Influencer(
+                        id=connected_id,
+                        name=entity_name,
+                    )
+                    self.db.add(connected_influencer)
+                    self.db.flush()
+
+                connection = Connection(
+                    influencer_id=influencer.id,
+                    connected_influencer_id=connected_influencer.id,
+                    entity_name=entity_name,
+                    entity_type=entity_type,
+                    connection_type=connection_type,
+                    strength=conn_data.get("strength", 1),
+                    description=conn_data.get("description", ""),
                 )
-                self.db.add(connected_influencer)
-                self.db.commit()
+            else:
+                # For non-influencer entities (agencies, brands, etc.)
+                connection = Connection(
+                    influencer_id=influencer.id,
+                    connected_influencer_id=None,
+                    entity_name=entity_name,
+                    entity_type=entity_type,
+                    connection_type=connection_type,
+                    strength=conn_data.get("strength", 1),
+                    description=conn_data.get("description", ""),
+                )
 
-            connection = Connection(
-                influencer_id=influencer.id,
-                connected_influencer_id=connected_influencer.id,
-                connection_type=conn_data.get("type", "collaboration"),
-                strength=conn_data.get("strength", 1),
-                description=conn_data.get("description", ""),
-            )
             self.db.add(connection)
 
         self.db.commit()
@@ -328,12 +449,25 @@ class InfluencerAnalyzer:
                     "category": p.category,
                     "quality_score": p.quality_score,
                     "description": p.description,
+                    "review_count": p.review_count,
+                    "reviews": [
+                        {
+                            "author": r.author,
+                            "comment": r.comment,
+                            "platform": r.platform,
+                            "sentiment": r.sentiment,
+                            "url": r.url,
+                            "date": r.date.isoformat() if r.date else None,
+                        }
+                        for r in p.reviews
+                    ],
                 }
                 for p in influencer.products
             ],
             "connections": [
                 {
-                    "name": c.connected_influencer.name,
+                    "name": c.entity_name or (c.connected_influencer.name if c.connected_influencer else "Unknown"),
+                    "entity_type": c.entity_type or "influencer",
                     "type": c.connection_type,
                     "strength": c.strength,
                     "description": c.description,

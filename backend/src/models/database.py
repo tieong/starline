@@ -118,18 +118,46 @@ class Product(Base):
 
     # Relationships
     influencer = relationship("Influencer", back_populates="products")
+    reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
+
+
+class ProductReview(Base):
+    """User reviews/comments from social media about influencer products."""
+
+    __tablename__ = "product_reviews"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    author = Column(String)  # Username/name of reviewer
+    comment = Column(Text, nullable=False)  # The actual review/comment
+    platform = Column(String)  # twitter, reddit, youtube, tiktok, etc.
+    sentiment = Column(String)  # positive, negative, neutral
+    url = Column(String)  # Link to the comment/review if available
+    date = Column(DateTime)  # When the comment was posted
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    product = relationship("Product", back_populates="reviews")
 
 
 class Connection(Base):
-    """Social graph connections between influencers."""
+    """Social graph connections between influencers and entities (other influencers, agencies, brands, etc.)."""
 
     __tablename__ = "connections"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
-    connected_influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
-    connection_type = Column(String)  # collaboration, mention, tag, etc.
-    strength = Column(Integer, default=1)  # Number of interactions
+
+    # Can connect to either an influencer or an entity (agency, brand, etc.)
+    connected_influencer_id = Column(String, ForeignKey("influencers.id"), nullable=True)
+
+    # For non-influencer entities (ad agencies, brands, management companies, etc.)
+    entity_name = Column(String)  # Name of the entity if not an influencer
+    entity_type = Column(String)  # influencer, ad_agency, brand, management, record_label, network, etc.
+
+    connection_type = Column(String)  # collaboration, sponsorship, managed_by, signed_to, partnership, etc.
+    strength = Column(Integer, default=1)  # Number of interactions or deal size
     description = Column(Text)
 
     created_at = Column(DateTime, default=datetime.utcnow)

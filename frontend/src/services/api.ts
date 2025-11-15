@@ -49,12 +49,33 @@ export interface InfluencerDetail {
     category: string;
     quality_score: number;
     description: string;
+    review_count: number;
+    reviews: Array<{
+      author: string;
+      comment: string;
+      platform: string;
+      sentiment: string;
+      url: string | null;
+      date: string | null;
+    }>;
   }>;
   connections: Array<{
     name: string;
+    entity_type: string;
     type: string;
     strength: number;
     description: string;
+  }>;
+  news: Array<{
+    id: number;
+    title: string;
+    description: string;
+    article_type: string;
+    date: string | null;
+    source: string;
+    url: string | null;
+    sentiment: string;
+    severity: number;
   }>;
   last_analyzed: string | null;
   analysis_complete: boolean;

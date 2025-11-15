@@ -30,6 +30,7 @@ export default function InfluencerDetail() {
           timeline: data.timeline || [],
           products: data.products || [],
           connections: data.connections || [],
+          news: data.news || [],
           bio: data.bio || 'No bio available',
           avatar_url: data.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
         };
@@ -61,6 +62,7 @@ export default function InfluencerDetail() {
                 timeline: freshData.timeline || [],
                 products: freshData.products || [],
                 connections: freshData.connections || [],
+                news: freshData.news || [],
                 bio: freshData.bio || 'No bio available',
                 avatar_url: freshData.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
               };
@@ -90,14 +92,28 @@ export default function InfluencerDetail() {
       return null;
     }
 
+    const getEntityColor = (entityType: string) => {
+      switch (entityType) {
+        case 'influencer': return '#3b82f6'; // blue
+        case 'ad_agency': return '#f59e0b'; // orange
+        case 'brand': return '#10b981'; // green
+        case 'management': return '#8b5cf6'; // purple
+        case 'record_label': return '#ef4444'; // red
+        case 'network': return '#06b6d4'; // cyan
+        case 'studio': return '#ec4899'; // pink
+        default: return '#6b7280'; // gray
+      }
+    };
+
     return {
       nodes: [
-        { id: influencer.id, name: influencer.name, val: 30, color: '#3b82f6' },
+        { id: influencer.id, name: influencer.name, val: 30, color: '#3b82f6', entityType: 'influencer' },
         ...influencer.connections.map((conn, idx) => ({
           id: `conn-${idx}`,
           name: conn.name,
+          entityType: conn.entity_type || 'influencer',
           val: 10 + (conn.strength || 1),
-          color: conn.type === 'collaboration' ? '#10b981' : '#8b5cf6',
+          color: getEntityColor(conn.entity_type || 'influencer'),
         })),
       ],
       links: influencer.connections.map((conn, idx) => ({
@@ -110,7 +126,14 @@ export default function InfluencerDetail() {
 
   const handleNodeClick = useCallback((node: any) => {
     setSelectedNode(node.id);
-  }, []);
+
+    // Only navigate if it's an influencer node (not agencies, brands, etc.)
+    if (node.id.startsWith('conn-') && node.entityType === 'influencer') {
+      // Convert the connection name to URL-safe format (lowercase, replace spaces with underscores)
+      const influencerId = node.name.toLowerCase().replace(/\s+/g, '_');
+      navigate(`/influencer/${influencerId}`);
+    }
+  }, [navigate]);
 
   const getLinkColor = useCallback(() => '#cbd5e1', []);
 
@@ -367,32 +390,83 @@ export default function InfluencerDetail() {
           {/* Network Graph */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Network Connections</h2>
-            <p className="text-gray-600 mb-4">
-              Click on nodes to see connection details
-            </p>
-            {networkData && (
-              <div className="border rounded-lg overflow-hidden">
-                <ForceGraph2D
-                  ref={graphRef}
-                  graphData={networkData}
-                  nodeLabel="name"
-                  nodeColor="color"
-                  nodeRelSize={6}
-                  linkWidth={2}
-                  linkColor={getLinkColor}
-                  onNodeClick={handleNodeClick}
-                  width={500}
-                  height={400}
-                />
-              </div>
-            )}
-            {selectedNode && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="font-semibold">
-                  Selected: {networkData?.nodes.find(n => n.id === selectedNode)?.name}
+            {networkData ? (
+              <>
+                <p className="text-gray-600 mb-2">
+                  Click on influencer nodes to navigate
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Click on another node to view their connection
+                <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    Influencer
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                    Ad Agency
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    Brand
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    Management
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    Record Label
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+                    Network
+                  </span>
+                </div>
+                <div className="border rounded-lg overflow-hidden">
+                  <ForceGraph2D
+                    ref={graphRef}
+                    graphData={networkData}
+                    nodeLabel="name"
+                    nodeColor="color"
+                    nodeRelSize={6}
+                    linkWidth={2}
+                    linkColor={getLinkColor}
+                    onNodeClick={handleNodeClick}
+                    width={500}
+                    height={400}
+                  />
+                </div>
+                {selectedNode && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    {(() => {
+                      const selectedNodeData = networkData?.nodes.find(n => n.id === selectedNode);
+                      const isInfluencer = selectedNodeData?.entityType === 'influencer';
+                      return (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold">
+                              {selectedNodeData?.name}
+                            </p>
+                            <span className="text-xs bg-white px-2 py-0.5 rounded-full border capitalize">
+                              {selectedNodeData?.entityType?.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {isInfluencer ? 'Click to navigate to their profile' : 'Business entity'}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <p className="text-gray-500 mb-2">No connections found</p>
+                <p className="text-sm text-gray-400">
+                  AI analysis didn't identify any collaborations or connections for this influencer.
                 </p>
               </div>
             )}
@@ -402,10 +476,10 @@ export default function InfluencerDetail() {
           {influencer.products && influencer.products.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-2xl font-bold mb-6">Products & Sponsorships</h2>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {influencer.products.map((product, idx) => (
-                  <div key={idx} className="border-b pb-4 last:border-b-0">
-                    <div className="flex items-start justify-between mb-2">
+                  <div key={idx} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{product.name}</h3>
                         <p className="text-sm text-gray-600 capitalize">{product.category}</p>
@@ -420,7 +494,71 @@ export default function InfluencerDetail() {
                       )}
                     </div>
                     {product.description && (
-                      <p className="text-sm text-gray-700">{product.description}</p>
+                      <p className="text-sm text-gray-700 mb-3">{product.description}</p>
+                    )}
+
+                    {/* User Reviews from Social Media */}
+                    {product.reviews && product.reviews.length > 0 && (
+                      <div className="mt-4 border-t pt-4">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <span>💬 User Comments from Social Media</span>
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {product.review_count} reviews
+                          </span>
+                        </h4>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {product.reviews.map((review, reviewIdx) => {
+                            const getSentimentColor = (sentiment: string) => {
+                              if (sentiment === 'positive') return 'border-l-green-500 bg-green-50';
+                              if (sentiment === 'negative') return 'border-l-red-500 bg-red-50';
+                              return 'border-l-gray-500 bg-white';
+                            };
+
+                            const getSentimentIcon = (sentiment: string) => {
+                              if (sentiment === 'positive') return '👍';
+                              if (sentiment === 'negative') return '👎';
+                              return '💬';
+                            };
+
+                            return (
+                              <div
+                                key={reviewIdx}
+                                className={`border-l-4 p-3 rounded ${getSentimentColor(review.sentiment)}`}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{getSentimentIcon(review.sentiment)}</span>
+                                    <span className="font-semibold text-sm">@{review.author}</span>
+                                    <span className="text-xs bg-white px-2 py-0.5 rounded-full border capitalize">
+                                      {review.platform}
+                                    </span>
+                                  </div>
+                                  {review.date && (
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(review.date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-700 mb-2 italic">"{review.comment}"</p>
+                                {review.url && (
+                                  <a
+                                    href={review.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-700"
+                                  >
+                                    View original →
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -428,6 +566,99 @@ export default function InfluencerDetail() {
             </div>
           )}
         </div>
+
+        {/* News & Drama Section */}
+        {influencer.news && influencer.news.length > 0 && (
+          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-6">News & Drama</h2>
+            <div className="space-y-4">
+              {influencer.news.map((article) => {
+                const getSentimentColor = (sentiment: string) => {
+                  if (sentiment === 'positive') return 'bg-green-100 text-green-800 border-green-200';
+                  if (sentiment === 'negative') return 'bg-red-100 text-red-800 border-red-200';
+                  return 'bg-gray-100 text-gray-800 border-gray-200';
+                };
+
+                const getSentimentIcon = (sentiment: string) => {
+                  if (sentiment === 'positive') return '✅';
+                  if (sentiment === 'negative') return '⚠️';
+                  return '📰';
+                };
+
+                const getTypeColor = (type: string) => {
+                  if (type === 'drama' || type === 'controversy' || type === 'legal') return 'bg-red-50 border-red-200';
+                  if (type === 'achievement') return 'bg-green-50 border-green-200';
+                  if (type === 'collaboration') return 'bg-blue-50 border-blue-200';
+                  return 'bg-gray-50 border-gray-200';
+                };
+
+                return (
+                  <div
+                    key={article.id}
+                    className={`border-2 rounded-lg p-4 ${getTypeColor(article.article_type)}`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-2xl">{getSentimentIcon(article.sentiment)}</span>
+                          <h3 className="font-bold text-lg">{article.title}</h3>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getSentimentColor(article.sentiment)} border`}>
+                            {article.sentiment.toUpperCase()}
+                          </span>
+                          <span className="px-2 py-1 bg-white rounded-full text-xs font-semibold border border-gray-300 capitalize">
+                            {article.article_type}
+                          </span>
+                          {article.date && (
+                            <span className="text-xs text-gray-500">
+                              {formatDate(article.date)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-xs text-gray-500 mb-1">Severity</p>
+                        <div className="flex items-center gap-1">
+                          {[...Array(10)].map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-1.5 h-6 rounded-sm ${
+                                i < article.severity
+                                  ? article.severity >= 7
+                                    ? 'bg-red-500'
+                                    : article.severity >= 4
+                                    ? 'bg-yellow-500'
+                                    : 'bg-green-500'
+                                  : 'bg-gray-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 mb-3">{article.description}</p>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">
+                        Source: <span className="font-semibold">{article.source}</span>
+                      </span>
+                      {article.url && (
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 font-semibold"
+                        >
+                          Read More →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Platforms Section */}
         {influencer.platforms && influencer.platforms.length > 0 && (
