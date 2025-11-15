@@ -74,7 +74,17 @@ async def analyze_influencer(
         result = await analyzer.analyze_influencer(request.name, analysis_level=analysis_level)
         return result
     except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+
         error_msg = str(e)
+        error_traceback = traceback.format_exc()
+
+        # Log the error with full details
+        logger.error(f"API /analyze failed for '{request.name}': {error_msg}")
+        logger.debug(f"Full traceback:\n{error_traceback}")
+
         # Return 404 for "not found" errors, 500 for other errors
         if "not found" in error_msg.lower():
             raise HTTPException(status_code=404, detail=error_msg)

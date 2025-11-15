@@ -19,8 +19,8 @@ from sqlalchemy.orm import relationship, sessionmaker
 
 from src.config.settings import settings
 
-# Create database engine
-engine = create_engine(settings.database_url, echo=settings.debug)
+# Create database engine (echo disabled, use logging configuration instead)
+engine = create_engine(settings.database_url, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
