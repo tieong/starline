@@ -33,6 +33,7 @@ class Influencer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, index=True, unique=True)
     bio = Column(Text)
+    country = Column(String, index=True)  # ISO country code or country name
     verified = Column(Boolean, default=False)
     trust_score = Column(Integer, default=0)
     avatar_url = Column(String)

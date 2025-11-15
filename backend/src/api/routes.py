@@ -22,6 +22,7 @@ class InfluencerResponse(BaseModel):
     id: int
     name: str
     bio: str | None = None
+    country: str | None = None
     verified: bool
     trust_score: int
     avatar_url: str | None = None
@@ -99,6 +100,7 @@ async def search_influencers(
                 "id": inf.id,
                 "name": inf.name,
                 "bio": inf.bio,
+                "country": inf.country,
                 "trust_score": inf.trust_score,
                 "avatar_url": inf.avatar_url,
                 "platforms": [
@@ -132,6 +134,7 @@ async def get_trending(
                 "id": inf.id,
                 "name": inf.name,
                 "bio": inf.bio,
+                "country": inf.country,
                 "trust_score": inf.trust_score,
                 "trending_score": inf.trending_score,
                 "avatar_url": inf.avatar_url,
@@ -142,6 +145,73 @@ async def get_trending(
                     }
                     for p in inf.platforms
                 ]
+            }
+            for inf in influencers
+        ]
+    }
+
+
+@router.get("/api/influencers/top")
+async def get_top_influencers(
+    country: str = None,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    Get top N influencers globally or by country.
+
+    Query parameters:
+    - country: ISO country code or country name (optional, returns global if not provided)
+    - limit: Number of influencers to return (default: 10, max: 50)
+
+    Returns influencers sorted by trending_score (descending).
+    """
+    # Enforce max limit of 50
+    if limit > 50:
+        limit = 50
+    if limit < 1:
+        limit = 1
+
+    # Build query
+    query = db.query(Influencer).filter(
+        Influencer.analysis_complete == True  # Only completed analyses
+    )
+
+    # Filter by country if provided
+    if country:
+        query = query.filter(Influencer.country.ilike(country))
+
+    # Order by trending_score, then trust_score as tiebreaker
+    influencers = query.order_by(
+        Influencer.trending_score.desc(),
+        Influencer.trust_score.desc()
+    ).limit(limit).all()
+
+    return {
+        "country": country or "global",
+        "limit": limit,
+        "count": len(influencers),
+        "influencers": [
+            {
+                "id": inf.id,
+                "name": inf.name,
+                "bio": inf.bio,
+                "country": inf.country,
+                "trust_score": inf.trust_score,
+                "trending_score": inf.trending_score,
+                "verified": inf.verified,
+                "avatar_url": inf.avatar_url,
+                "platforms": [
+                    {
+                        "platform": p.platform_name,
+                        "username": p.username,
+                        "followers": p.follower_count,
+                        "verified": p.verified,
+                        "url": p.url
+                    }
+                    for p in inf.platforms
+                ],
+                "total_followers": sum(p.follower_count or 0 for p in inf.platforms)
             }
             for inf in influencers
         ]

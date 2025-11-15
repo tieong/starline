@@ -130,6 +130,9 @@ class InfluencerAnalyzer:
                 logger.info(f"💾 Saving platform data...")
                 await self._save_platforms(influencer, platforms_data)
                 influencer.bio = platforms_data.get("bio", "")
+                influencer.country = platforms_data.get("country")
+                if influencer.country:
+                    logger.info(f"   🌍 Country detected: {influencer.country}")
 
                 # Fetch profile picture directly from platforms
                 logger.info(f"🖼️  Fetching profile picture...")
@@ -525,6 +528,7 @@ class InfluencerAnalyzer:
             "id": influencer.id,
             "name": influencer.name,
             "bio": influencer.bio,
+            "country": influencer.country,
             "verified": influencer.verified,
             "trust_score": influencer.trust_score,
             "avatar_url": influencer.avatar_url,

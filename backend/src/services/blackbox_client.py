@@ -101,8 +101,17 @@ Return ONLY a valid JSON object in this exact format:
     "primary_platform": "youtube",
     "total_followers": 5000000,
     "bio": "Short bio description",
+    "country": "USA",
     "profile_picture_url": "https://yt3.googleusercontent.com/ACTUAL_COMPLETE_CDN_URL"
 }}
+
+COUNTRY DETECTION:
+- Detect the influencer's primary country based on:
+  1. Where they are based/live (mentioned in bio or about section)
+  2. Their nationality
+  3. Location tags in their content
+- Return the country name (e.g., "USA", "United Kingdom", "Japan", "Brazil")
+- If you cannot determine the country, set it to null
 
 If you cannot find a real profile picture URL, set profile_picture_url to null.
 
