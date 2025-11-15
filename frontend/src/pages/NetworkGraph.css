@@ -1,0 +1,232 @@
+.network-graph-page {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--white);
+}
+
+/* Subtle grid pattern like Chroma */
+.network-graph-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--white);
+  border-bottom: 1px solid var(--border-main);
+  z-index: 10;
+}
+
+.graph-header-left {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.graph-header h1 {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-strong);
+  flex: 1;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.graph-controls {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.graph-controls button,
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--white);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
+  color: var(--text-normal);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.graph-controls button:hover,
+.back-button:hover {
+  background: var(--state-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+.graph-container {
+  flex: 1;
+  position: relative;
+  background: transparent;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.graph-svg:active {
+  cursor: grabbing;
+}
+
+.node-info-panel {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  background: var(--surface-card);
+  padding: var(--space-lg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card-glow);
+  min-width: 250px;
+  z-index: 20;
+}
+
+.node-info-panel h3 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: var(--space-sm);
+}
+
+.node-type {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+  margin-bottom: var(--space-xs);
+}
+
+.node-score {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-main);
+  margin-bottom: var(--space-md);
+}
+
+.view-profile-btn,
+.close-panel-btn {
+  width: 100%;
+  padding: var(--space-md);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: var(--space-sm);
+}
+
+.view-profile-btn {
+  background: var(--primary-main);
+  color: white;
+}
+
+.view-profile-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.close-panel-btn {
+  background: var(--surface-card-soft);
+  color: var(--text-normal);
+}
+
+.close-panel-btn:hover {
+  background: var(--state-hover);
+}
+
+.graph-legend {
+  position: absolute;
+  bottom: var(--space-lg);
+  left: var(--space-lg);
+  background: var(--white);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
+  z-index: 20;
+  box-shadow: var(--shadow-card);
+}
+
+.graph-legend h3 {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-md);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-normal);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+@media (max-width: 768px) {
+  .graph-header {
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .graph-header h1 {
+    font-size: 20px;
+  }
+
+  .node-info-panel {
+    right: var(--space-md);
+    top: var(--space-md);
+    min-width: 200px;
+  }
+
+  .graph-legend {
+    left: var(--space-md);
+    bottom: var(--space-md);
+  }
+}

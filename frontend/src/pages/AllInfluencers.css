@@ -1,0 +1,138 @@
+.all-influencers {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  min-height: 100vh;
+}
+
+.back-button-top {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-card);
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--text-normal);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s ease;
+  margin-bottom: var(--space-xl);
+}
+
+.back-button-top:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.all-influencers-header {
+  text-align: center;
+  margin-bottom: var(--space-xxl);
+}
+
+.all-influencers-header h1 {
+  font-size: 40px;
+  background: linear-gradient(135deg, var(--primary-main), var(--accent-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--space-sm);
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.search-section {
+  margin-bottom: var(--space-xxl);
+}
+
+.filters {
+  margin-top: var(--space-xl);
+  background: var(--surface-card);
+  padding: var(--space-lg);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: var(--space-md);
+}
+
+.filter-header svg {
+  color: var(--primary-main);
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.filter-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.filter-button:hover {
+  opacity: 0.8;
+}
+
+.results-section {
+  animation: slideUp 0.6s ease-out;
+}
+
+.results-header {
+  margin-bottom: var(--space-xl);
+}
+
+.results-header h2 {
+  font-size: 24px;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.influencer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-xl);
+  margin-bottom: var(--space-xxl);
+}
+
+.no-results {
+  text-align: center;
+  padding: var(--space-xxl);
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .all-influencers {
+    padding: var(--space-lg);
+  }
+
+  .all-influencers-header h1 {
+    font-size: 32px;
+  }
+
+  .influencer-grid {
+    grid-template-columns: 1fr;
+  }
+}

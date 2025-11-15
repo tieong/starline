@@ -1,73 +1,100 @@
-# React + TypeScript + Vite
+# Starline - Plateforme d'Intelligence d'Influenceurs
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Une application React moderne pour analyser et découvrir des influenceurs avec scoring IA, graphe de relations interactif et timeline d'actualités.
 
-Currently, two official plugins are available:
+## ✨ Fonctionnalités
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🔍 **Recherche intelligente** : Trouvez des influenceurs par nom ou niche
+- 📊 **InfluScoring** : Système de notation complet avec métriques de fiabilité
+- 🎨 **Design Soft Pastel** : Interface rassurante avec neumorphisme léger
+- 🕸️ **Graphe Interactif** : Visualisez les relations entre influenceurs, agences et marques
+- 📰 **Timeline d'Actualités** : Suivez les derniers événements et partenariats
+- 🎁 **Catalogue Produits** : Découvrez les collaborations et codes promo
+- ⚡ **Animations Fluides** : Micro-interactions avec Framer Motion
+- 📱 **Responsive** : Design adapté à tous les écrans
 
-## React Compiler
+## 🚀 Démarrage Rapide
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Installation
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Développement
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+Ouvrez [http://localhost:5173](http://localhost:5173) dans votre navigateur.
+
+### Build Production
+
+```bash
+npm run build
+```
+
+### Preview Production
+
+```bash
+npm run preview
+```
+
+## 🎨 Charte Graphique
+
+L'application utilise une palette **Soft Pastel Science** :
+
+- **Primary** : Violet doux (#A57AE9)
+- **Background** : Lavande clair (#F4F0FF)
+- **Accent** : Orange, Bleu, Teal, Jaune
+- **Style** : Neumorphisme léger, bordures arrondies, ombres douces
+
+## 📦 Technologies
+
+- **React 18** avec TypeScript
+- **Vite** pour le build ultra-rapide
+- **Framer Motion** pour les animations
+- **D3.js** pour le graphe interactif
+- **React Router** pour la navigation
+- **Lucide React** pour les icônes
+
+## 🗂️ Structure du Projet
+
+```
+src/
+├── components/        # Composants réutilisables
+│   ├── SearchBar.tsx
+│   ├── Tag.tsx
+│   ├── InfluencerCard.tsx
+│   └── ScoreGauge.tsx
+├── pages/            # Pages de l'application
+│   ├── Home.tsx
+│   ├── InfluencerDetail.tsx
+│   └── NetworkGraph.tsx
+├── data/             # Données mock
+│   └── mockData.ts
+├── types.ts          # Définitions TypeScript
+├── App.tsx           # Composant principal
+├── main.tsx          # Point d'entrée
+└── index.css         # Styles globaux
+```
+
+## 🎯 Pages
+
+1. **Accueil** (`/`) : Recherche et grille d'influenceurs
+2. **Profil Influenceur** (`/influencer/:id`) : Détails complets avec scoring, produits et news
+3. **Graphe de Relations** (`/graph/:id?`) : Carte interactive des connexions
+
+## 🔮 Prochaines Évolutions
+
+- Intégration API backend réelle
+- Système de recherche avancée avec filtres
+- Comparaison de plusieurs influenceurs
+- Export de rapports PDF
+- Notifications temps réel
+- Mode sombre
+
+## 📄 Licence
+
+Ce projet est sous licence MIT.

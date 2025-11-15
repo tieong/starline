@@ -1,68 +1,82 @@
-export interface TimelineMilestone {
-  id: string;
-  date: string;
-  type: 'video' | 'tweet' | 'instagram' | 'tiktok' | 'collaboration' | 'achievement';
-  title: string;
-  description: string;
-  platform: string;
-  views?: number;
-  likes?: number;
-  url?: string;
-}
-
 export interface Influencer {
   id: string;
   name: string;
-  platform: string;
-  followerCount: number;
-  verified: boolean;
-  trustScore: number; // 0-100
-  avatarUrl: string;
+  handle: string;
+  avatar: string;
+  followers: number;
+  engagementRate: number;
+  niche: string[];
   bio: string;
-  timeline?: TimelineMilestone[];
-  trendingScore?: number; // How many times this influencer has been searched
+  agency?: string;
+  influscoring: InfluScoring;
+  stats: Stats;
+  socialLinks: SocialLinks;
 }
 
-export interface InfluencerConnection {
+export interface InfluScoring {
+  overall: number;
+  reliability: number;
+  controversies: number;
+  authenticity: number;
+  reputation: number;
+  professionalism: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface Stats {
+  avgViews: number;
+  avgLikes: number;
+  postingFrequency: string;
+  topCountries: string[];
+  audienceAge: { range: string; percentage: number }[];
+  audienceGender: { male: number; female: number; other: number };
+}
+
+export interface SocialLinks {
+  youtube?: string;
+  instagram?: string;
+  tiktok?: string;
+  twitter?: string;
+  twitch?: string;
+}
+
+export interface Product {
   id: string;
   name: string;
-  relationship: string; // e.g., "collaborator", "mentor", "friend"
-  trustScore: number;
+  brand: string;
+  category: string;
+  image: string;
+  price?: number;
+  promoCode?: string;
+  influencerId: string;
+  launchDate: string;
+  status: 'active' | 'ended';
 }
 
-export interface Review {
+export interface NewsItem {
   id: string;
-  userId: string;
-  userName: string;
-  rating: number; // 1-5
-  comment: string;
-  productName?: string;
+  influencerId: string;
+  title: string;
+  type: 'news' | 'drama' | 'partnership' | 'milestone';
   date: string;
-  verified: boolean;
+  description: string;
+  severity?: 'low' | 'medium' | 'high';
+  source?: string;
 }
 
-export interface TrustMetrics {
-  overallScore: number;
-  authenticity: number;
-  productQuality: number;
-  transparency: number;
-  engagement: number;
+export interface Relationship {
+  source: string;
+  target: string;
+  type: 'agency' | 'collaboration' | 'friendship' | 'brand';
+  strength: number;
+  label?: string;
 }
 
 export interface GraphNode {
   id: string;
   name: string;
-  val: number; // size of node
-  color: string;
-}
-
-export interface GraphLink {
-  source: string;
-  target: string;
-  value: number; // strength of connection
-}
-
-export interface NetworkGraphData {
-  nodes: GraphNode[];
-  links: GraphLink[];
+  type: 'influencer' | 'agency' | 'brand' | 'event';
+  avatar?: string;
+  score?: number;
+  size: number;
 }

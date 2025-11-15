@@ -1,478 +1,323 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { apiClient, type InfluencerDetail as InfluencerDetailType } from '../services/api';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  Users,
+  TrendingUp,
+  Shield,
+  Package,
+  Newspaper,
+  Network,
+  ExternalLink
+} from 'lucide-react';
+import { influencers, products, newsItems } from '../data/mockData';
+import { Tag } from '../components/Tag';
+import { ScoreGauge } from '../components/ScoreGauge';
+import './InfluencerDetail.css';
 
-export default function InfluencerDetail() {
+export const InfluencerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [influencer, setInfluencer] = useState<InfluencerDetailType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const graphRef = useRef<any>();
 
-  // Fetch influencer data
-  useEffect(() => {
-    const fetchInfluencer = async () => {
-      if (!id) return;
+  const influencer = influencers.find(inf => inf.id === id);
+  const influencerProducts = products.filter(p => p.influencerId === id);
+  const influencerNews = newsItems.filter(n => n.influencerId === id);
 
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiClient.getInfluencer(id);
-
-        // Add defensive checks and default values
-        const normalizedData = {
-          ...data,
-          platforms: data.platforms || [],
-          timeline: data.timeline || [],
-          products: data.products || [],
-          connections: data.connections || [],
-          bio: data.bio || 'No bio available',
-          avatar_url: data.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
-        };
-
-        console.log('Fetched influencer data:', normalizedData);
-        setInfluencer(normalizedData);
-      } catch (err: any) {
-        console.error('Failed to fetch influencer:', err);
-
-        // If influencer not found, try to analyze it
-        if (err.message === 'Influencer not found') {
-          try {
-            setError('Influencer not in database. Analyzing now...');
-            console.log(`Influencer "${id}" not found, triggering analysis...`);
-
-            // Use the ID as the name for analysis
-            const analysisResult = await apiClient.analyzeInfluencer(id);
-
-            // Check if analysis completed or is in progress
-            if ('status' in analysisResult && analysisResult.status === 'analyzing') {
-              setError('Analysis in progress... This takes 20-30 seconds. Please refresh in a moment.');
-            } else {
-              // Analysis completed successfully, fetch the data again
-              const freshData = await apiClient.getInfluencer(id);
-
-              const normalizedFreshData = {
-                ...freshData,
-                platforms: freshData.platforms || [],
-                timeline: freshData.timeline || [],
-                products: freshData.products || [],
-                connections: freshData.connections || [],
-                bio: freshData.bio || 'No bio available',
-                avatar_url: freshData.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=',
-              };
-
-              setInfluencer(normalizedFreshData);
-              setError(null);
-            }
-          } catch (analysisErr: any) {
-            console.error('Analysis failed:', analysisErr);
-            setError(`Could not analyze "${id}". ${analysisErr.message}`);
-          }
-        } else {
-          setError(err.message || 'Failed to load influencer');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInfluencer();
-  }, [id]);
-
-  // Build network graph data from connections (memoized to prevent re-renders)
-  // MUST be before any conditional returns to follow Rules of Hooks
-  const networkData = useMemo(() => {
-    if (!influencer?.connections || influencer.connections.length === 0) {
-      return null;
-    }
-
-    return {
-      nodes: [
-        { id: influencer.id, name: influencer.name, val: 30, color: '#3b82f6' },
-        ...influencer.connections.map((conn, idx) => ({
-          id: `conn-${idx}`,
-          name: conn.name,
-          val: 10 + (conn.strength || 1),
-          color: conn.type === 'collaboration' ? '#10b981' : '#8b5cf6',
-        })),
-      ],
-      links: influencer.connections.map((conn, idx) => ({
-        source: influencer.id,
-        target: `conn-${idx}`,
-        value: conn.strength || 1,
-      })),
-    };
-  }, [influencer?.connections, influencer?.id, influencer?.name]);
-
-  const handleNodeClick = useCallback((node: any) => {
-    setSelectedNode(node.id);
-  }, []);
-
-  const getLinkColor = useCallback(() => '#cbd5e1', []);
-
-  if (loading) {
+  if (!influencer) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading influencer data...</p>
-        </div>
+      <div className="not-found">
+        <h2>Influenceur non trouvé</h2>
+        <button onClick={() => navigate('/')}>Retour à l'accueil</button>
       </div>
     );
   }
 
-  if (error || !influencer) {
-    const isAnalyzing = error?.includes('Analyzing') || error?.includes('Analysis in progress');
-
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <div className="text-center max-w-2xl mx-auto px-4">
-          {isAnalyzing ? (
-            <div className="bg-white rounded-2xl shadow-xl p-12 border-2 border-blue-100">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
-              <h2 className="text-3xl font-bold text-blue-900 mb-4">
-                Analyzing Influencer...
-              </h2>
-              <p className="text-gray-700 text-lg mb-4">{error}</p>
-              <div className="bg-blue-50 rounded-lg p-6 mb-6">
-                <p className="text-blue-800 font-semibold mb-2">What we're discovering:</p>
-                <ul className="text-sm text-blue-700 text-left space-y-2">
-                  <li>✓ Social media platforms & follower counts</li>
-                  <li>✓ Products and sponsorships</li>
-                  <li>✓ Success timeline & breakthrough moments</li>
-                  <li>✓ Network connections & collaborations</li>
-                </ul>
-              </div>
-              <p className="text-gray-600 text-sm">
-                This typically takes 20-30 seconds. You can refresh this page or search again shortly.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-xl p-12">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">{error || 'Influencer not found'}</h2>
-              <p className="text-gray-600 mb-6">
-                We couldn't find or analyze this influencer. Please try a different name or check the spelling.
-              </p>
-              <button
-                onClick={() => navigate('/')}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all"
-              >
-                Back to Home
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const getTrustScoreColor = (score: number) => {
-    if (score >= 85) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return `${(num / 1000000).toFixed(1)}M`;
-    }
-    if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K`;
-    }
+  const formatFollowers = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
     return num.toString();
   };
 
+  const getNewsIcon = (type: string) => {
+    switch (type) {
+      case 'drama':
+        return '⚠️';
+      case 'partnership':
+        return '🤝';
+      case 'milestone':
+        return '🎉';
+      default:
+        return '📰';
+    }
+  };
+
+  const getSeverityColor = (severity?: string) => {
+    switch (severity) {
+      case 'high':
+        return 'red';
+      case 'medium':
+        return 'yellow';
+      case 'low':
+        return 'blue';
+      default:
+        return 'default';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Search
-          </button>
-        </div>
-      </div>
+    <div className="influencer-detail">
+      <motion.button
+        className="back-button"
+        onClick={() => navigate('/')}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        whileHover={{ x: -5 }}
+      >
+        <ArrowLeft size={20} />
+        <span>Retour</span>
+      </motion.button>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Influencer Header */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <div className="flex items-start gap-6">
-            <img
-              src={influencer.avatar_url || 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M='}
-              alt={influencer.name}
-              className="w-32 h-32 rounded-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = 'https://media.istockphoto.com/id/2171382633/vector/user-profile-icon-anonymous-person-symbol-blank-avatar-graphic-vector-illustration.jpg?s=170667a&w=0&k=20&c=C0GFBgcEAPMXFFQBSK-rS2Omt9sUGImXfJE_8JOWC0M=';
-              }}
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{influencer.name}</h1>
-                {influencer.verified && (
-                  <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </div>
-              <p className="text-gray-600 mb-2">
-                {influencer.platforms.map(p => p.platform).join(', ') || 'Unknown'}
-              </p>
-              <p className="text-gray-700 mb-4">{influencer.bio}</p>
-              <div className="flex gap-8">
+      {/* Hero Section */}
+      <motion.section
+        className="hero-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="hero-content">
+          <img src={influencer.avatar} alt={influencer.name} className="hero-avatar" />
+          <div className="hero-info">
+            <h1 className="hero-name">{influencer.name}</h1>
+            <p className="hero-handle">{influencer.handle}</p>
+            <p className="hero-bio">{influencer.bio}</p>
+
+            <div className="hero-stats">
+              <div className="hero-stat">
+                <Users size={24} />
                 <div>
-                  <p className="text-sm text-gray-500">Total Followers</p>
-                  <p className="text-2xl font-bold">
-                    {(() => {
-                      const totalFollowers = influencer.platforms?.reduce((sum, p) => sum + (p.followers || 0), 0) || 0;
-                      if (totalFollowers >= 1000000) {
-                        return `${(totalFollowers / 1000000).toFixed(1)}M`;
-                      } else if (totalFollowers >= 1000) {
-                        return `${(totalFollowers / 1000).toFixed(0)}K`;
-                      }
-                      return totalFollowers.toString();
-                    })()}
-                  </p>
+                  <div className="hero-stat-value">{formatFollowers(influencer.followers)}</div>
+                  <div className="hero-stat-label">Abonnés</div>
                 </div>
+              </div>
+              <div className="hero-stat">
+                <TrendingUp size={24} />
                 <div>
-                  <p className="text-sm text-gray-500">Trust Score</p>
-                  <p className={`text-4xl font-bold ${getTrustScoreColor(influencer.trust_score || 0)}`}>
-                    {influencer.trust_score || 0}
-                  </p>
+                  <div className="hero-stat-value">{influencer.engagementRate}%</div>
+                  <div className="hero-stat-label">Engagement</div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Growth Chart */}
-        {influencer.timeline && influencer.timeline.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-bold mb-2 text-gray-800">Growth Timeline</h2>
-            <p className="text-gray-600 mb-6">Hover over points to see key milestones and events</p>
-
-            <ResponsiveContainer width="100%" height={400}>
-              <AreaChart
-                data={influencer.timeline.map((event, idx) => ({
-                  date: new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-                  views: event.views || 0,
-                  likes: event.likes || 0,
-                  title: event.title,
-                  description: event.description,
-                  platform: event.platform,
-                  type: event.type,
-                }))}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#6b7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#6b7280"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                    return value;
-                  }}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white border-2 border-blue-500 rounded-lg p-4 shadow-xl max-w-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-3 h-3 rounded-full ${
-                              data.type === 'video' ? 'bg-red-500' :
-                              data.type === 'collaboration' ? 'bg-green-500' :
-                              data.type === 'achievement' ? 'bg-yellow-500' :
-                              'bg-blue-500'
-                            }`} />
-                            <p className="font-bold text-gray-900">{data.title}</p>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{data.date}</p>
-                          <p className="text-sm text-gray-700 mb-3">{data.description}</p>
-                          <div className="flex gap-4 text-xs">
-                            {data.views > 0 && (
-                              <div className="flex items-center gap-1">
-                                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                </svg>
-                                <span className="font-semibold">{formatNumber(data.views)}</span>
-                              </div>
-                            )}
-                            {data.likes > 0 && (
-                              <div className="flex items-center gap-1">
-                                <svg className="w-4 h-4 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                </svg>
-                                <span className="font-semibold">{formatNumber(data.likes)}</span>
-                              </div>
-                            )}
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">
-                              {data.platform}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="views"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  fill="url(#colorViews)"
-                  dot={{ fill: '#3b82f6', r: 6, strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 8, strokeWidth: 3 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Network Graph */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">Network Connections</h2>
-            <p className="text-gray-600 mb-4">
-              Click on nodes to see connection details
-            </p>
-            {networkData && (
-              <div className="border rounded-lg overflow-hidden">
-                <ForceGraph2D
-                  ref={graphRef}
-                  graphData={networkData}
-                  nodeLabel="name"
-                  nodeColor="color"
-                  nodeRelSize={6}
-                  linkWidth={2}
-                  linkColor={getLinkColor}
-                  onNodeClick={handleNodeClick}
-                  width={500}
-                  height={400}
-                />
-              </div>
-            )}
-            {selectedNode && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="font-semibold">
-                  Selected: {networkData?.nodes.find(n => n.id === selectedNode)?.name}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Click on another node to view their connection
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Products */}
-          {influencer.products && influencer.products.length > 0 && (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold mb-6">Products & Sponsorships</h2>
-              <div className="space-y-4">
-                {influencer.products.map((product, idx) => (
-                  <div key={idx} className="border-b pb-4 last:border-b-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{product.name}</h3>
-                        <p className="text-sm text-gray-600 capitalize">{product.category}</p>
-                      </div>
-                      {product.quality_score && (
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">Quality Score</p>
-                          <p className={`text-2xl font-bold ${getTrustScoreColor(product.quality_score)}`}>
-                            {product.quality_score}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    {product.description && (
-                      <p className="text-sm text-gray-700">{product.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="hero-tags">
+              {influencer.niche.map((tag, index) => (
+                <Tag key={index} variant="blue" size="medium">
+                  {tag}
+                </Tag>
+              ))}
             </div>
-          )}
-        </div>
 
-        {/* Platforms Section */}
-        {influencer.platforms && influencer.platforms.length > 0 && (
-          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold mb-6">Platform Presence</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {influencer.platforms.map((platform, idx) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-lg capitalize">{platform.platform}</h3>
-                      <p className="text-sm text-gray-600">{platform.username}</p>
-                    </div>
-                    {platform.verified && (
-                      <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <div>
-                      <p className="text-xs text-gray-500">Followers</p>
-                      <p className="text-xl font-bold">{formatNumber(platform.followers)}</p>
-                    </div>
-                    {platform.url && (
-                      <a
-                        href={platform.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 text-sm"
-                      >
-                        View Profile →
-                      </a>
-                    )}
-                  </div>
-                </div>
+            <div className="social-links">
+              {Object.entries(influencer.socialLinks).map(([platform, username]) => (
+                <a
+                  key={platform}
+                  href={`https://${platform}.com/${username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link"
+                >
+                  <span className="social-platform">{platform}</span>
+                  <ExternalLink size={14} />
+                </a>
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      </motion.section>
+
+      {/* InfluScoring Section */}
+      <motion.section
+        className="section scoring-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <div className="section-header">
+          <Shield className="section-icon" />
+          <h2>InfluScoring</h2>
+        </div>
+        <div className="scoring-content">
+          <div className="overall-score">
+            <div className="overall-score-circle">
+              <motion.svg viewBox="0 0 200 200" className="score-ring">
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill="none"
+                  stroke="var(--surface-card-soft)"
+                  strokeWidth="12"
+                />
+                <motion.circle
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill="none"
+                  stroke="var(--primary-main)"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 90}`}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 90 }}
+                  animate={{
+                    strokeDashoffset: 2 * Math.PI * 90 * (1 - influencer.influscoring.overall / 100)
+                  }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
+                  style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                />
+              </motion.svg>
+              <div className="score-number">{influencer.influscoring.overall}</div>
+            </div>
+            <div className="overall-score-label">Score Global</div>
+          </div>
+
+          <div className="score-details">
+            <ScoreGauge
+              label="✅ Fiabilité"
+              value={influencer.influscoring.reliability}
+            />
+            <ScoreGauge
+              label="⚠️ Controverses"
+              value={100 - influencer.influscoring.controversies}
+              color={
+                influencer.influscoring.controversies < 20
+                  ? 'var(--accent-teal)'
+                  : influencer.influscoring.controversies < 50
+                  ? 'var(--accent-yellow)'
+                  : 'var(--accent-red)'
+              }
+            />
+            <ScoreGauge
+              label="📊 Authenticité"
+              value={influencer.influscoring.authenticity}
+            />
+            <ScoreGauge
+              label="🔍 Réputation"
+              value={influencer.influscoring.reputation}
+            />
+            <ScoreGauge
+              label="💼 Professionnalisme"
+              value={influencer.influscoring.professionalism}
+            />
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Products Section */}
+      {influencerProducts.length > 0 && (
+        <motion.section
+          className="section products-section"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="section-header">
+            <Package className="section-icon" />
+            <h2>Produits & Collaborations</h2>
+          </div>
+          <div className="products-grid">
+            {influencerProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                className="product-card"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <img src={product.image} alt={product.name} className="product-image" />
+                <div className="product-info">
+                  <h3 className="product-name">{product.name}</h3>
+                  <p className="product-brand">{product.brand}</p>
+                  {product.price && (
+                    <p className="product-price">{product.price.toFixed(2)}€</p>
+                  )}
+                  {product.promoCode && (
+                    <Tag variant="orange" size="small">
+                      Code: {product.promoCode}
+                    </Tag>
+                  )}
+                  <Tag variant={product.status === 'active' ? 'teal' : 'default'} size="small">
+                    {product.status === 'active' ? 'Actif' : 'Terminé'}
+                  </Tag>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {/* News Timeline */}
+      {influencerNews.length > 0 && (
+        <motion.section
+          className="section news-section"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div className="section-header">
+            <Newspaper className="section-icon" />
+            <h2>Actualités & Timeline</h2>
+          </div>
+          <div className="news-timeline">
+            {influencerNews.map((news, index) => (
+              <motion.div
+                key={news.id}
+                className="news-item"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="news-icon">{getNewsIcon(news.type)}</div>
+                <div className="news-content">
+                  <div className="news-header">
+                    <h3 className="news-title">{news.title}</h3>
+                    <div className="news-meta">
+                      <Tag variant={getSeverityColor(news.severity)} size="small">
+                        {news.type}
+                      </Tag>
+                      <span className="news-date">
+                        {new Date(news.date).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="news-description">{news.description}</p>
+                  {news.source && (
+                    <p className="news-source">Source: {news.source}</p>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {/* Relationship Graph Teaser */}
+      <motion.section
+        className="section graph-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
+        <div className="section-header">
+          <Network className="section-icon" />
+          <h2>Réseau & Relations</h2>
+        </div>
+        <div className="graph-teaser">
+          <p>Explorez le réseau de {influencer.name} et ses connexions avec d'autres influenceurs, agences et marques.</p>
+          <button className="cta-button" onClick={() => navigate(`/graph/${influencer.id}`)}>
+            Voir le graphe interactif
+          </button>
+        </div>
+      </motion.section>
     </div>
   );
-}
+};

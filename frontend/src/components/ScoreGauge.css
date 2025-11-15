@@ -1,0 +1,53 @@
+.score-gauge {
+  margin-bottom: var(--space-md);
+}
+
+.score-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.score-gauge-label {
+  font-size: 14px;
+  color: var(--text-normal);
+  font-weight: 500;
+}
+
+.score-gauge-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.score-gauge-bar {
+  height: 8px;
+  background: var(--surface-card-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+
+.score-gauge-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.score-gauge-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
