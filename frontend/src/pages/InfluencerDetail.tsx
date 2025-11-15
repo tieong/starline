@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { apiClient, type InfluencerDetail as InfluencerDetailType } from '../services/api';
 
 export default function InfluencerDetail() {
@@ -302,7 +302,7 @@ export default function InfluencerDetail() {
                     const dateB = new Date(b.date).getTime();
                     return dateA - dateB;
                   })
-                  .map((event, idx) => ({
+                  .map((event) => ({
                     date: new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
                     views: event.views || 0,
                     likes: event.likes || 0,
