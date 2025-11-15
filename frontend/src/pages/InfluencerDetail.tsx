@@ -618,6 +618,106 @@ export default function InfluencerDetail() {
                       <p className="text-sm text-gray-700 mb-3">{product.description}</p>
                     )}
 
+                    {/* OpenFoodFacts Nutritional Data */}
+                    {product.openfoodfacts_data && (
+                      <div className="mt-4 border-t pt-4 bg-white rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <span>🥗 Nutritional & Safety Information</span>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            OpenFoodFacts
+                          </span>
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {product.openfoodfacts_data.nutriscore_grade && (
+                            <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                              <p className="text-xs text-gray-600 mb-1">NutriScore</p>
+                              <p className={`text-3xl font-bold ${
+                                product.openfoodfacts_data.nutriscore_grade === 'a' ? 'text-green-600' :
+                                product.openfoodfacts_data.nutriscore_grade === 'b' ? 'text-lime-600' :
+                                product.openfoodfacts_data.nutriscore_grade === 'c' ? 'text-yellow-600' :
+                                product.openfoodfacts_data.nutriscore_grade === 'd' ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {product.openfoodfacts_data.nutriscore_grade.toUpperCase()}
+                              </p>
+                            </div>
+                          )}
+                          {product.openfoodfacts_data.nova_group && (
+                            <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                              <p className="text-xs text-gray-600 mb-1">NOVA Group</p>
+                              <p className="text-3xl font-bold text-blue-700">
+                                {product.openfoodfacts_data.nova_group}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {product.openfoodfacts_data.nova_group === 1 ? 'Unprocessed' :
+                                 product.openfoodfacts_data.nova_group === 2 ? 'Processed' :
+                                 product.openfoodfacts_data.nova_group === 3 ? 'Processed' :
+                                 'Ultra-processed'}
+                              </p>
+                            </div>
+                          )}
+                          {product.openfoodfacts_data.ecoscore_grade && (
+                            <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg border border-emerald-200">
+                              <p className="text-xs text-gray-600 mb-1">Eco-Score</p>
+                              <p className={`text-3xl font-bold ${
+                                product.openfoodfacts_data.ecoscore_grade === 'a' ? 'text-green-600' :
+                                product.openfoodfacts_data.ecoscore_grade === 'b' ? 'text-lime-600' :
+                                product.openfoodfacts_data.ecoscore_grade === 'c' ? 'text-yellow-600' :
+                                product.openfoodfacts_data.ecoscore_grade === 'd' ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {product.openfoodfacts_data.ecoscore_grade.toUpperCase()}
+                              </p>
+                            </div>
+                          )}
+                          {product.openfoodfacts_data.safety_score !== undefined && (
+                            <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                              <p className="text-xs text-gray-600 mb-1">Safety Score</p>
+                              <p className={`text-3xl font-bold ${getTrustScoreColor(product.openfoodfacts_data.safety_score)}`}>
+                                {product.openfoodfacts_data.safety_score}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Ingredients */}
+                        {product.openfoodfacts_data.ingredients_text && (
+                          <div className="mt-4">
+                            <p className="text-xs font-semibold text-gray-700 mb-1">Ingredients:</p>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                              {product.openfoodfacts_data.ingredients_text}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Allergens */}
+                        {product.openfoodfacts_data.allergens && product.openfoodfacts_data.allergens.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-xs font-semibold text-red-700 mb-2">⚠️ Allergens:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {product.openfoodfacts_data.allergens.map((allergen: string, i: number) => (
+                                <span key={i} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full border border-red-200">
+                                  {allergen}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Warning for hazardous ingredients (cosmetics) */}
+                        {product.openfoodfacts_data.hazardous_ingredients && product.openfoodfacts_data.hazardous_ingredients.length > 0 && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs font-semibold text-red-800 mb-2">⚠️ Hazardous Ingredients:</p>
+                            <ul className="text-sm text-red-700 space-y-1">
+                              {product.openfoodfacts_data.hazardous_ingredients.map((ingredient: string, i: number) => (
+                                <li key={i}>• {ingredient}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* User Reviews from Social Media */}
                     {product.reviews && product.reviews.length > 0 && (
                       <div className="mt-4 border-t pt-4">
