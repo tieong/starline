@@ -535,7 +535,7 @@ Return ONLY valid JSON:
     ]
 }}
 
-IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 5 reviews (most relevant/recent only)."""
+IMPORTANT: Only return REAL comments you can verify. Limit to MAXIMUM 2 reviews (most relevant/recent only)."""
 
         messages = [
             {"role": "system", "content": "You are an AI assistant that searches social media for product reviews. CRITICAL: Only return REAL, VERIFIABLE comments from actual users. DO NOT make up fake reviews. If you cannot find reviews, return an empty array. Always return valid JSON."},

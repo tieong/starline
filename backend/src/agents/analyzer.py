@@ -283,7 +283,10 @@ class InfluencerAnalyzer:
                 if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
                     sentiments = []
 
-                    for review_item in reviews_data.get("reviews", []):
+                    # Limit to 2 reviews to reduce token consumption
+                    reviews_list = reviews_data.get("reviews", [])[:2]
+
+                    for review_item in reviews_list:
                         try:
                             # Parse date if provided
                             if review_item.get("date"):
@@ -307,8 +310,8 @@ class InfluencerAnalyzer:
                         )
                         self.db.add(review)
 
-                    # Update review count
-                    product.review_count = len(reviews_data.get("reviews", []))
+                    # Update review count (limited to 2)
+                    product.review_count = len(reviews_list)
 
                     # Calculate sentiment score (-1 to 1)
                     if sentiments:
