@@ -98,12 +98,15 @@ class InfluencerAnalyzer:
 
         Args:
             influencer_name: Name of the influencer to analyze
-            analysis_level: "basic" (platforms, products only) or "full" (includes timeline, news, reviews, connections)
+            analysis_level:
+                - "platforms_only": ONLY platforms and profile picture (for top lists)
+                - "basic": Platforms, products (for individual profile view)
+                - "full": Everything (timeline, news, reviews, connections)
 
         Returns:
             Influencer profile data
 
-        Note: Network map (connections) are NOT fetched in basic mode. Use fetch_connections() endpoint.
+        Note: For top influencer lists, use "platforms_only" to minimize token usage.
         """
         logger.info(f"🔍 Starting {analysis_level} analysis for: {influencer_name}")
 
@@ -154,7 +157,12 @@ class InfluencerAnalyzer:
 
         try:
             # Run all analysis tasks in parallel
-            logger.info(f"📱 Step 1/6: Discovering social media platforms for {influencer_name}...")
+            if analysis_level == "platforms_only":
+                logger.info(f"📱 Step 1/2: Discovering social media platforms for {influencer_name}...")
+            elif analysis_level == "basic":
+                logger.info(f"📱 Step 1/4: Discovering social media platforms for {influencer_name}...")
+            else:
+                logger.info(f"📱 Step 1/6: Discovering social media platforms for {influencer_name}...")
             platforms_data = await self._run_in_thread(
                 self.ai_client.analyze_influencer_platforms,
                 influencer_name
@@ -213,18 +221,28 @@ class InfluencerAnalyzer:
                 if influencer.country:
                     logger.info(f"   🌍 Country detected: {influencer.country}")
 
-                # Fetch profile picture directly from platforms
-                logger.info(f"🖼️  Fetching profile picture...")
-                avatar_url = await self._fetch_profile_picture(influencer_name, platforms_data)
-                influencer.avatar_url = avatar_url
+                # Fetch profile picture only if not already stored
+                if not influencer.avatar_data:
+                    logger.info(f"🖼️  Fetching profile picture...")
+                    avatar_url = await self._fetch_profile_picture(influencer_name, platforms_data)
+                    influencer.avatar_url = avatar_url
 
-                # Download and store the actual image data
-                if avatar_url:
-                    logger.info(f"   📥 Downloading image from: {avatar_url}")
-                    await self._download_and_store_image(influencer, avatar_url)
+                    # Download and store the actual image data
+                    if avatar_url:
+                        logger.info(f"   📥 Downloading image from: {avatar_url}")
+                        await self._download_and_store_image(influencer, avatar_url)
+                else:
+                    logger.info(f"✓ Profile picture already exists, skipping download")
 
             # Run analyses based on level
-            if analysis_level == "full":
+            if analysis_level == "platforms_only":
+                # Platforms only: Skip ALL additional analyses (products, timeline, news, connections)
+                logger.info(f"✅ Step 2/2: Platforms-only analysis complete (skipping products, timeline, news, connections)")
+                products_data = None
+                connections_data = None
+                timeline_data = None
+                news_data = None
+            elif analysis_level == "full":
                 logger.info(f"🔄 Step 2/6: Running full parallel analyses (products, timeline, connections, news)...")
                 results = await asyncio.gather(
                     self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
@@ -234,9 +252,10 @@ class InfluencerAnalyzer:
                     return_exceptions=True
                 )
                 products_data, timeline_data, connections_data, news_data = results
+                logger.info(f"   ✓ Parallel analyses complete")
             else:
                 # Basic analysis: only products (skip timeline, news, and connections)
-                logger.info(f"🔄 Step 2/6: Running basic analysis (products only)...")
+                logger.info(f"🔄 Step 2/4: Running basic analysis (products only)...")
                 products_data = await self._run_in_thread(
                     self.ai_client.analyze_products,
                     influencer_name,
@@ -245,8 +264,7 @@ class InfluencerAnalyzer:
                 connections_data = None
                 timeline_data = None
                 news_data = None
-
-            logger.info(f"   ✓ Parallel analyses complete")
+                logger.info(f"   ✓ Parallel analyses complete")
 
             # Save all data
             if isinstance(products_data, dict):
@@ -273,14 +291,21 @@ class InfluencerAnalyzer:
                 await self._save_news(influencer, news_data)
                 logger.info(f"   ✓ Saved {len(news_data.get('news', []))} news articles")
 
-            # Calculate trust score (basic for now)
-            logger.info(f"🎯 Calculating trust score...")
-            influencer.trust_score = self._calculate_trust_score(platforms_data, products_data)
+            # Calculate trust score only when we have product data (not for platforms_only mode)
+            if analysis_level == "platforms_only":
+                # For platforms_only, set default trust score (will be calculated when viewing full profile)
+                influencer.trust_score = 0
+                logger.info(f"✅ Platforms-only analysis complete! Trust score will be calculated on profile view")
+            else:
+                # Calculate trust score for basic/full analysis
+                logger.info(f"🎯 Calculating trust score...")
+                influencer.trust_score = self._calculate_trust_score(platforms_data, products_data)
+                logger.info(f"✅ Analysis complete for {influencer_name}! Trust score: {influencer.trust_score}")
+
             influencer.is_analyzing = False
             influencer.analysis_complete = True
             self.db.commit()
 
-            logger.info(f"✅ Analysis complete for {influencer_name}! Trust score: {influencer.trust_score}")
             return self._build_response(influencer)
 
         except Exception as e:
@@ -484,30 +509,9 @@ class InfluencerAnalyzer:
                     self.db.add(connected_influencer)
                     self.db.flush()  # Get auto-generated ID
 
-                    # Fetch profile picture for the connected influencer
-                    try:
-                        logger.info(f"      Fetching profile picture for {entity_name}...")
-                        # Use image search to find their profile picture
-                        from src.services.image_search import image_search_service
-
-                        def search_for_connected():
-                            return image_search_service.search_profile_picture(
-                                entity_name,
-                                "",  # No platform info available
-                                ""   # No username available
-                            )
-
-                        avatar_url = await self._run_in_thread(search_for_connected)
-
-                        if avatar_url:
-                            connected_influencer.avatar_url = avatar_url
-                            logger.info(f"      Downloading image for {entity_name}...")
-                            await self._download_and_store_image(connected_influencer, avatar_url)
-                            logger.info(f"      ✓ Saved profile picture for {entity_name}")
-                        else:
-                            logger.info(f"      ⚠ Could not find profile picture for {entity_name}")
-                    except Exception as e:
-                        logger.warning(f"      ⚠ Failed to fetch profile picture for {entity_name}: {str(e)}")
+                    # Skip fetching profile pictures for connected influencers to avoid rate limiting
+                    # Their avatars will be fetched if/when user navigates to their profile
+                    logger.info(f"      ✓ Created stub record (avatar will be fetched on-demand)")
 
                 connection = Connection(
                     influencer_id=influencer.id,
@@ -719,6 +723,7 @@ class InfluencerAnalyzer:
             ],
             "products": [
                 {
+                    "id": p.id,
                     "name": p.name,
                     "category": p.category,
                     "quality_score": p.quality_score,
@@ -822,7 +827,7 @@ class InfluencerAnalyzer:
                     "likes": t.likes,
                     "url": t.url,
                 }
-                for t in sorted(influencer.timeline_events, key=lambda x: x.date or datetime.min, reverse=True)
+                for t in sorted(influencer.timeline, key=lambda x: x.date or datetime.min, reverse=True)
             ]
         }
 
@@ -1043,3 +1048,61 @@ class InfluencerAnalyzer:
                 "category": product.category,
                 "error": "Product not found in OpenFoodFacts database"
             }
+
+    async def fetch_news(self, influencer_id: int) -> Dict[str, Any]:
+        """
+        Fetch news and drama on-demand for an influencer.
+
+        Args:
+            influencer_id: ID of the influencer
+
+        Returns:
+            Dict with news articles
+        """
+        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        if not influencer:
+            raise ValueError(f"Influencer with ID {influencer_id} not found")
+
+        # Get platform data
+        platforms_data = {
+            "platforms": [
+                {
+                    "platform": p.platform_name,
+                    "username": p.username,
+                    "followers": p.follower_count,
+                    "url": p.url
+                }
+                for p in influencer.platforms
+            ]
+        }
+
+        # Fetch news from AI
+        logger.info(f"🔍 Fetching news and drama for: {influencer.name}")
+        news_data = await self._run_in_thread(
+            self.ai_client.analyze_news_drama,
+            influencer.name,
+            platforms_data
+        )
+
+        # Save news
+        if isinstance(news_data, dict):
+            await self._save_news(influencer, news_data)
+            logger.info(f"   ✓ Saved news articles")
+
+        return {
+            "influencer_id": influencer_id,
+            "news": [
+                {
+                    "id": n.id,
+                    "title": n.title,
+                    "description": n.description,
+                    "article_type": n.article_type,
+                    "date": n.date.isoformat() if n.date else None,
+                    "source": n.source,
+                    "url": n.url,
+                    "sentiment": n.sentiment,
+                    "severity": n.severity,
+                }
+                for n in sorted(influencer.news_articles, key=lambda x: x.date or datetime.min, reverse=True)
+            ]
+        }

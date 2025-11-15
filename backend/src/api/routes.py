@@ -1,9 +1,10 @@
 """API routes."""
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.agents.analyzer import InfluencerAnalyzer
@@ -12,26 +13,311 @@ from src.models.database import Influencer, NewsArticle, get_db
 router = APIRouter()
 
 
+# ============= Request Models =============
+
 class InfluencerSearchRequest(BaseModel):
     """Request model for influencer search."""
-    name: str
+    name: str = Field(..., description="Name of the influencer to analyze", example="MrBeast")
+
+
+# ============= Response Models =============
+
+class PlatformResponse(BaseModel):
+    """Social media platform information."""
+    platform: str = Field(..., description="Platform name", example="youtube")
+    username: str = Field(..., description="Username/handle", example="@MrBeast")
+    followers: int = Field(..., description="Follower count", example=250000000)
+    verified: bool = Field(..., description="Whether account is verified", example=True)
+    url: str = Field(..., description="Profile URL", example="https://youtube.com/@MrBeast")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "platform": "youtube",
+                "username": "@MrBeast",
+                "followers": 250000000,
+                "verified": True,
+                "url": "https://youtube.com/@MrBeast"
+            }
+        }
+
+
+class ProductReviewResponse(BaseModel):
+    """User review of a product."""
+    author: str = Field(..., description="Review author username")
+    comment: str = Field(..., description="Review text")
+    platform: str = Field(..., description="Platform where review was posted")
+    sentiment: str = Field(..., description="Sentiment: positive, negative, or neutral")
+    url: Optional[str] = Field(None, description="URL to original review")
+    date: Optional[str] = Field(None, description="Review date")
+
+
+class ProductResponse(BaseModel):
+    """Product sold/promoted by influencer."""
+    id: int = Field(..., description="Product ID")
+    name: str = Field(..., description="Product name", example="Feastables Chocolate Bar")
+    category: str = Field(..., description="Product category", example="food")
+    quality_score: Optional[int] = Field(None, description="Quality score 0-100", example=85)
+    description: str = Field(..., description="Product description")
+    review_count: int = Field(0, description="Number of reviews")
+    sentiment_score: Optional[float] = Field(None, description="Average sentiment -1 to 1")
+    openfoodfacts_data: Optional[dict] = Field(None, description="OpenFoodFacts nutritional data (if available)")
+    reviews: List[ProductReviewResponse] = Field(default_factory=list, description="User reviews")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Feastables Chocolate Bar",
+                "category": "food",
+                "quality_score": 85,
+                "description": "Premium chocolate bar brand created by MrBeast",
+                "review_count": 0,
+                "sentiment_score": None,
+                "openfoodfacts_data": None,
+                "reviews": []
+            }
+        }
+
+
+class TimelineEventResponse(BaseModel):
+    """Timeline/milestone event."""
+    id: int
+    date: str = Field(..., description="Event date (ISO format)")
+    type: str = Field(..., description="Event type", example="video")
+    title: str = Field(..., description="Event title")
+    description: str = Field(..., description="Event description")
+    platform: str = Field(..., description="Platform where event occurred")
+    views: Optional[int] = Field(None, description="View count if applicable")
+    likes: Optional[int] = Field(None, description="Like count if applicable")
+    url: Optional[str] = Field(None, description="URL to event/content")
+
+
+class ConnectionResponse(BaseModel):
+    """Network connection (collaborator, agency, brand, etc)."""
+    name: str = Field(..., description="Entity name", example="Night Media")
+    entity_type: str = Field(..., description="Entity type", example="management")
+    type: str = Field(..., description="Connection type", example="managed_by")
+    strength: int = Field(..., description="Connection strength 1-10", example=10)
+    description: str = Field(..., description="Connection description")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Night Media",
+                "entity_type": "management",
+                "type": "managed_by",
+                "strength": 10,
+                "description": "Talent management company"
+            }
+        }
+
+
+class NewsArticleResponse(BaseModel):
+    """News article or drama."""
+    id: int
+    title: str = Field(..., description="Article title")
+    description: str = Field(..., description="Article description")
+    article_type: str = Field(..., description="Article type", example="news")
+    date: Optional[str] = Field(None, description="Article date")
+    source: str = Field(..., description="News source")
+    url: Optional[str] = Field(None, description="Article URL")
+    sentiment: str = Field(..., description="Sentiment: positive, negative, or neutral")
+    severity: int = Field(..., description="Severity 1-10", example=5)
 
 
 class InfluencerResponse(BaseModel):
-    """Response model for influencer data."""
-    id: int
-    name: str
-    bio: str | None = None
-    country: str | None = None
-    verified: bool
-    trust_score: int
-    avatar_url: str | None = None
-    platforms: List[dict]
-    timeline: List[dict]
-    products: List[dict]
-    connections: List[dict]
-    last_analyzed: str | None
-    analysis_complete: bool
+    """Complete influencer profile."""
+    id: int = Field(..., description="Influencer ID")
+    name: str = Field(..., description="Influencer name", example="MrBeast")
+    bio: Optional[str] = Field(None, description="Biography")
+    country: Optional[str] = Field(None, description="Country", example="USA")
+    verified: bool = Field(False, description="Whether influencer is verified")
+    trust_score: int = Field(0, description="Trust score 0-100 (0 means not calculated yet)")
+    avatar_url: Optional[str] = Field(None, description="Avatar image URL")
+    platforms: List[PlatformResponse] = Field(default_factory=list, description="Social media platforms")
+    timeline: List[TimelineEventResponse] = Field(default_factory=list, description="Timeline events")
+    products: List[ProductResponse] = Field(default_factory=list, description="Products sold/promoted")
+    connections: List[ConnectionResponse] = Field(default_factory=list, description="Network connections")
+    news: List[NewsArticleResponse] = Field(default_factory=list, description="News articles")
+    last_analyzed: Optional[str] = Field(None, description="Last analysis timestamp")
+    analysis_complete: bool = Field(False, description="Whether analysis is complete")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "MrBeast",
+                "bio": "American YouTuber known for expensive stunts and philanthropy",
+                "country": "USA",
+                "verified": True,
+                "trust_score": 95,
+                "avatar_url": "https://example.com/avatar.jpg",
+                "platforms": [
+                    {
+                        "platform": "youtube",
+                        "username": "@MrBeast",
+                        "followers": 250000000,
+                        "verified": True,
+                        "url": "https://youtube.com/@MrBeast"
+                    }
+                ],
+                "timeline": [],
+                "products": [
+                    {
+                        "id": 1,
+                        "name": "Feastables",
+                        "category": "food",
+                        "quality_score": 85,
+                        "description": "Premium chocolate brand",
+                        "review_count": 0,
+                        "sentiment_score": None,
+                        "openfoodfacts_data": None,
+                        "reviews": []
+                    }
+                ],
+                "connections": [],
+                "news": [],
+                "last_analyzed": "2025-11-15T12:00:00",
+                "analysis_complete": True
+            }
+        }
+
+
+class TopInfluencersResponse(BaseModel):
+    """Response for top influencers endpoint."""
+    country: str = Field(..., description="Country filter used", example="FR")
+    limit: int = Field(..., description="Limit requested", example=5)
+    count: int = Field(..., description="Number of influencers returned", example=5)
+    auto_discovered: bool = Field(..., description="Whether auto-discovery was triggered")
+    newly_analyzed_count: Optional[int] = Field(None, description="Number of newly analyzed influencers")
+    requested: int = Field(..., description="Number of influencers requested")
+    influencers: List[InfluencerResponse] = Field(..., description="List of influencers")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "country": "FR",
+                "limit": 5,
+                "count": 5,
+                "auto_discovered": False,
+                "newly_analyzed_count": 0,
+                "requested": 5,
+                "influencers": [
+                    {
+                        "id": 1,
+                        "name": "Tibo InShape",
+                        "bio": "French fitness YouTuber",
+                        "country": "France",
+                        "verified": False,
+                        "trust_score": 0,
+                        "avatar_url": None,
+                        "platforms": [
+                            {
+                                "platform": "youtube",
+                                "username": "@TiboInShape",
+                                "followers": 26800000,
+                                "verified": True,
+                                "url": "https://youtube.com/@TiboInShape"
+                            }
+                        ],
+                        "timeline": [],
+                        "products": [],
+                        "connections": [],
+                        "news": [],
+                        "last_analyzed": "2025-11-15T12:00:00",
+                        "analysis_complete": True
+                    }
+                ]
+            }
+        }
+
+
+class SearchResultInfluencer(BaseModel):
+    """Influencer search result (simplified profile)."""
+    id: int = Field(..., description="Influencer ID")
+    name: str = Field(..., description="Influencer name", example="MrBeast")
+    bio: Optional[str] = Field(None, description="Biography")
+    country: Optional[str] = Field(None, description="Country", example="USA")
+    trust_score: int = Field(0, description="Trust score 0-100")
+    avatar_url: Optional[str] = Field(None, description="Avatar image URL")
+    platforms: List[dict] = Field(default_factory=list, description="Simplified platform list")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "MrBeast",
+                "bio": "American YouTuber known for expensive stunts",
+                "country": "USA",
+                "trust_score": 95,
+                "avatar_url": "https://example.com/avatar.jpg",
+                "platforms": [
+                    {"platform": "youtube", "followers": 250000000}
+                ]
+            }
+        }
+
+
+class SearchInfluencersResponse(BaseModel):
+    """Response for search endpoint."""
+    results: List[SearchResultInfluencer] = Field(..., description="Search results")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "results": [
+                    {
+                        "id": 1,
+                        "name": "MrBeast",
+                        "bio": "American YouTuber",
+                        "country": "USA",
+                        "trust_score": 95,
+                        "avatar_url": "https://example.com/avatar.jpg",
+                        "platforms": [
+                            {"platform": "youtube", "followers": 250000000}
+                        ]
+                    }
+                ]
+            }
+        }
+
+
+class TrendingInfluencer(BaseModel):
+    """Trending influencer (includes trending_score)."""
+    id: int = Field(..., description="Influencer ID")
+    name: str = Field(..., description="Influencer name", example="MrBeast")
+    bio: Optional[str] = Field(None, description="Biography")
+    country: Optional[str] = Field(None, description="Country", example="USA")
+    trust_score: int = Field(0, description="Trust score 0-100")
+    trending_score: int = Field(0, description="Trending score (higher = more trending)")
+    avatar_url: Optional[str] = Field(None, description="Avatar image URL")
+    platforms: List[dict] = Field(default_factory=list, description="Simplified platform list")
+
+
+class TrendingInfluencersResponse(BaseModel):
+    """Response for trending endpoint."""
+    trending: List[TrendingInfluencer] = Field(..., description="Trending influencers")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "trending": [
+                    {
+                        "id": 1,
+                        "name": "MrBeast",
+                        "bio": "American YouTuber",
+                        "country": "USA",
+                        "trust_score": 95,
+                        "trending_score": 100,
+                        "avatar_url": "https://example.com/avatar.jpg",
+                        "platforms": [
+                            {"platform": "youtube", "followers": 250000000}
+                        ]
+                    }
+                ]
+            }
+        }
 
 
 @router.get("/")
@@ -50,25 +336,37 @@ async def health_check():
     return {"status": "healthy"}
 
 
-@router.post("/api/influencers/analyze")
+@router.post(
+    "/api/influencers/analyze",
+    response_model=None,  # Dynamic response based on analysis_level
+    summary="Analyze an influencer",
+    description="""
+Analyze an influencer in real-time using AI-powered web search.
+
+**Analysis Levels:**
+- `platforms_only`: Only platforms and profile picture (for top lists) - ~1,200 tokens
+- `basic`: Platforms + products + trust score (for profile view) - ~2,100 tokens
+- `full`: Everything (timeline, news, connections) - ~4,000+ tokens
+
+**Workflow:**
+1. Checks if influencer is cached and analysis is complete
+2. If not cached, triggers real-time AI analysis via Perplexity
+3. Returns complete profile data based on analysis_level
+
+**Note:** For top influencer lists, use `platforms_only` to minimize token usage.
+Products, timeline, and other data can be fetched on-demand when viewing the profile.
+""",
+    tags=["Influencers"],
+)
 async def analyze_influencer(
     request: InfluencerSearchRequest,
-    analysis_level: str = "basic",
+    analysis_level: str = Query(
+        "basic",
+        description="Analysis depth: 'platforms_only', 'basic', or 'full'",
+        enum=["platforms_only", "basic", "full"]
+    ),
     db: Session = Depends(get_db)
 ):
-    """
-    Analyze an influencer in real-time.
-
-    Query parameters:
-    - analysis_level: "basic" (platforms, products, connections) or "full" (adds timeline, news, reviews)
-
-    This endpoint will:
-    1. Check if the influencer is cached
-    2. If not, trigger real-time AI analysis
-    3. Return profile data based on analysis_level
-
-    Note: Use "basic" for initial discovery (saves ~60% tokens), then fetch timeline/reviews on-demand.
-    """
     try:
         analyzer = InfluencerAnalyzer(db)
         result = await analyzer.analyze_influencer(request.name, analysis_level=analysis_level)
@@ -92,17 +390,24 @@ async def analyze_influencer(
             raise HTTPException(status_code=500, detail=error_msg)
 
 
-@router.get("/api/influencers/search")
+@router.get(
+    "/api/influencers/search",
+    response_model=None,
+    summary="Search influencers",
+    description="""
+Search for influencers in the database by name.
+
+**Note:** Only returns influencers with completed analyses (cached data).
+For new influencer analysis, use the `/api/influencers/analyze` endpoint.
+
+**Returns:** List of matching influencers with basic information (platforms, trust score, etc.)
+""",
+    tags=["Influencers"],
+)
 async def search_influencers(
-    q: str,
+    q: str = Query(..., description="Search query (influencer name)", example="MrBeast"),
     db: Session = Depends(get_db)
 ):
-    """
-    Search for influencers in the database.
-
-    Returns cached influencers matching the query.
-    Only returns completed analyses.
-    """
     # Only return influencers with completed analysis
     # Avoid partial matches for very short queries
     influencers = db.query(Influencer).filter(
@@ -132,12 +437,23 @@ async def search_influencers(
     }
 
 
-@router.get("/api/influencers/trending")
+@router.get(
+    "/api/influencers/trending",
+    response_model=None,
+    summary="Get trending influencers",
+    description="""
+Get trending influencers sorted by trending score.
+
+**Returns:** List of influencers with trending scores, ordered by trending_score (highest first).
+
+**Note:** Only returns influencers with trending_score > 0.
+""",
+    tags=["Influencers"],
+)
 async def get_trending(
-    limit: int = 10,
+    limit: int = Query(10, description="Maximum number of trending influencers to return", ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """Get trending influencers."""
     influencers = db.query(Influencer).filter(
         Influencer.trending_score > 0
     ).order_by(
@@ -167,27 +483,44 @@ async def get_trending(
     }
 
 
-@router.get("/api/influencers/top")
+@router.get(
+    "/api/influencers/top",
+    response_model=None,
+    summary="Get top influencers",
+    description="""
+Get top N influencers globally or by country (default: 5).
+
+**Analysis Level:** Uses `platforms_only` mode for auto-discovered influencers to minimize token usage (~1,200 tokens per influencer).
+When viewing individual profiles, the frontend automatically fetches products and calculates trust score.
+
+**Query Parameters:**
+- `country`: ISO country code (FR, US, UK) or full name (France, United States) - optional
+- `limit`: Number of influencers to return (default: 5, max: 50)
+- `auto_discover`: Auto-discover new influencers if database is insufficient (default: true)
+
+**Workflow:**
+1. Query database for cached influencers matching filters
+2. If insufficient results and auto_discover=true:
+   - Discover top influencers via AI
+   - Analyze them with platforms_only mode
+   - Return combined results
+
+**Returns:** Influencers sorted by total followers (descending).
+
+**Response Fields:**
+- `auto_discovered`: Whether new influencers were discovered during this request
+- `newly_analyzed_count`: Number of newly analyzed influencers
+- `count`: Actual number of influencers returned
+- `requested`: Number requested (may differ from count if some analyses failed)
+""",
+    tags=["Influencers"],
+)
 async def get_top_influencers(
-    country: str = None,
-    limit: int = 5,
-    auto_discover: bool = True,
+    country: str = Query(None, description="Country filter (ISO code or full name)", example="FR"),
+    limit: int = Query(5, description="Number of influencers to return", ge=1, le=50),
+    auto_discover: bool = Query(True, description="Auto-discover new influencers if database is insufficient"),
     db: Session = Depends(get_db)
 ):
-    """
-    Get top N influencers globally or by country (default: 5).
-
-    Query parameters:
-    - country: ISO country code or country name (optional, returns global if not provided)
-    - limit: Number of influencers to return (default: 5, max: 50)
-    - auto_discover: If true, automatically discover and analyze new influencers if database has insufficient results (default: true)
-
-    Returns influencers sorted by trending_score (descending).
-    If auto_discover is enabled and database is empty/insufficient, this endpoint will:
-    1. Use AI to discover top trending influencers
-    2. Analyze them in real-time
-    3. Return the results
-    """
     # Enforce max limit of 50
     if limit > 50:
         limit = 50
@@ -314,8 +647,9 @@ async def get_top_influencers(
                 continue
 
             # Analyze the influencer (single attempt, fail fast)
+            # Use "platforms_only" for top lists - only get platforms and photos, no products
             logger.info(f"Analyzing {inf_data['name']} ({len(newly_analyzed) + 1}/{needed})...")
-            result = await analyzer.analyze_influencer(inf_data["name"])
+            result = await analyzer.analyze_influencer(inf_data["name"], analysis_level="platforms_only")
 
             # Fetch the analyzed influencer from database
             inf = db.query(Influencer).filter(
@@ -388,12 +722,73 @@ async def get_top_influencers(
     }
 
 
-@router.get("/api/influencers/{influencer_id}")
+@router.get(
+    "/api/influencers/{influencer_id}",
+    response_model=None,
+    summary="Get influencer by ID",
+    description="""
+Get detailed influencer profile by ID.
+
+**Returns:** Complete influencer profile including platforms, products, timeline, connections, and news.
+
+**Note:** If the influencer was fetched via platforms_only mode (trust_score === 0),
+the frontend will automatically trigger a basic analysis to fetch products and calculate trust score.
+
+**Triggers:**
+- If products are empty, frontend fetches them on-demand
+- If trust_score is 0, frontend calculates it on-demand
+""",
+    tags=["Influencers"],
+    responses={
+        200: {
+            "description": "Influencer profile",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": 1,
+                        "name": "MrBeast",
+                        "bio": "American YouTuber known for expensive stunts and philanthropy",
+                        "country": "USA",
+                        "verified": True,
+                        "trust_score": 95,
+                        "avatar_url": "https://example.com/avatar.jpg",
+                        "platforms": [
+                            {
+                                "platform": "youtube",
+                                "username": "@MrBeast",
+                                "followers": 250000000,
+                                "verified": True,
+                                "url": "https://youtube.com/@MrBeast"
+                            }
+                        ],
+                        "products": [
+                            {
+                                "id": 1,
+                                "name": "Feastables",
+                                "category": "food",
+                                "quality_score": 85,
+                                "description": "Premium chocolate brand",
+                                "review_count": 0,
+                                "openfoodfacts_data": None,
+                                "reviews": []
+                            }
+                        ],
+                        "timeline": [],
+                        "connections": [],
+                        "news": [],
+                        "last_analyzed": "2025-11-15T12:00:00",
+                        "analysis_complete": True
+                    }
+                }
+            }
+        },
+        404: {"description": "Influencer not found"}
+    }
+)
 async def get_influencer(
     influencer_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get detailed influencer profile by ID."""
     influencer = db.query(Influencer).filter(
         Influencer.id == influencer_id
     ).first()
@@ -437,23 +832,32 @@ async def get_influencer_avatar(
     )
 
 
-@router.get("/api/news")
+@router.get(
+    "/api/news",
+    response_model=None,
+    summary="Get news and drama articles",
+    description="""
+Get news and drama articles across all influencers.
+
+**Filters:**
+- `limit`: Maximum number of articles (default: 50)
+- `influencer_id`: Filter by specific influencer
+- `article_type`: Filter by type (news, drama, controversy, achievement, collaboration, legal)
+- `sentiment`: Filter by sentiment (positive, negative, neutral)
+
+**Sorting:** Articles are sorted by date (newest first) and severity (highest first).
+
+**Returns:** List of news articles with metadata (title, description, sentiment, severity, source, etc.)
+""",
+    tags=["News"],
+)
 async def get_all_news(
-    limit: int = 50,
-    influencer_id: int = None,
-    article_type: str = None,
-    sentiment: str = None,
+    limit: int = Query(50, description="Maximum number of articles", ge=1, le=200),
+    influencer_id: int = Query(None, description="Filter by influencer ID"),
+    article_type: str = Query(None, description="Filter by article type", enum=["news", "drama", "controversy", "achievement", "collaboration", "legal"]),
+    sentiment: str = Query(None, description="Filter by sentiment", enum=["positive", "negative", "neutral"]),
     db: Session = Depends(get_db)
 ):
-    """
-    Get news and drama articles.
-
-    Query parameters:
-    - limit: Maximum number of articles to return (default: 50)
-    - influencer_id: Filter by specific influencer
-    - article_type: Filter by type (news, drama, controversy, achievement, collaboration, legal)
-    - sentiment: Filter by sentiment (positive, negative, neutral)
-    """
     query = db.query(NewsArticle)
 
     # Apply filters
@@ -534,17 +938,27 @@ async def get_influencer_news(
     }
 
 
-@router.post("/api/influencers/{influencer_id}/timeline/fetch")
+@router.post(
+    "/api/influencers/{influencer_id}/timeline/fetch",
+    response_model=None,
+    summary="Fetch timeline events on-demand",
+    description="""
+Fetch timeline events on-demand for an influencer using AI analysis.
+
+**Use Cases:**
+- When timeline data is not yet available (platforms_only or basic analysis)
+- When timeline data needs updating
+
+**Returns:** Updated timeline events with metadata (date, type, title, description, views, likes, etc.)
+
+**Note:** This is an expensive operation (~1,500 tokens) - only call when necessary.
+""",
+    tags=["On-Demand Analysis"],
+)
 async def fetch_timeline(
     influencer_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetch timeline events on-demand for an influencer.
-
-    This endpoint triggers AI analysis to fetch and store timeline events.
-    Use when timeline data is not yet available or needs updating.
-    """
     try:
         analyzer = InfluencerAnalyzer(db)
         result = await analyzer.fetch_timeline(influencer_id)
@@ -555,17 +969,27 @@ async def fetch_timeline(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/products/{product_id}/reviews/fetch")
+@router.post(
+    "/api/products/{product_id}/reviews/fetch",
+    response_model=None,
+    summary="Fetch product reviews on-demand",
+    description="""
+Fetch product reviews on-demand using AI-powered web search.
+
+**Use Cases:**
+- When review data is not yet available
+- When reviews need updating
+
+**Returns:** Updated product reviews from social media (Twitter, Reddit, YouTube, TikTok, etc.) with sentiment analysis.
+
+**Note:** This operation searches social media for user reviews and analyzes sentiment (~1,000-1,500 tokens).
+""",
+    tags=["On-Demand Analysis"],
+)
 async def fetch_product_reviews(
     product_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetch product reviews on-demand.
-
-    This endpoint triggers AI analysis to fetch and store product reviews.
-    Use when review data is not yet available or needs updating.
-    """
     try:
         analyzer = InfluencerAnalyzer(db)
         result = await analyzer.fetch_product_reviews(product_id)
@@ -576,20 +1000,28 @@ async def fetch_product_reviews(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/products/{product_id}/openfoodfacts/fetch")
+@router.post(
+    "/api/products/{product_id}/openfoodfacts/fetch",
+    response_model=None,
+    summary="Fetch OpenFoodFacts data",
+    description="""
+Fetch nutritional and safety data from OpenFoodFacts API.
+
+**Product Categories Supported:**
+- Food products: NutriScore, NOVA group, Ecoscore, ingredients, allergens, nutritional values
+- Cosmetics: Safety ratings, ingredient analysis, hazardous substances
+
+**Returns:** Nutritional/safety data stored in product.openfoodfacts_data field as JSON.
+
+**Note:** Only works for products with category: food, cosmetics, or beauty.
+Fast operation (external API call, no AI tokens used).
+""",
+    tags=["On-Demand Analysis"],
+)
 async def fetch_openfoodfacts_data(
     product_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetch OpenFoodFacts nutritional/safety data for a product on-demand.
-
-    This endpoint queries OpenFoodFacts API for:
-    - Food products: NutriScore, NOVA group, Ecoscore, ingredients, allergens
-    - Cosmetics: Safety ratings, ingredient analysis
-
-    Only works for products with category: food, cosmetics, or beauty.
-    """
     try:
         analyzer = InfluencerAnalyzer(db)
         result = await analyzer.fetch_openfoodfacts_data(product_id)
@@ -600,25 +1032,85 @@ async def fetch_openfoodfacts_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/influencers/{influencer_id}/connections/fetch")
+@router.post(
+    "/api/influencers/{influencer_id}/connections/fetch",
+    response_model=None,
+    summary="Fetch network connections on-demand",
+    description="""
+Fetch network map/connections on-demand using AI analysis.
+
+**Use Cases:**
+- When viewing detailed influencer profile page
+- When connection data is not yet available (platforms_only or basic analysis)
+
+**Returns Network Connections:**
+- Other influencers (collaborators, friends, partners)
+- Agencies (talent management, MCNs)
+- Brands (sponsors, partnerships)
+- Management companies
+- Record labels, networks, and other entities
+
+**Connection Metadata:**
+- Entity name and type
+- Connection type (collaboration, sponsorship, managed_by, etc.)
+- Connection strength (1-10)
+- Description
+
+**Note:** This is an expensive operation (~1,500 tokens) - only call when necessary.
+""",
+    tags=["On-Demand Analysis"],
+)
 async def fetch_connections(
     influencer_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Fetch network map/connections on-demand for an influencer.
-
-    This endpoint triggers AI analysis to fetch and store connections (network map).
-    Use when viewing the detailed influencer profile page.
-    
-    Returns:
-    - Connected influencers (other creators they collaborate with)
-    - Agencies, brands, management companies
-    - Other business entities in their network
-    """
     try:
         analyzer = InfluencerAnalyzer(db)
         result = await analyzer.fetch_connections(influencer_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/api/influencers/{influencer_id}/news/fetch",
+    response_model=None,
+    summary="Fetch news and drama on-demand",
+    description="""
+Fetch news and drama articles on-demand using AI analysis.
+
+**Use Cases:**
+- When viewing detailed influencer profile page
+- When news data is not yet available (platforms_only or basic analysis)
+
+**Returns News Articles:**
+- Recent news about the influencer
+- Drama and controversies
+- Achievements and milestones
+- Collaborations and partnerships
+- Legal issues
+
+**Article Metadata:**
+- Title and description
+- Article type (news, drama, controversy, achievement, collaboration, legal)
+- Publication date and source
+- Sentiment (positive, negative, neutral)
+- Severity score (1-10)
+- Source URL
+
+**Note:** This is an expensive operation (~1,500 tokens) - only call when necessary.
+""",
+    tags=["On-Demand Analysis"],
+)
+async def fetch_news(
+    influencer_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        analyzer = InfluencerAnalyzer(db)
+        result = await analyzer.fetch_news(influencer_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
