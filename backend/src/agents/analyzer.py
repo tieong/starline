@@ -27,6 +27,7 @@ from src.config.settings import settings
 from src.services.blackbox_client import blackbox_client
 from src.services.perplexity_client import perplexity_client
 from src.services.profile_fetcher import profile_fetcher
+from src.services.image_search import image_search_service
 
 
 class InfluencerAnalyzer:
@@ -132,7 +133,7 @@ class InfluencerAnalyzer:
 
                 # Fetch profile picture directly from platforms
                 logger.info(f"🖼️  Fetching profile picture...")
-                avatar_url = await self._fetch_profile_picture(platforms_data)
+                avatar_url = await self._fetch_profile_picture(influencer_name, platforms_data)
                 influencer.avatar_url = avatar_url
 
             # Run remaining analyses in parallel
@@ -372,11 +373,12 @@ class InfluencerAnalyzer:
 
         self.db.commit()
 
-    async def _fetch_profile_picture(self, platforms_data: Dict[str, Any]) -> str:
+    async def _fetch_profile_picture(self, influencer_name: str, platforms_data: Dict[str, Any]) -> str:
         """
-        Use the profile picture URL provided by AI from platform CDN.
+        Fetch profile picture URL using AI data or image search fallback.
 
         Args:
+            influencer_name: Name of the influencer
             platforms_data: Platform information including profile_picture_url
 
         Returns:
@@ -392,9 +394,39 @@ class InfluencerAnalyzer:
                 profile_pic_url
             )
             if is_valid:
+                logger.info(f"   ✓ Using AI-provided profile picture")
                 return profile_pic_url
 
-        # If AI didn't provide a valid URL, return None (will show fallback)
+        # Fallback: Search for profile picture using image search
+        logger.info(f"   ⚠ AI didn't provide valid profile picture, searching with Bing/Yandex...")
+
+        # Get primary platform and username for more accurate search
+        primary_platform = platforms_data.get("primary_platform", "")
+        username = ""
+
+        # Try to get username from the primary platform or first platform
+        if platforms_data.get("platforms"):
+            for platform in platforms_data["platforms"]:
+                if platform.get("platform") == primary_platform:
+                    username = platform.get("username", "")
+                    break
+            # If no primary platform match, use first platform's username
+            if not username and platforms_data["platforms"]:
+                username = platforms_data["platforms"][0].get("username", "")
+
+        # Search for profile picture using username (more accurate) or name
+        search_result = await self._run_in_thread(
+            image_search_service.search_profile_picture,
+            influencer_name,
+            primary_platform,
+            username
+        )
+        if search_result:
+            logger.info(f"   ✓ Found profile picture via image search")
+            return search_result
+
+        # If all else fails, return None (will show fallback avatar)
+        logger.warning(f"   ⚠ Could not find profile picture")
         return None
 
     def _calculate_trust_score(self, platforms_data: Dict[str, Any], products_data: Dict[str, Any]) -> int:
