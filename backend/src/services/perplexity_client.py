@@ -303,6 +303,75 @@ Return ONLY valid JSON:
         except json.JSONDecodeError:
             return {"connections": []}
 
+    def analyze_news_drama(self, influencer_name: str, platforms_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Find recent news, drama, and controversies about the influencer.
+
+        Args:
+            influencer_name: Name of the influencer
+            platforms_data: Platform information
+
+        Returns:
+            Dict with news and drama information
+        """
+        prompt = f"""Research all recent and significant news, drama, and controversies about '{influencer_name}'.
+
+Platform data: {json.dumps(platforms_data, indent=2)}
+
+Find:
+1. Recent news articles about them (within last 2 years)
+2. Any drama, controversies, or scandals they were involved in
+3. Major achievements or positive news
+4. Collaborations that made headlines
+5. Any legal issues or public disputes
+
+For each item, provide:
+- title: Concise headline
+- description: Detailed explanation of what happened
+- article_type: One of: "news", "drama", "controversy", "achievement", "collaboration", "legal"
+- date: When it happened (YYYY-MM-DD format)
+- source: Where this information comes from (e.g., "YouTube", "Twitter", "News Article")
+- url: Link to source if available (or null)
+- sentiment: "positive", "negative", or "neutral"
+- severity: 1-10 (how significant is this event? 10 = major scandal, 1 = minor mention)
+
+Return ONLY valid JSON:
+{{
+    "news": [
+        {{
+            "title": "Brief headline",
+            "description": "Detailed explanation of the event",
+            "article_type": "drama",
+            "date": "2024-01-15",
+            "source": "Twitter",
+            "url": "https://twitter.com/...",
+            "sentiment": "negative",
+            "severity": 7
+        }}
+    ]
+}}
+
+IMPORTANT: Focus on recent events (last 2 years) and significant events that define their public image."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that researches influencer news and drama. Always return valid JSON with dates in YYYY-MM-DD format. Use web search to find current, accurate information."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.3, max_tokens=3000)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            return {"news": []}
+
 
 # Global client instance
 perplexity_client = PerplexityClient()

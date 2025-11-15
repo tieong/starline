@@ -53,6 +53,7 @@ class Influencer(Base):
     timeline = relationship("TimelineEvent", back_populates="influencer", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="influencer", cascade="all, delete-orphan")
     connections = relationship("Connection", foreign_keys="Connection.influencer_id", back_populates="influencer", cascade="all, delete-orphan")
+    news_articles = relationship("NewsArticle", back_populates="influencer", cascade="all, delete-orphan")
 
 
 class Platform(Base):
@@ -136,6 +137,29 @@ class Connection(Base):
     # Relationships
     influencer = relationship("Influencer", foreign_keys=[influencer_id], back_populates="connections")
     connected_influencer = relationship("Influencer", foreign_keys=[connected_influencer_id])
+
+
+class NewsArticle(Base):
+    """News and drama articles about influencers."""
+
+    __tablename__ = "news_articles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    article_type = Column(String)  # news, drama, controversy, achievement, collaboration
+    date = Column(DateTime)  # When the event/news happened
+    source = Column(String)  # Source of the news
+    url = Column(String)  # Link to the article/source
+    sentiment = Column(String)  # positive, negative, neutral
+    severity = Column(Integer, default=1)  # 1-10, how significant is this news/drama
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    influencer = relationship("Influencer", back_populates="news_articles")
 
 
 class Review(Base):

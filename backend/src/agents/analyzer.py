@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.models.database import (
     Connection,
     Influencer,
+    NewsArticle,
     Platform,
     Product,
     TimelineEvent,
@@ -95,10 +96,11 @@ class InfluencerAnalyzer:
                 self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
                 self._run_in_thread(self.ai_client.analyze_breakthrough_moment, influencer_name, platforms_data),
                 self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
+                self._run_in_thread(self.ai_client.analyze_news_drama, influencer_name, platforms_data),
                 return_exceptions=True
             )
 
-            products_data, timeline_data, connections_data = results
+            products_data, timeline_data, connections_data, news_data = results
 
             # Save all data
             if isinstance(products_data, dict):
@@ -109,6 +111,9 @@ class InfluencerAnalyzer:
 
             if isinstance(connections_data, dict):
                 await self._save_connections(influencer, connections_data)
+
+            if isinstance(news_data, dict):
+                await self._save_news(influencer, news_data)
 
             # Calculate trust score (basic for now)
             influencer.trust_score = self._calculate_trust_score(platforms_data, products_data)
@@ -216,6 +221,36 @@ class InfluencerAnalyzer:
 
         self.db.commit()
 
+    async def _save_news(self, influencer: Influencer, data: Dict[str, Any]):
+        """Save news and drama articles to database."""
+        # Clear existing news
+        self.db.query(NewsArticle).filter(NewsArticle.influencer_id == influencer.id).delete()
+
+        for news_item in data.get("news", []):
+            try:
+                # Parse date if provided
+                if news_item.get("date"):
+                    article_date = datetime.strptime(news_item.get("date", ""), "%Y-%m-%d")
+                else:
+                    article_date = None
+            except:
+                article_date = None
+
+            article = NewsArticle(
+                influencer_id=influencer.id,
+                title=news_item.get("title", ""),
+                description=news_item.get("description", ""),
+                article_type=news_item.get("article_type", "news"),
+                date=article_date,
+                source=news_item.get("source", ""),
+                url=news_item.get("url"),
+                sentiment=news_item.get("sentiment", "neutral"),
+                severity=news_item.get("severity", 1),
+            )
+            self.db.add(article)
+
+        self.db.commit()
+
     async def _fetch_profile_picture(self, platforms_data: Dict[str, Any]) -> str:
         """
         Use the profile picture URL provided by AI from platform CDN.
@@ -304,6 +339,20 @@ class InfluencerAnalyzer:
                     "description": c.description,
                 }
                 for c in influencer.connections
+            ],
+            "news": [
+                {
+                    "id": n.id,
+                    "title": n.title,
+                    "description": n.description,
+                    "article_type": n.article_type,
+                    "date": n.date.isoformat() if n.date else None,
+                    "source": n.source,
+                    "url": n.url,
+                    "sentiment": n.sentiment,
+                    "severity": n.severity,
+                }
+                for n in sorted(influencer.news_articles, key=lambda x: (x.date or datetime.min), reverse=True)
             ],
             "last_analyzed": influencer.last_analyzed.isoformat() if influencer.last_analyzed else None,
             "analysis_complete": influencer.analysis_complete,
