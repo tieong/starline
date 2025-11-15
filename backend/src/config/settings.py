@@ -1,0 +1,31 @@
+"""Application configuration settings."""
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings."""
+
+    # API Settings
+    app_name: str = "Starline Backend"
+    app_version: str = "0.1.0"
+    debug: bool = True
+
+    # Database Settings
+    database_url: str = "postgresql://starline:starline@localhost:5432/starline"
+
+    # Blackbox AI Settings
+    blackbox_api_key: str = ""
+    blackbox_base_url: str = "https://api.blackbox.ai"
+    blackbox_model: str = "blackboxai/openai/gpt-4"
+
+    # External APIs
+    youtube_api_key: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+
+
+settings = Settings()

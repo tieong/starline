@@ -69,6 +69,14 @@ Each influencer has a dedicated page featuring:
 - **Tailwind CSS** - Styling
 - **React Force Graph 2D** - Network visualization
 
+### Backend
+- **Python 3.13+** - Runtime
+- **FastAPI** - High-performance API framework
+- **PostgreSQL** - Database
+- **SQLAlchemy** - ORM
+- **Blackbox AI** - Intelligent influencer analysis
+- **uv** - Fast Python package manager
+
 ## Getting Started
 
 ### Prerequisites
@@ -101,11 +109,12 @@ http://localhost:5173
 
 ## Docker Deployment
 
-The easiest way to run and share Starline is using Docker. This allows you to run the application in a containerized environment without installing Node.js or any dependencies.
+The easiest way to run and share Starline is using Docker. This allows you to run the full application stack (frontend, backend, and database) in a containerized environment.
 
 ### Prerequisites
 - Docker (20.10+)
 - Docker Compose v2 (or Docker Desktop)
+- Blackbox AI API key ([Get one here](https://www.blackbox.ai/dashboard/docs))
 
 **Note:** If you get permission errors, you may need to:
 - Run commands with `sudo`, OR
@@ -119,19 +128,37 @@ git clone https://github.com/tieong/starline.git
 cd starline
 ```
 
-2. Build and run with Docker Compose:
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env and add your BLACKBOX_API_KEY
+nano .env
+```
+
+3. Build and run the full stack:
 ```bash
 docker compose up --build
 ```
 
-3. Open your browser and navigate to:
+This will start:
+- **PostgreSQL** database on port 5432
+- **Backend API** on port 8000
+- **Frontend** on port 3000
+
+4. Open your browser and navigate to:
 ```
-http://localhost:3000
+Frontend: http://localhost:3000
+Backend API Docs: http://localhost:8000/docs
 ```
 
-4. To stop the application:
+5. To stop the application:
 ```bash
 docker compose down
+```
+
+To remove all data (including database volumes):
+```bash
+docker compose down -v
 ```
 
 ### Useful Docker Commands
@@ -176,28 +203,41 @@ docker rm starline
 
 ### Sharing with Colleagues
 
-#### Option 1: Use Pre-built Image from GitHub Container Registry (Easiest)
+#### Option 1: Use Pre-built Images from GitHub Container Registry (Easiest)
 
-The frontend is automatically built and published to GitHub Container Registry on every push to main. You and your colleagues can pull and run the latest version directly:
+Both frontend and backend are automatically built and published to GitHub Container Registry on every push to main. You and your colleagues can pull and run the latest version directly:
 
 ```bash
-# Pull and run the latest version
+# Pull and run frontend
 docker run -d -p 3000:80 ghcr.io/tieong/starline/frontend:latest
 
-# Or use a specific version tag
-docker run -d -p 3000:80 ghcr.io/tieong/starline/frontend:v1.0.0
+# Pull and run backend (requires PostgreSQL)
+docker run -d -p 8000:8000 \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -e BLACKBOX_API_KEY=your_key \
+  ghcr.io/tieong/starline/backend:latest
 ```
 
 To use with Docker Compose, update your `docker-compose.yml`:
 ```yaml
 services:
+  backend:
+    image: ghcr.io/tieong/starline/backend:latest
+    environment:
+      DATABASE_URL: postgresql://starline:starline@postgres:5432/starline
+      BLACKBOX_API_KEY: ${BLACKBOX_API_KEY}
+    ports:
+      - "8000:8000"
+
   frontend:
     image: ghcr.io/tieong/starline/frontend:latest
-    container_name: starline-frontend
     ports:
       - "3000:80"
-    restart: unless-stopped
 ```
+
+Available images:
+- `ghcr.io/tieong/starline/frontend:latest`
+- `ghcr.io/tieong/starline/backend:latest`
 
 Available tags:
 - `latest` - Latest build from main branch
@@ -253,11 +293,12 @@ Only when all checks pass, the workflow proceeds to build and publish.
 ### Automated Publishing
 
 Every push to the main branch automatically:
-1. Runs all quality checks (lint, type check, build)
-2. Builds the frontend Docker image (multi-platform: amd64 + arm64)
-3. Runs security attestation checks
-4. Publishes to GitHub Container Registry (ghcr.io)
-5. Tags the image appropriately
+1. **Frontend**: Runs quality checks (lint, type check, build)
+2. **Backend**: Builds Python FastAPI application
+3. Builds Docker images for both services (multi-platform: amd64 + arm64)
+4. Runs security attestation checks
+5. Publishes to GitHub Container Registry (ghcr.io)
+6. Tags images appropriately
 
 ### Workflow Triggers
 
@@ -278,10 +319,18 @@ git push origin v1.0.0
 ```
 
 This will automatically publish images with tags:
+
+**Frontend:**
 - `ghcr.io/tieong/starline/frontend:v1.0.0`
 - `ghcr.io/tieong/starline/frontend:1.0`
 - `ghcr.io/tieong/starline/frontend:1`
 - `ghcr.io/tieong/starline/frontend:latest`
+
+**Backend:**
+- `ghcr.io/tieong/starline/backend:v1.0.0`
+- `ghcr.io/tieong/starline/backend:1.0`
+- `ghcr.io/tieong/starline/backend:1`
+- `ghcr.io/tieong/starline/backend:latest`
 
 ### Image Visibility
 

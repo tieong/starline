@@ -1,0 +1,44 @@
+"""Main FastAPI application."""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.api.routes import router
+from src.config.settings import settings
+from src.models.database import init_db
+
+# Initialize FastAPI app
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="Real-time influencer trust rating and analysis platform",
+)
+
+# CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routes
+app.include_router(router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup."""
+    init_db()
+    print(f"✅ {settings.app_name} v{settings.app_version} started")
+    print(f"📚 API Documentation: http://localhost:8000/docs")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "src.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+    )

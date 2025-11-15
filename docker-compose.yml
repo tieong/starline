@@ -1,4 +1,45 @@
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17
+    container_name: starline-postgres
+    environment:
+      POSTGRES_USER: starline
+      POSTGRES_PASSWORD: starline
+      POSTGRES_DB: starline
+    ports:
+      - "5433:5432"  # External:Internal - avoids conflict with system PostgreSQL
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - starline-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: starline-backend
+    environment:
+      DATABASE_URL: postgresql://starline:starline@postgres:5432/starline
+      BLACKBOX_API_KEY: ${BLACKBOX_API_KEY}
+      DEBUG: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - starline-network
+
+  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -6,22 +47,15 @@ services:
     container_name: starline-frontend
     ports:
       - "3000:80"
+    depends_on:
+      - backend
     restart: unless-stopped
     networks:
       - starline-network
 
-  # Placeholder for future backend service
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: starline-backend
-  #   ports:
-  #     - "8000:8000"
-  #   restart: unless-stopped
-  #   networks:
-  #     - starline-network
-
 networks:
   starline-network:
     driver: bridge
+
+volumes:
+  postgres-data:
