@@ -2,6 +2,7 @@
 import concurrent.futures
 import logging
 import re
+import time
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote_plus
 
@@ -20,6 +21,56 @@ class ImageSearchService:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         self.timeout = 10
+
+    def _make_request_with_backoff(self, url: str, max_total_time: int = 300) -> Optional[requests.Response]:
+        """
+        Make HTTP request with exponential backoff for 429 errors.
+
+        Args:
+            url: URL to fetch
+            max_total_time: Maximum total time to spend retrying (default: 300 seconds = 5 minutes)
+
+        Returns:
+            Response object or None if all retries failed
+        """
+        start_time = time.time()
+        retry_delay = 1  # Start with 1 second
+        max_retry_delay = 60  # Cap individual retry at 60 seconds
+
+        while True:
+            elapsed = time.time() - start_time
+            if elapsed >= max_total_time:
+                logger.warning(f"      ⚠ Giving up after {max_total_time}s")
+                return None
+
+            try:
+                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+
+                if response.status_code == 429:
+                    # Calculate remaining time
+                    remaining = max_total_time - elapsed
+                    if remaining <= 0:
+                        logger.warning(f"      ⚠ Rate limited, no time left for retry")
+                        return None
+
+                    # Use the smaller of retry_delay and remaining time
+                    actual_delay = min(retry_delay, remaining)
+                    logger.warning(f"      ⚠ Rate limited (429), waiting {actual_delay:.1f}s before retry...")
+                    time.sleep(actual_delay)
+
+                    # Exponential backoff: double the delay (up to max)
+                    retry_delay = min(retry_delay * 2, max_retry_delay)
+                    continue
+
+                response.raise_for_status()
+                return response
+
+            except requests.exceptions.Timeout:
+                logger.warning(f"      ⚠ Request timeout")
+                return None
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"      ⚠ Request failed: {str(e)}")
+                return None
 
     def search_profile_picture(self, influencer_name: str, platform: str = "", username: str = "") -> Optional[str]:
         """
@@ -244,8 +295,9 @@ class ImageSearchService:
         """Search Google Images for profile picture."""
         url = f"https://www.google.com/search?q={quote_plus(query)}&tbm=isch"
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
+        response = self._make_request_with_backoff(url)
+        if not response:
+            return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -278,8 +330,9 @@ class ImageSearchService:
         """Search Kagi Images for profile picture."""
         url = f"https://kagi.com/images?q={quote_plus(query)}"
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
+        response = self._make_request_with_backoff(url)
+        if not response:
+            return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -309,8 +362,9 @@ class ImageSearchService:
         """Search Bing Images for profile picture."""
         url = f"https://www.bing.com/images/search?q={quote_plus(query)}&first=1"
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
+        response = self._make_request_with_backoff(url)
+        if not response:
+            return None
 
         # Parse HTML to find image URLs
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -347,8 +401,9 @@ class ImageSearchService:
         """Search Yandex Images for profile picture."""
         url = f"https://yandex.com/images/search?text={quote_plus(query)}"
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
+        response = self._make_request_with_backoff(url)
+        if not response:
+            return None
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -374,8 +429,9 @@ class ImageSearchService:
         """Search DuckDuckGo Images for profile picture."""
         url = f"https://duckduckgo.com/?q={quote_plus(query)}&iax=images&ia=images"
 
-        response = requests.get(url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
+        response = self._make_request_with_backoff(url)
+        if not response:
+            return None
 
         # DuckDuckGo loads images via JavaScript, so scraping is harder
         # Try to find image URLs in the page source
