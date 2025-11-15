@@ -4,6 +4,15 @@
   padding: var(--space-xxl) var(--space-xl);
   min-height: 100vh;
   background: var(--bg-main);
+  position: relative;
+}
+
+/* Data Source Toggle Container */
+.all-influencers .data-source-toggle-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
 }
 
 .back-button-top {

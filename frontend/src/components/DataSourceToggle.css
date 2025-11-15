@@ -1,0 +1,139 @@
+.data-source-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-mono-800);
+  border: 2px solid var(--color-mono-700);
+  border-radius: 20px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.toggle-button:hover {
+  border-color: var(--color-mono-600);
+  transform: scale(1.02);
+}
+
+.toggle-button.mock-active {
+  border-color: var(--color-purple-500);
+}
+
+.toggle-button.api-active {
+  border-color: var(--color-green-500);
+}
+
+.toggle-slider {
+  position: absolute;
+  left: 4px;
+  width: 64px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--color-purple-500), var(--color-blue-500));
+  border-radius: 14px;
+  z-index: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-button.api-active .toggle-slider {
+  background: linear-gradient(135deg, var(--color-green-500), var(--color-blue-500));
+}
+
+.toggle-option {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  color: var(--color-mono-400);
+  transition: all 0.3s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.toggle-button.mock-active .toggle-option:first-of-type,
+.toggle-button.api-active .toggle-option:last-of-type {
+  color: white;
+}
+
+.toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.data-source-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-mono-800);
+  border: 1px solid var(--color-mono-700);
+  border-radius: 12px;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.indicator-dot.mock {
+  background: var(--color-purple-500);
+  box-shadow: 0 0 8px var(--color-purple-500);
+}
+
+.indicator-dot.api {
+  background: var(--color-green-500);
+  box-shadow: 0 0 8px var(--color-green-500);
+}
+
+.indicator-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-mono-300);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .data-source-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toggle-label {
+    display: none;
+  }
+
+  .toggle-button {
+    min-width: 80px;
+  }
+
+  .toggle-slider {
+    width: 32px;
+  }
+
+  .toggle-option {
+    padding: 6px;
+  }
+}

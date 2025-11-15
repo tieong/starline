@@ -102,6 +102,26 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContent
       return null
     }
 
+    // Filter out Recharts-specific props that shouldn't be passed to DOM elements
+    const {
+      allowEscapeViewBox,
+      animationDuration,
+      animationEasing,
+      axisId,
+      contentStyle,
+      filterNull,
+      isAnimationActive,
+      itemSorter,
+      itemStyle,
+      labelStyle,
+      reverseDirection,
+      useTranslate3d,
+      wrapperStyle,
+      activeIndex,
+      accessibilityLayer,
+      ...domProps
+    } = props as any;
+
     return (
       <div
         ref={ref}
@@ -114,7 +134,7 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContent
           minWidth: "180px",
         }}
         className={className}
-        {...props}
+        {...domProps}
       >
         {label && (
           <div style={{ 

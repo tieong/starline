@@ -1,13 +1,59 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SearchAutocomplete } from '../components/SearchAutocomplete';
-import { influencers } from '../data/mockData';
+import { DataSourceToggle } from '../components/DataSourceToggle';
+import { dataService } from '../services/dataService';
+import { useDataContext } from '../context/DataContext';
 import { Influencer } from '../types';
 import { Sparkles, Map, BarChart3, Users } from 'lucide-react';
 import './Home.css';
 
 export const Home = () => {
   const navigate = useNavigate();
+  const { useMockData } = useDataContext();
+  const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load influencers when data source changes
+  useEffect(() => {
+    const loadInfluencers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await dataService.getInfluencers(useMockData);
+        setInfluencers(data);
+      } catch (err) {
+        console.error('Failed to load influencers:', err);
+        setError('Failed to load influencers. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInfluencers();
+  }, [useMockData]);
+
+  // Listen for influencer discovery events
+  useEffect(() => {
+    const handleInfluencerDiscovered = async (event: any) => {
+      console.log('Influencer discovered event received:', event.detail);
+      // Reload influencers to include the newly discovered one
+      try {
+        const data = await dataService.getInfluencers(useMockData);
+        setInfluencers(data);
+      } catch (err) {
+        console.error('Failed to reload influencers:', err);
+      }
+    };
+
+    window.addEventListener('influencer-discovered', handleInfluencerDiscovered);
+
+    return () => {
+      window.removeEventListener('influencer-discovered', handleInfluencerDiscovered);
+    };
+  }, [useMockData]);
 
   const handleSelectInfluencer = (influencer: Influencer) => {
     // Navigate to graph with this influencer as center
@@ -15,6 +61,7 @@ export const Home = () => {
   };
 
   const handleRandomInfluencer = () => {
+    if (influencers.length === 0) return;
     const randomInfluencer = influencers[Math.floor(Math.random() * influencers.length)];
     navigate(`/graph/${randomInfluencer.id}`);
   };
@@ -33,6 +80,11 @@ export const Home = () => {
         <div className="particle"></div>
         <div className="particle"></div>
         <div className="particle"></div>
+      </div>
+
+      {/* Data Source Toggle */}
+      <div className="data-source-toggle-container">
+        <DataSourceToggle />
       </div>
 
       <motion.div
@@ -101,22 +153,34 @@ export const Home = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
-          <div className="home-stat-item">
-            <span className="home-stat-value">{influencers.length}</span>
-            <span className="home-stat-label">Influenceurs</span>
-          </div>
-          <div className="home-stat-divider"></div>
-          <div className="home-stat-item">
-            <span className="home-stat-value">
-              {Math.round(influencers.reduce((sum, inf) => sum + inf.followers, 0) / 1000000)}M+
-            </span>
-            <span className="home-stat-label">Abonnés totaux</span>
-          </div>
-          <div className="home-stat-divider"></div>
-          <div className="home-stat-item">
-            <span className="home-stat-value">Temps réel</span>
-            <span className="home-stat-label">Données actualisées</span>
-          </div>
+          {loading ? (
+            <div className="home-stat-item">
+              <span className="home-stat-label">Loading...</span>
+            </div>
+          ) : error ? (
+            <div className="home-stat-item">
+              <span className="home-stat-label" style={{ color: 'var(--color-red-500)' }}>{error}</span>
+            </div>
+          ) : (
+            <>
+              <div className="home-stat-item">
+                <span className="home-stat-value">{influencers.length}</span>
+                <span className="home-stat-label">Influenceurs</span>
+              </div>
+              <div className="home-stat-divider"></div>
+              <div className="home-stat-item">
+                <span className="home-stat-value">
+                  {Math.round(influencers.reduce((sum, inf) => sum + inf.followers, 0) / 1000000)}M+
+                </span>
+                <span className="home-stat-label">Abonnés totaux</span>
+              </div>
+              <div className="home-stat-divider"></div>
+              <div className="home-stat-item">
+                <span className="home-stat-value">{useMockData ? 'Mock' : 'Temps réel'}</span>
+                <span className="home-stat-label">Données actualisées</span>
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </div>

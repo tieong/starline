@@ -74,7 +74,7 @@ export const InfluencerInfoPanel = ({
             <div className="panel-stat">
               <TrendingUp size={20} />
               <div>
-                <div className="panel-stat-value">{influencer.engagementRate}%</div>
+                <div className="panel-stat-value">{influencer.engagementRate.toFixed(2)}%</div>
                 <div className="panel-stat-label">Engagement</div>
               </div>
             </div>

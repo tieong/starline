@@ -69,7 +69,7 @@ export const InfluencerCard = ({ influencer, onClick, delay = 0 }: InfluencerCar
           </div>
           <div className="stat">
             <span className="stat-label">Engagement</span>
-            <span className="stat-value">{influencer.engagementRate}%</span>
+            <span className="stat-value">{influencer.engagementRate.toFixed(2)}%</span>
           </div>
         </div>
 

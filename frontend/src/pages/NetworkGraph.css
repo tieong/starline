@@ -4,8 +4,18 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
   background: var(--white);
+}
+
+/* Data Source Toggle Container */
+.network-graph-page .data-source-toggle-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 1000;
 }
 
 /* Subtle grid pattern like Chroma */
@@ -128,6 +138,7 @@
   background: transparent;
   overflow: hidden;
   z-index: 1;
+  min-height: 0; /* Fix for flex child not shrinking */
 }
 
 .graph-svg {

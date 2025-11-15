@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # Database Settings
-    database_url: str = "postgresql://starline:starline@localhost:5432/starline"
+    database_url: str = ""
 
     # AI Provider Settings
     ai_provider: str = "perplexity"  # Options: "blackbox" or "perplexity"

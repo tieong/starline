@@ -163,6 +163,50 @@
   flex-shrink: 0;
 }
 
+/* Analyzing state */
+.search-autocomplete-analyzing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  color: var(--text-normal);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+  border-left: 3px solid var(--primary-purple);
+}
+
+.search-autocomplete-analyzing-icon {
+  flex-shrink: 0;
+  color: var(--primary-purple);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.search-autocomplete-analyzing-text {
+  flex: 1;
+}
+
+.search-autocomplete-analyzing-title {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 4px;
+}
+
+.search-autocomplete-analyzing-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 @media (max-width: 768px) {
   .search-autocomplete-input {
     height: 56px;

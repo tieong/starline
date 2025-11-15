@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:vite": "vite build",
+    "build:docker": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +25,7 @@
     "@types/d3": "^7.4.3",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
+    "@types/three": "^0.181.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.22",
     "class-variance-authority": "^0.7.1",

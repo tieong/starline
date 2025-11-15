@@ -3,7 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3';
 import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home } from 'lucide-react';
-import { graphNodes, relationships, influencers } from '../data/mockData';
+import { DataSourceToggle } from '../components/DataSourceToggle';
+import { dataService } from '../services/dataService';
+import { useDataContext } from '../context/DataContext';
+import { GraphNode, Relationship, Influencer } from '../types';
 import { InfluencerInfoPanel } from '../components/InfluencerInfoPanel';
 import { ThreeDInfluencerMap } from '../components/ThreeDInfluencerMap';
 import './NetworkGraph.css';
@@ -28,11 +31,48 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 export const NetworkGraph = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { useMockData } = useDataContext();
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(id || null);
   const [centralInfluencer, setCentralInfluencer] = useState<string | null>(id || null);
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(id ? '2d' : '3d');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+
+  // Load graph data
+  useEffect(() => {
+    const loadGraphData = async () => {
+      console.log('[NetworkGraph] Starting to load graph data, useMockData:', useMockData, 'id:', id);
+      setLoading(true);
+      try {
+        const [graphData, influencersData] = await Promise.all([
+          dataService.getGraphData(useMockData, id),
+          dataService.getInfluencers(useMockData),
+        ]);
+
+        console.log('[NetworkGraph] Graph data loaded:', {
+          nodeCount: graphData.nodes.length,
+          relationshipCount: graphData.relationships.length,
+          nodes: graphData.nodes.slice(0, 3)
+        });
+
+        setGraphNodes(graphData.nodes);
+        setRelationships(graphData.relationships);
+        setInfluencers(influencersData);
+      } catch (err) {
+        console.error('Failed to load graph data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGraphData();
+  }, [useMockData, id]);
 
   useEffect(() => {
     if (id) {
@@ -43,14 +83,38 @@ export const NetworkGraph = () => {
   }, [id]);
 
   useEffect(() => {
+    console.log('[NetworkGraph] Rendering useEffect triggered:', {
+      hasRef: !!svgRef.current,
+      viewMode,
+      nodeCount: graphNodes?.length || 0,
+      relationshipCount: relationships?.length || 0,
+      centralInfluencer,
+      id
+    });
+
     if (!svgRef.current) return;
     if (viewMode !== '2d') {
       d3.select(svgRef.current).selectAll('*').remove();
       return;
     }
 
+    // Don't render if we don't have valid data
+    if (!graphNodes || graphNodes.length === 0) {
+      console.warn('[NetworkGraph] No graph nodes available for rendering');
+      return;
+    }
+
+    console.log('[NetworkGraph] Starting D3 render with', graphNodes.length, 'nodes');
+
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
+
+    console.log('[NetworkGraph] SVG dimensions:', { width, height });
+
+    if (width === 0 || height === 0) {
+      console.error('[NetworkGraph] SVG has zero dimensions! Cannot render graph.');
+      return;
+    }
 
     // Clear previous content
     d3.select(svgRef.current).selectAll('*').remove();
@@ -75,6 +139,8 @@ export const NetworkGraph = () => {
     // Prepare data
     const nodes: Node[] = graphNodes.map(n => ({ ...n }));
     const links: Link[] = relationships.map(r => ({ ...r }));
+
+    console.log('[NetworkGraph] Prepared D3 data:', { nodes: nodes.length, links: links.length });
 
     // Color mapping - Vibrant colors with white background
     const colorMap = {
@@ -102,6 +168,13 @@ export const NetworkGraph = () => {
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius((d: any) => d.size + 10));
 
+    // Handle both ID formats for central influencer
+    const centralNodeId = centralInfluencer
+      ? (centralInfluencer.startsWith('influencer-')
+          ? centralInfluencer
+          : `influencer-${centralInfluencer}`)
+      : null;
+
     // Create links with colorful style (following GUIDELINES.md: high contrast, bold)
     const link = g.append('g')
       .selectAll('line')
@@ -109,22 +182,22 @@ export const NetworkGraph = () => {
       .join('line')
       .attr('stroke', (d: any) => linkColorMap[d.type as keyof typeof linkColorMap] || '#000000')
       .attr('stroke-opacity', (d: any) => {
-        if (!centralInfluencer) return 0.7;
+        if (!centralNodeId) return 0.7;
 
         const source = typeof d.source === 'object' ? d.source.id : d.source;
         const target = typeof d.target === 'object' ? d.target.id : d.target;
 
         // Highlight links connected to central node
-        const isConnectedToCenter = source === centralInfluencer || target === centralInfluencer;
+        const isConnectedToCenter = source === centralNodeId || target === centralNodeId;
         return isConnectedToCenter ? 0.9 : 0.4;
       })
       .attr('stroke-width', (d: any) => {
-        if (!centralInfluencer) return 2.5;
+        if (!centralNodeId) return 2.5;
 
         const source = typeof d.source === 'object' ? d.source.id : d.source;
         const target = typeof d.target === 'object' ? d.target.id : d.target;
 
-        const isConnectedToCenter = source === centralInfluencer || target === centralInfluencer;
+        const isConnectedToCenter = source === centralNodeId || target === centralNodeId;
         return isConnectedToCenter ? 3.5 : 2;
       });
 
@@ -151,15 +224,23 @@ export const NetworkGraph = () => {
         .on('end', dragended) as any
       );
 
+    console.log('[NetworkGraph] Created D3 node elements:', node.size());
+
     // Helper function to check if node is connected to central
     const isNodeConnected = (nodeId: string) => {
       if (!centralInfluencer) return true;
-      if (nodeId === centralInfluencer) return true;
+
+      // Handle both formats: "1" and "influencer-1"
+      const centralNodeId = centralInfluencer.startsWith('influencer-')
+        ? centralInfluencer
+        : `influencer-${centralInfluencer}`;
+
+      if (nodeId === centralNodeId) return true;
       return links.some(l => {
         const source = typeof l.source === 'object' ? l.source.id : l.source;
         const target = typeof l.target === 'object' ? l.target.id : l.target;
-        return (source === centralInfluencer && target === nodeId) ||
-               (target === centralInfluencer && source === nodeId);
+        return (source === centralNodeId && target === nodeId) ||
+               (target === centralNodeId && source === nodeId);
       });
     };
 
@@ -169,7 +250,7 @@ export const NetworkGraph = () => {
         const baseSize = d.size * 0.4;
         const isConnected = isNodeConnected(d.id);
 
-        if (d.id === centralInfluencer) return baseSize * 1.5;
+        if (d.id === centralNodeId) return baseSize * 1.5;
         if (isConnected) return baseSize;
         return baseSize * 0.6; // Smaller for non-connected nodes
       })
@@ -179,11 +260,11 @@ export const NetworkGraph = () => {
       .style('cursor', 'pointer')
       .style('filter', (d: Node) => {
         const color = colorMap[d.type];
-        return `drop-shadow(0 0 ${d.id === centralInfluencer ? '10px' : '6px'} ${color})`;
+        return `drop-shadow(0 0 ${d.id === centralNodeId ? '10px' : '6px'} ${color})`;
       })
       .style('opacity', (d: Node) => {
-        if (!centralInfluencer) return 0.95;
-        if (d.id === centralInfluencer) return 1;
+        if (!centralNodeId) return 0.95;
+        if (d.id === centralNodeId) return 1;
         const isConnected = isNodeConnected(d.id);
         return isConnected ? 0.85 : 0.2;
       })
@@ -205,7 +286,7 @@ export const NetworkGraph = () => {
             const baseSize = d.size * 0.4;
             const isConnected = isNodeConnected(d.id);
             let currentSize = baseSize;
-            if (d.id === centralInfluencer) currentSize = baseSize * 1.5;
+            if (d.id === centralNodeId) currentSize = baseSize * 1.5;
             else if (!isConnected) currentSize = baseSize * 0.6;
             return currentSize * 1.2;
           })
@@ -218,7 +299,7 @@ export const NetworkGraph = () => {
           .attr('r', (d: any) => {
             const baseSize = d.size * 0.4;
             const isConnected = isNodeConnected(d.id);
-            if (d.id === centralInfluencer) return baseSize * 1.5;
+            if (d.id === centralNodeId) return baseSize * 1.5;
             if (isConnected) return baseSize;
             return baseSize * 0.6;
           })
@@ -397,11 +478,14 @@ export const NetworkGraph = () => {
       d.fy = null;
     }
 
+    console.log('[NetworkGraph] D3 render setup complete, nodes and simulation created');
+
     // Cleanup
     return () => {
+      console.log('[NetworkGraph] Cleanup: stopping simulation');
       simulation.stop();
     };
-  }, [id, centralInfluencer, viewMode]);
+  }, [id, centralInfluencer, viewMode, graphNodes, relationships]);
 
   const resetView = () => {
     if (viewMode !== '2d') return;
@@ -444,6 +528,11 @@ export const NetworkGraph = () => {
 
   return (
     <div className="network-graph-page">
+      {/* Data Source Toggle */}
+      <div className="data-source-toggle-container">
+        <DataSourceToggle />
+      </div>
+
       <motion.div
         className="graph-header"
         initial={{ opacity: 0, y: -20 }}

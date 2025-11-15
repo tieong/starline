@@ -1,17 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SearchBar } from '../components/SearchBar';
 import { InfluencerCard } from '../components/InfluencerCard';
 import { Tag } from '../components/Tag';
-import { influencers } from '../data/mockData';
+import { DataSourceToggle } from '../components/DataSourceToggle';
+import { dataService } from '../services/dataService';
+import { useDataContext } from '../context/DataContext';
+import { Influencer } from '../types';
 import { ArrowLeft, Filter } from 'lucide-react';
 import './AllInfluencers.css';
 
 export const AllInfluencers = () => {
   const navigate = useNavigate();
+  const { useMockData } = useDataContext();
+  const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNiche, setSelectedNiche] = useState<string | null>(null);
+
+  // Load influencers when data source changes
+  useEffect(() => {
+    const loadInfluencers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await dataService.getInfluencers(useMockData);
+        setInfluencers(data);
+      } catch (err) {
+        console.error('Failed to load influencers:', err);
+        setError('Failed to load influencers. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInfluencers();
+  }, [useMockData]);
+
+  // Listen for influencer discovery events
+  useEffect(() => {
+    const handleInfluencerDiscovered = async () => {
+      // Reload influencers to include the newly discovered one
+      try {
+        const data = await dataService.getInfluencers(useMockData);
+        setInfluencers(data);
+      } catch (err) {
+        console.error('Failed to reload influencers:', err);
+      }
+    };
+
+    window.addEventListener('influencer-discovered', handleInfluencerDiscovered);
+
+    return () => {
+      window.removeEventListener('influencer-discovered', handleInfluencerDiscovered);
+    };
+  }, [useMockData]);
 
   const allNiches = Array.from(
     new Set(influencers.flatMap(inf => inf.niche))
@@ -31,7 +76,7 @@ export const AllInfluencers = () => {
   );
   const averageEngagementRate = (
     datasetForInsights.reduce((sum, inf) => sum + inf.engagementRate, 0) / datasetSize
-  ).toFixed(1);
+  ).toFixed(2);
   const totalFollowersDisplayed = new Intl.NumberFormat('fr-FR', {
     notation: 'compact',
     maximumFractionDigits: 1
@@ -40,6 +85,11 @@ export const AllInfluencers = () => {
 
   return (
     <div className="all-influencers">
+      {/* Data Source Toggle */}
+      <div className="data-source-toggle-container">
+        <DataSourceToggle />
+      </div>
+
       <motion.button
         className="back-button-top"
         onClick={() => navigate('/')}
@@ -138,30 +188,40 @@ export const AllInfluencers = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <h2>
-            {filteredInfluencers.length} influenceur{filteredInfluencers.length > 1 ? 's' : ''} trouvé{filteredInfluencers.length > 1 ? 's' : ''}
-          </h2>
+          {loading ? (
+            <h2>Loading influencers...</h2>
+          ) : error ? (
+            <h2 style={{ color: 'var(--color-red-500)' }}>{error}</h2>
+          ) : (
+            <h2>
+              {filteredInfluencers.length} influenceur{filteredInfluencers.length > 1 ? 's' : ''} trouvé{filteredInfluencers.length > 1 ? 's' : ''}
+            </h2>
+          )}
         </motion.div>
 
-        <div className="influencer-grid">
-          {filteredInfluencers.map((influencer, index) => (
-            <InfluencerCard
-              key={influencer.id}
-              influencer={influencer}
-              onClick={() => navigate(`/influencer/${influencer.id}`)}
-              delay={index * 0.1}
-            />
-          ))}
-        </div>
+        {!loading && !error && (
+          <>
+            <div className="influencer-grid">
+              {filteredInfluencers.map((influencer, index) => (
+                <InfluencerCard
+                  key={influencer.id}
+                  influencer={influencer}
+                  onClick={() => navigate(`/influencer/${influencer.id}`)}
+                  delay={index * 0.1}
+                />
+              ))}
+            </div>
 
-        {filteredInfluencers.length === 0 && (
-          <motion.div
-            className="no-results"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <p>Aucun influenceur trouvé pour cette recherche</p>
-          </motion.div>
+            {filteredInfluencers.length === 0 && (
+              <motion.div
+                className="no-results"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p>Aucun influenceur trouvé pour cette recherche</p>
+              </motion.div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,9 +12,15 @@ import {
   ExternalLink,
   TrendingUp as TrendIcon,
   MessageCircle,
-  Globe
+  Globe,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
-import { influencers, products, newsItems, socialComments } from '../data/mockData';
+import { DataSourceToggle } from '../components/DataSourceToggle';
+import { dataService } from '../services/dataService';
+import { apiService } from '../services/api';
+import { useDataContext } from '../context/DataContext';
+import { Influencer, Product, NewsItem, SocialComment } from '../types';
 import { Tag } from '../components/Tag';
 import { ScoreGauge } from '../components/ScoreGauge';
 import { InfluencerComparison } from '../components/InfluencerComparison';
@@ -25,16 +32,140 @@ import './InfluencerDetail.css';
 export const InfluencerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { useMockData } = useDataContext();
 
-  const influencer = influencers.find(inf => inf.id === id);
-  const influencerProducts = products.filter(p => p.influencerId === id);
-  const influencerNews = newsItems.filter(n => n.influencerId === id);
-  const influencerComments = socialComments.filter(c => c.influencerId === id);
+  const [influencer, setInfluencer] = useState<Influencer | null>(null);
+  const [influencerProducts, setInfluencerProducts] = useState<Product[]>([]);
+  const [influencerNews, setInfluencerNews] = useState<NewsItem[]>([]);
+  const [influencerTimeline, setInfluencerTimeline] = useState<any[]>([]);
+  const [influencerComments, setInfluencerComments] = useState<SocialComment[]>([]);
+  const [allInfluencers, setAllInfluencers] = useState<Influencer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchingNews, setFetchingNews] = useState(false);
+  const [fetchingTimeline, setFetchingTimeline] = useState(false);
+  const [fetchingReputation, setFetchingReputation] = useState(false);
 
-  if (!influencer) {
+  // Handler to fetch news on-demand
+  const handleFetchNews = async () => {
+    if (!id || useMockData) return;
+    setFetchingNews(true);
+    try {
+      await apiService.fetchNews(parseInt(id));
+      const news = await dataService.getNewsItems(useMockData, parseInt(id));
+      setInfluencerNews(news);
+    } catch (error) {
+      console.error('Failed to fetch news:', error);
+    } finally {
+      setFetchingNews(false);
+    }
+  };
+
+  // Handler to fetch reputation on-demand
+  const handleFetchReputation = async () => {
+    if (!id || useMockData) return;
+    setFetchingReputation(true);
+    try {
+      await apiService.fetchReputation(parseInt(id));
+      const comments = await dataService.getSocialComments(useMockData, parseInt(id));
+      setInfluencerComments(comments);
+    } catch (error) {
+      console.error('Failed to fetch reputation:', error);
+    } finally {
+      setFetchingReputation(false);
+    }
+  };
+
+  // Handler to fetch timeline on-demand
+  const handleFetchTimeline = async () => {
+    if (!id || useMockData) return;
+    setFetchingTimeline(true);
+    try {
+      await apiService.fetchTimeline(parseInt(id));
+      const timeline = await apiService.getInfluencerTimeline(parseInt(id));
+      setInfluencerTimeline(timeline);
+    } catch (error) {
+      console.error('Failed to fetch timeline:', error);
+    } finally {
+      setFetchingTimeline(false);
+    }
+  };
+
+  // Load influencer data when ID or data source changes
+  useEffect(() => {
+    const loadInfluencer = async () => {
+      if (!id) return;
+
+      setLoading(true);
+      setError(null);
+      try {
+        const influencerId = parseInt(id);
+        const influencerData = await dataService.getInfluencer(useMockData, influencerId);
+
+        if (!influencerData) {
+          setError('Influencer not found');
+          return;
+        }
+
+        setInfluencer(influencerData);
+
+        // Load related data and influencers for comparison
+        const [products, news, comments, influencersForComparison, timeline] = await Promise.all([
+          dataService.getProducts(useMockData, influencerId),
+          dataService.getNewsItems(useMockData, influencerId),
+          dataService.getSocialComments(useMockData, influencerId),
+          dataService.getInfluencers(useMockData),
+          useMockData ? Promise.resolve([]) : apiService.getInfluencerTimeline(influencerId).catch(() => []),
+        ]);
+
+        setInfluencerProducts(products);
+        setInfluencerNews(news);
+        setInfluencerComments(comments);
+        setAllInfluencers(influencersForComparison);
+        setInfluencerTimeline(timeline);
+
+        // Auto-fetch news, reputation, and timeline if empty in API mode
+        if (!useMockData) {
+          // Trigger news fetch if empty
+          if (news.length === 0) {
+            handleFetchNews();
+          }
+
+          // Trigger reputation fetch if empty
+          if (comments.length === 0) {
+            handleFetchReputation();
+          }
+
+          // Trigger timeline fetch if empty
+          if (timeline.length === 0) {
+            handleFetchTimeline();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load influencer:', err);
+        setError('Failed to load influencer data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInfluencer();
+  }, [id, useMockData]);
+
+  if (loading) {
+    return (
+      <div className="influencer-detail">
+        <div className="loading-state">
+          <h2>Loading influencer...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !influencer) {
     return (
       <div className="not-found">
-        <h2>Influenceur non trouvé</h2>
+        <h2>{error || 'Influenceur non trouvé'}</h2>
         <button onClick={() => navigate('/')}>Retour à l'accueil</button>
       </div>
     );
@@ -74,6 +205,11 @@ export const InfluencerDetail = () => {
 
   return (
     <div className="influencer-detail">
+      {/* Data Source Toggle */}
+      <div className="data-source-toggle-container">
+        <DataSourceToggle />
+      </div>
+
       <motion.button
         className="back-button"
         onClick={() => navigate('/')}
@@ -130,7 +266,7 @@ export const InfluencerDetail = () => {
               <div className="hero-stat-card">
                 <TrendingUp size={20} className="stat-icon" />
                 <div className="stat-content">
-                  <div className="hero-stat-value">{influencer.engagementRate}%</div>
+                  <div className="hero-stat-value">{influencer.engagementRate.toFixed(2)}%</div>
                   <div className="hero-stat-label">Engagement</div>
                 </div>
               </div>
@@ -186,10 +322,106 @@ export const InfluencerDetail = () => {
         >
           <InfluencerComparison
             currentInfluencer={influencer}
-            allInfluencers={influencers}
+            allInfluencers={allInfluencers}
           />
         </motion.section>
       )}
+
+      {/* News Timeline - Shown First */}
+      <motion.section
+        className="section news-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+      >
+        <div className="section-header">
+          <Newspaper className="section-icon" size={28} />
+          <div className="section-header-text">
+            <h2>Actualités & Timeline</h2>
+            {(influencerNews.length > 0 || influencerTimeline.length > 0) && (
+              <p className="section-subtitle">
+                {influencerNews.length + influencerTimeline.length} événement{influencerNews.length + influencerTimeline.length > 1 ? 's' : ''} récent{influencerNews.length + influencerTimeline.length > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        </div>
+        {(fetchingNews || fetchingTimeline) ? (
+          <div className="empty-state">
+            <Loader2 className="empty-state-icon spinning" size={48} />
+            <h3 className="empty-state-title">Analyse en cours...</h3>
+            <p className="empty-state-description">
+              Recherche d'actualités et d'événements récents
+            </p>
+          </div>
+        ) : (influencerNews.length === 0 && influencerTimeline.length === 0) ? (
+          <div className="empty-state">
+            <Newspaper className="empty-state-icon" size={48} />
+            <h3 className="empty-state-title">Aucune actualité disponible</h3>
+            <p className="empty-state-description">
+              {useMockData
+                ? "Aucune actualité n'est disponible dans les données de démonstration"
+                : "Recherchez les dernières actualités et événements de cet influenceur"}
+            </p>
+            {!useMockData && (
+              <button className="analyze-button" onClick={handleFetchNews}>
+                <Sparkles size={20} />
+                <span>Rechercher des actualités</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="news-timeline">
+            {/* Combine and sort news items and timeline events by date */}
+            {[
+              ...influencerNews.map(news => ({ ...news, source_type: 'news' })),
+              ...influencerTimeline.map(event => ({
+                ...event,
+                source_type: 'timeline',
+                // Map timeline fields to news fields for consistent display
+                title: event.event || event.title,
+                description: event.description || event.summary,
+                date: event.date || event.timestamp,
+                type: event.event_type || event.type || 'event',
+              }))
+            ]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((item, index) => (
+                <motion.div
+                  key={`${item.source_type}-${item.id || index}`}
+                  className="news-item"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className="news-marker" />
+                  <div className="news-content">
+                    <div className="news-header">
+                      <div className="news-title-row">
+                        <h3 className="news-title">{item.title}</h3>
+                        <div className="news-meta">
+                          <Tag variant={getSeverityColor(item.severity)} size="small">
+                            {item.type}
+                          </Tag>
+                        </div>
+                      </div>
+                      <span className="news-date">
+                        {new Date(item.date).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                    <p className="news-description">{item.description}</p>
+                    {item.source && (
+                      <p className="news-source">Source · {item.source}</p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+          </div>
+        )}
+      </motion.section>
 
       {/* Two Column Layout */}
       <div className="detail-two-column">
@@ -249,7 +481,7 @@ export const InfluencerDetail = () => {
                         </Tag>
                       </div>
                       <p className="product-compact-brand">{product.brand}</p>
-                      {product.price && (
+                      {product.price && typeof product.price === 'number' && (
                         <p className="product-compact-price">${product.price.toFixed(2)}</p>
                       )}
                     </div>
@@ -260,23 +492,49 @@ export const InfluencerDetail = () => {
           )}
 
           {/* User Comments from Social Media */}
-          {influencerComments.length > 0 && (
-            <motion.section
-              className="section comments-section"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <div className="section-header">
-                <MessageCircle className="section-icon" size={28} />
-                <div className="section-header-text">
-                  <h2>User Comments from Social Media</h2>
+          <motion.section
+            className="section comments-section"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <div className="section-header">
+              <MessageCircle className="section-icon" size={28} />
+              <div className="section-header-text">
+                <h2>User Comments from Social Media</h2>
+                {influencerComments.length > 0 && (
                   <p className="section-subtitle">{influencerComments.length} comment{influencerComments.length > 1 ? 's' : ''}</p>
-                </div>
+                )}
               </div>
+            </div>
+            {fetchingReputation ? (
+              <div className="empty-state">
+                <Loader2 className="empty-state-icon spinning" size={48} />
+                <h3 className="empty-state-title">Analyse en cours...</h3>
+                <p className="empty-state-description">
+                  Collecte des commentaires sur les réseaux sociaux
+                </p>
+              </div>
+            ) : influencerComments.length === 0 ? (
+              <div className="empty-state">
+                <MessageCircle className="empty-state-icon" size={48} />
+                <h3 className="empty-state-title">Aucun commentaire disponible</h3>
+                <p className="empty-state-description">
+                  {useMockData
+                    ? "Aucun commentaire n'est disponible dans les données de démonstration"
+                    : "Analysez la réputation de cet influenceur sur les réseaux sociaux"}
+                </p>
+                {!useMockData && (
+                  <button className="analyze-button" onClick={handleFetchReputation}>
+                    <Sparkles size={20} />
+                    <span>Analyser la réputation</span>
+                  </button>
+                )}
+              </div>
+            ) : (
               <SocialComments comments={influencerComments} />
-            </motion.section>
-          )}
+            )}
+          </motion.section>
         </div>
       </div>
 
@@ -296,60 +554,6 @@ export const InfluencerDetail = () => {
             </div>
           </div>
           <PlatformPresence platforms={influencer.platformPresence} />
-        </motion.section>
-      )}
-
-      {/* News Timeline */}
-      {influencerNews.length > 0 && (
-        <motion.section
-          className="section news-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <div className="section-header">
-            <Newspaper className="section-icon" size={28} />
-            <div className="section-header-text">
-              <h2>Actualités & Timeline</h2>
-              <p className="section-subtitle">{influencerNews.length} événement{influencerNews.length > 1 ? 's' : ''} récent{influencerNews.length > 1 ? 's' : ''}</p>
-            </div>
-          </div>
-          <div className="news-timeline">
-            {influencerNews.map((news, index) => (
-              <motion.div
-                key={news.id}
-                className="news-item"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <div className="news-marker" />
-                <div className="news-content">
-                  <div className="news-header">
-                    <div className="news-title-row">
-                      <h3 className="news-title">{news.title}</h3>
-                      <div className="news-meta">
-                        <Tag variant={getSeverityColor(news.severity)} size="small">
-                          {news.type}
-                        </Tag>
-                      </div>
-                    </div>
-                    <span className="news-date">
-                      {new Date(news.date).toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                  <p className="news-description">{news.description}</p>
-                  {news.source && (
-                    <p className="news-source">Source · {news.source}</p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </motion.section>
       )}
 
