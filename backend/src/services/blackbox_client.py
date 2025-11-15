@@ -223,7 +223,10 @@ Find:
 3. Top 5-6 most significant milestones in their growth (chronological order)
 4. Major collaborations or turning points
 
-IMPORTANT: Limit timeline to 5-6 most significant events only (no more than 6).
+IMPORTANT:
+- Limit timeline to 5-6 most significant events only (no more than 6)
+- ENSURE the most recent event is from 2024 or 2025 if the influencer is still active
+- Include their latest major milestone or achievement to show current activity
 
 Return ONLY valid JSON:
 {{
