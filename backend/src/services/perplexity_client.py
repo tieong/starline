@@ -64,18 +64,30 @@ class PerplexityClient:
         logger.info(f"   🤖 Perplexity: Searching for platforms...")
         prompt = f"""Find all social media accounts for the influencer '{influencer_name}'.
 
+NAME MATCHING - CRITICAL:
+- The name "{influencer_name}" may NOT be exact - try multiple variations
+- Search broadly: try the name AS-IS, with/without spaces, common nicknames, stage names, real names
+- Examples of name variations to try:
+  * "Tiboinshape" → try "Tibo InShape", "Tibo", "TiboInShape"
+  * "Nabilla Vergara" → try "Nabilla", "Nabilla Benattia", "@nabilla"
+  * "MrBeast" → try "Mr Beast", "Jimmy Donaldson", "@mrbeast"
+- Search for "{influencer_name}" on social media platforms directly
+- If exact match fails, find the most popular French/social media influencer with a SIMILAR name
+- DO NOT give up easily - try at least 2-3 name variations before returning "not found"
+
 IMPORTANT: We are looking for people who became famous THROUGH social media (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors.
 
 CRITICAL REQUIREMENTS:
 1. ONLY return data if this is a REAL, VERIFIED social media influencer
 2. EXCLUDE: Movie actors, TV stars, athletes, musicians who became famous through traditional media
 3. INCLUDE: YouTubers, TikTokers, Instagram creators, Twitter personalities who built their fame online
-4. If you cannot find ANY social media accounts, return {{"platforms": [], "error": "Influencer not found"}}
-5. DO NOT make up or hallucinate data - if unsure, return empty platforms array
-6. ALL platforms MUST belong to the SAME person/influencer
-7. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
-8. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
-9. The influencer MUST have at least one verified platform or significant follower count (>10,000) to be considered real
+4. Be FLEXIBLE with name matching - accept nicknames, stage names, and variations
+5. If you cannot find ANY social media accounts even with flexible matching, return {{"platforms": [], "error": "Influencer not found"}}
+6. DO NOT make up or hallucinate data - if unsure, return empty platforms array
+7. ALL platforms MUST belong to the SAME person/influencer
+8. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
+9. If you find multiple people with similar names, choose the one who is most famous on social media
+10. The influencer MUST have at least one verified platform or significant follower count (>10,000) to be considered real
 
 Search across YouTube, TikTok, Instagram, Twitter/X, and other relevant platforms.
 
@@ -130,11 +142,14 @@ If the influencer is not found, return:
 }}"""
 
         messages = [
-            {"role": "system", "content": "You are an AI assistant that researches social media influencers. Focus on people who became famous through social media (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors. CRITICAL: Only return data for REAL influencers with verifiable social media presence. If you cannot find the influencer or verify their identity, return empty platforms array with an error message. DO NOT hallucinate or make up data. Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
+            {"role": "system", "content": "You are an AI assistant that researches social media influencers. Focus on people who became famous through social media (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors. IMPORTANT: Be FLEXIBLE with name matching - accept nicknames, stage names, partial names, and variations. Search for the most popular influencer matching the given name. CRITICAL: Only return data for REAL influencers with verifiable social media presence. If you cannot find the influencer even with flexible name matching, return empty platforms array with an error message. DO NOT hallucinate or make up data. Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Always return valid JSON."},
             {"role": "user", "content": prompt}
         ]
 
         response = self.chat(messages, temperature=0.3, max_tokens=1200)
+
+        # Log raw response for debugging
+        logger.info(f"   📝 Perplexity raw response preview: {response[:300]}...")
 
         # Try to parse JSON from response
         try:
@@ -145,6 +160,11 @@ If the influencer is not found, return:
                 json_str = response.split("```")[1].split("```")[0].strip()
             else:
                 json_str = response.strip()
+
+            # Clean up Python-style number formatting (e.g., 9_000_000 -> 9000000)
+            # This is invalid JSON but Perplexity sometimes returns it
+            import re
+            json_str = re.sub(r'(\d)_(\d)', r'\1\2', json_str)
 
             return json.loads(json_str)
         except json.JSONDecodeError:
@@ -461,7 +481,17 @@ REQUIREMENTS:
 8. Use their most commonly known name/handle
 
 For each influencer, provide:
-- name: Their full name or most commonly known name (e.g., "MrBeast", "Charli D'Amelio")
+- name: Their most searchable name that will work when searching platforms
+  * CRITICAL: Use the name format they actually use on YouTube/Instagram/TikTok
+  * For French influencers: Use their stage name with proper spacing
+  * Examples of CORRECT names:
+    - "Tibo InShape" (NOT "Tiboinshape" or "Tibo Inshape")
+    - "Squeezie" (NOT "Lucas Hauchard")
+    - "Nabilla" (NOT "Nabilla Vergara" or "Nabilla Benattia")
+    - "Norman" (NOT "Norman Thavaud")
+    - "Cyprien" (NOT "Cyprien Iov")
+  * If unsure, use their single-word stage name or most common username
+  * The name MUST be searchable on YouTube, Instagram, and TikTok
 - primary_platform: Their main platform (youtube, tiktok, instagram, twitter)
 - estimated_followers: Total followers across all platforms (approximate)
 - niche: Content category (gaming, beauty, comedy, tech, lifestyle, etc.)

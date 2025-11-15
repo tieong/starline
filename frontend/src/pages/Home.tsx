@@ -12,12 +12,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch top 10 global influencers on mount
+  // Fetch top 5 French influencers on mount
   useEffect(() => {
     const fetchTopInfluencers = async () => {
       try {
         setLoadingTop(true);
-        const response = await apiClient.getTopInfluencers({ limit: 10, auto_discover: true });
+        const response = await apiClient.getTopInfluencers({ limit: 5, country: 'FR', auto_discover: true });
         setTopInfluencers(response.influencers);
 
         // Show message if auto-discovery happened
@@ -223,14 +223,14 @@ export default function Home() {
           </div>
         )}
 
-        {/* Top 10 Global Influencers - Show when no search */}
+        {/* Top 5 French Influencers - Show when no search */}
         {!searchQuery && (
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                Top 10 Global Influencers
+                Top 5 French Influencers
               </h2>
-              <p className="text-gray-600">Most influential creators worldwide</p>
+              <p className="text-gray-600">Most influential creators in France</p>
               {autoDiscovering && (
                 <div className="mt-4 inline-block bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
                   <p className="text-blue-700 text-sm">

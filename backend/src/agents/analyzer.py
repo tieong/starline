@@ -44,16 +44,66 @@ class InfluencerAnalyzer:
         else:
             self.ai_client = blackbox_client
 
+    def _generate_name_variations(self, name: str) -> list[str]:
+        """
+        Generate common name variations for flexible matching.
+
+        Args:
+            name: Original influencer name
+
+        Returns:
+            List of name variations to try
+        """
+        variations = []
+
+        # Try the original name first
+        variations.append(name)
+
+        # If name has no spaces, try adding space variations
+        if " " not in name:
+            # Try adding space before capital letters (e.g., "Tiboinshape" -> "Tibo Inshape")
+            import re
+            spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+            if spaced != name:
+                variations.append(spaced)
+                # Also try with "In" capitalized (e.g., "Tibo InShape")
+                variations.append(spaced.replace(" in", " In"))
+
+        # If name has multiple words, try first name only
+        if " " in name:
+            first_name = name.split()[0]
+            variations.append(first_name)
+
+            # Also try without last name for common patterns (e.g., "Nabilla Vergara" -> "Nabilla")
+            if len(name.split()) > 1:
+                # Keep only first word
+                variations.append(name.split()[0])
+
+        # Try with @ prefix (common handle format)
+        variations.append(f"@{name.replace(' ', '').lower()}")
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_variations = []
+        for v in variations:
+            if v not in seen:
+                seen.add(v)
+                unique_variations.append(v)
+
+        return unique_variations
+
     async def analyze_influencer(self, influencer_name: str, analysis_level: str = "basic") -> Dict[str, Any]:
         """
         Perform real-time analysis of an influencer.
 
         Args:
             influencer_name: Name of the influencer to analyze
-            analysis_level: "basic" (platforms, products, connections) or "full" (includes timeline, news, reviews)
+            analysis_level: "basic" (platforms, products only) or "full" (includes timeline, news, reviews, connections)
 
         Returns:
             Influencer profile data
+
+        Note: Network map (connections) are NOT fetched in basic mode. Use fetch_connections() endpoint.
         """
         logger.info(f"🔍 Starting {analysis_level} analysis for: {influencer_name}")
 
@@ -62,13 +112,23 @@ class InfluencerAnalyzer:
             Influencer.name.ilike(f"%{influencer_name}%")
         ).first()
 
-        # If cached and not expired, return cached data
-        if influencer and influencer.cache_expires and influencer.cache_expires > datetime.utcnow():
+        # If cached, not expired, AND analysis was complete, return cached data
+        if (influencer and
+            influencer.cache_expires and
+            influencer.cache_expires > datetime.utcnow() and
+            influencer.analysis_complete):
             logger.info(f"✅ Returning cached data for: {influencer_name}")
             return self._build_response(influencer)
 
+        # If cached but analysis was incomplete, we'll retry the analysis
+        if influencer and not influencer.analysis_complete:
+            logger.info(f"⚠️  Found incomplete analysis for '{influencer_name}', retrying...")
+            # Reset the analyzing flag so we can retry
+            influencer.is_analyzing = False
+            self.db.commit()
+
         # If analysis is in progress, return status
-        if influencer and influencer.is_analyzing:
+        if influencer and influencer.is_analyzing and influencer.analysis_complete:
             logger.info(f"⏳ Analysis already in progress for: {influencer_name}")
             return {
                 "status": "analyzing",
@@ -102,30 +162,47 @@ class InfluencerAnalyzer:
             logger.info(f"   ✓ Found {len(platforms_data.get('platforms', []))} platforms")
 
             # Validate that influencer exists - check if we found any real platforms
-            if not platforms_data.get("platforms") or len(platforms_data.get("platforms", [])) == 0:
-                # No platforms found = influencer doesn't exist or couldn't be verified
-                logger.warning(f"❌ No platforms found for {influencer_name} - influencer may not exist")
-                influencer.is_analyzing = False
-                self.db.commit()
+            if not platforms_data.get("platforms") or len(platforms_data.get("platforms", [])) == 0 or platforms_data.get("error"):
+                # Try name variations as fallback
+                logger.warning(f"⚠️  Initial search for '{influencer_name}' found 0 platforms, trying name variations...")
+                variations = self._generate_name_variations(influencer_name)
+                logger.info(f"   🔄 Will try these variations: {variations}")
 
-                # Clean up the influencer record if it was just created
-                if not influencer.analysis_complete:
-                    self.db.delete(influencer)
+                platforms_data = None
+                for variation in variations[1:]:  # Skip first one (original name already tried)
+                    logger.info(f"   🔍 Trying variation: '{variation}'")
+                    try:
+                        variation_data = await self._run_in_thread(
+                            self.ai_client.analyze_influencer_platforms,
+                            variation
+                        )
+
+                        # Check if this variation found platforms
+                        if variation_data.get("platforms") and len(variation_data.get("platforms", [])) > 0 and not variation_data.get("error"):
+                            logger.info(f"   ✅ SUCCESS! Found {len(variation_data.get('platforms', []))} platforms using '{variation}'")
+                            platforms_data = variation_data
+                            # Update the influencer name to the working variation
+                            influencer.name = variation
+                            break
+                        else:
+                            logger.info(f"   ✗ No platforms found for '{variation}'")
+                    except Exception as e:
+                        logger.warning(f"   ✗ Error trying '{variation}': {str(e)}")
+                        continue
+
+                # If all variations failed, give up
+                if not platforms_data or not platforms_data.get("platforms") or len(platforms_data.get("platforms", [])) == 0:
+                    logger.error(f"❌ No platforms found for '{influencer_name}' even after trying {len(variations)} name variations")
+                    influencer.is_analyzing = False
                     self.db.commit()
 
-                raise Exception(f"Influencer '{influencer_name}' not found. Please verify the name and try again.")
+                    # Clean up the influencer record if it was just created
+                    if not influencer.analysis_complete:
+                        self.db.delete(influencer)
+                        self.db.commit()
 
-            # Check if AI explicitly returned an error
-            if platforms_data.get("error"):
-                logger.warning(f"❌ Error from AI: {platforms_data.get('error')}")
-                influencer.is_analyzing = False
-                self.db.commit()
-
-                if not influencer.analysis_complete:
-                    self.db.delete(influencer)
-                    self.db.commit()
-
-                raise Exception(f"Influencer '{influencer_name}' not found: {platforms_data.get('error')}")
+                    tried_names = ", ".join(variations)
+                    raise Exception(f"Influencer '{influencer_name}' not found. Tried variations: {tried_names}")
 
             # Save platform data
             if platforms_data.get("platforms"):
@@ -158,14 +235,14 @@ class InfluencerAnalyzer:
                 )
                 products_data, timeline_data, connections_data, news_data = results
             else:
-                # Basic analysis: only products and connections (skip timeline and news)
-                logger.info(f"🔄 Step 2/6: Running basic parallel analyses (products, connections)...")
-                results = await asyncio.gather(
-                    self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
-                    self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
-                    return_exceptions=True
+                # Basic analysis: only products (skip timeline, news, and connections)
+                logger.info(f"🔄 Step 2/6: Running basic analysis (products only)...")
+                products_data = await self._run_in_thread(
+                    self.ai_client.analyze_products,
+                    influencer_name,
+                    platforms_data
                 )
-                products_data, connections_data = results
+                connections_data = None
                 timeline_data = None
                 news_data = None
 
@@ -207,10 +284,17 @@ class InfluencerAnalyzer:
             return self._build_response(influencer)
 
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
             logger.error(f"❌ Analysis failed for {influencer_name}: {str(e)}")
-            influencer.is_analyzing = False
-            self.db.commit()
-            raise Exception(f"Analysis failed: {str(e)}")
+            logger.error(f"Full error traceback:\n{error_details}")
+
+            # Update influencer status
+            if influencer:
+                influencer.is_analyzing = False
+                self.db.commit()
+
+            raise Exception(f"Analysis failed for '{influencer_name}': {str(e)}")
 
     async def _run_in_thread(self, func, *args):
         """Run synchronous function in thread pool."""
@@ -841,6 +925,62 @@ class InfluencerAnalyzer:
                     "date": r.date.isoformat() if r.date else None,
                 }
                 for r in product.reviews
+            ]
+        }
+
+    async def fetch_connections(self, influencer_id: int) -> Dict[str, Any]:
+        """
+        Fetch network map/connections on-demand for an influencer.
+
+        Args:
+            influencer_id: ID of the influencer
+
+        Returns:
+            Dict with connections data
+        """
+        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        if not influencer:
+            raise ValueError(f"Influencer with ID {influencer_id} not found")
+
+        # Get platform data
+        platforms_data = {
+            "platforms": [
+                {
+                    "platform": p.platform_name,
+                    "username": p.username,
+                    "followers": p.follower_count,
+                    "url": p.url
+                }
+                for p in influencer.platforms
+            ]
+        }
+
+        # Fetch connections from AI
+        logger.info(f"🔍 Fetching network map for: {influencer.name}")
+        connections_data = await self._run_in_thread(
+            self.ai_client.analyze_connections,
+            influencer.name,
+            platforms_data
+        )
+
+        # Save connections
+        if isinstance(connections_data, dict):
+            await self._save_connections(influencer, connections_data)
+            logger.info(f"   ✓ Saved network map")
+
+        return {
+            "influencer_id": influencer_id,
+            "connections": [
+                {
+                    "id": c.id,
+                    "entity_name": c.entity_name,
+                    "entity_type": c.entity_type,
+                    "connection_type": c.connection_type,
+                    "strength": c.strength,
+                    "description": c.description,
+                    "connected_influencer_id": c.connected_influencer_id,
+                }
+                for c in influencer.connections
             ]
         }
 
