@@ -25,6 +25,16 @@ export const Home = () => {
 
   return (
     <div className="home-minimal">
+      {/* Particles background - reduced to 6 for performance */}
+      <div className="particles-background">
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+        <div className="particle"></div>
+      </div>
+
       <motion.div
         className="home-minimal-content"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -32,17 +42,12 @@ export const Home = () => {
         transition={{ duration: 0.6 }}
       >
         {/* Logo */}
-        <motion.div
-          className="logo-minimal"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
+        <div className="logo-minimal">
           <div className="logo-minimal-icon">
             <Sparkles size={36} strokeWidth={2} />
           </div>
           <h1 className="logo-minimal-text">Starline</h1>
-        </motion.div>
+        </div>
 
         {/* Tagline */}
         <motion.p

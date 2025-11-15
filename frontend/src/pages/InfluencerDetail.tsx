@@ -8,11 +8,18 @@ import {
   Package,
   Newspaper,
   Network,
-  ExternalLink
+  ExternalLink,
+  TrendingUp as TrendIcon,
+  MessageCircle,
+  Globe
 } from 'lucide-react';
-import { influencers, products, newsItems } from '../data/mockData';
+import { influencers, products, newsItems, socialComments } from '../data/mockData';
 import { Tag } from '../components/Tag';
 import { ScoreGauge } from '../components/ScoreGauge';
+import { InfluencerComparison } from '../components/InfluencerComparison';
+import { NetworkConnections } from '../components/NetworkConnections';
+import { SocialComments } from '../components/SocialComments';
+import { PlatformPresence } from '../components/PlatformPresence';
 import './InfluencerDetail.css';
 
 export const InfluencerDetail = () => {
@@ -22,6 +29,7 @@ export const InfluencerDetail = () => {
   const influencer = influencers.find(inf => inf.id === id);
   const influencerProducts = products.filter(p => p.influencerId === id);
   const influencerNews = newsItems.filter(n => n.influencerId === id);
+  const influencerComments = socialComments.filter(c => c.influencerId === id);
 
   if (!influencer) {
     return (
@@ -71,7 +79,6 @@ export const InfluencerDetail = () => {
         onClick={() => navigate('/')}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        whileHover={{ x: -5 }}
       >
         <ArrowLeft size={20} />
         <span>Retour</span>
@@ -84,26 +91,61 @@ export const InfluencerDetail = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <div className="hero-gradient-bar" />
         <div className="hero-content">
-          <img src={influencer.avatar} alt={influencer.name} className="hero-avatar" />
+          <div className="hero-left">
+            <div className="hero-avatar-wrapper">
+              <img src={influencer.avatar} alt={influencer.name} className="hero-avatar" />
+              <div className="hero-score-badge">
+                <span className="hero-score-value">{influencer.influscoring.overall}</span>
+                <span className="hero-score-label">Score</span>
+              </div>
+            </div>
+          </div>
+          
           <div className="hero-info">
-            <h1 className="hero-name">{influencer.name}</h1>
-            <p className="hero-handle">{influencer.handle}</p>
+            <div className="hero-header">
+              <div>
+                <h1 className="hero-name">{influencer.name}</h1>
+                <p className="hero-handle">{influencer.handle}</p>
+              </div>
+              {influencer.agency && (
+                <div className="hero-agency-badge">
+                  <span className="agency-label">Agence</span>
+                  <span className="agency-name">{influencer.agency}</span>
+                </div>
+              )}
+            </div>
+            
             <p className="hero-bio">{influencer.bio}</p>
 
-            <div className="hero-stats">
-              <div className="hero-stat">
-                <Users size={24} />
-                <div>
+            <div className="hero-stats-grid">
+              <div className="hero-stat-card">
+                <Users size={20} className="stat-icon" />
+                <div className="stat-content">
                   <div className="hero-stat-value">{formatFollowers(influencer.followers)}</div>
                   <div className="hero-stat-label">Abonnés</div>
                 </div>
               </div>
-              <div className="hero-stat">
-                <TrendingUp size={24} />
-                <div>
+              <div className="hero-stat-card">
+                <TrendingUp size={20} className="stat-icon" />
+                <div className="stat-content">
                   <div className="hero-stat-value">{influencer.engagementRate}%</div>
                   <div className="hero-stat-label">Engagement</div>
+                </div>
+              </div>
+              <div className="hero-stat-card">
+                <TrendIcon size={20} className="stat-icon" />
+                <div className="stat-content">
+                  <div className="hero-stat-value">{formatFollowers(influencer.stats.avgViews)}</div>
+                  <div className="hero-stat-label">Vues moy.</div>
+                </div>
+              </div>
+              <div className="hero-stat-card">
+                <Package size={20} className="stat-icon" />
+                <div className="stat-content">
+                  <div className="hero-stat-value">{influencer.stats.postingFrequency}</div>
+                  <div className="hero-stat-label">Fréquence</div>
                 </div>
               </div>
             </div>
@@ -134,124 +176,126 @@ export const InfluencerDetail = () => {
         </div>
       </motion.section>
 
-      {/* InfluScoring Section */}
-      <motion.section
-        className="section scoring-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        <div className="section-header">
-          <Shield className="section-icon" />
-          <h2>InfluScoring</h2>
-        </div>
-        <div className="scoring-content">
-          <div className="overall-score">
-            <div className="overall-score-circle">
-              <motion.svg viewBox="0 0 200 200" className="score-ring">
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="90"
-                  fill="none"
-                  stroke="var(--surface-card-soft)"
-                  strokeWidth="12"
-                />
-                <motion.circle
-                  cx="100"
-                  cy="100"
-                  r="90"
-                  fill="none"
-                  stroke="var(--primary-main)"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 90}`}
-                  initial={{ strokeDashoffset: 2 * Math.PI * 90 }}
-                  animate={{
-                    strokeDashoffset: 2 * Math.PI * 90 * (1 - influencer.influscoring.overall / 100)
-                  }}
-                  transition={{ duration: 1.5, ease: 'easeOut' }}
-                  style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-                />
-              </motion.svg>
-              <div className="score-number">{influencer.influscoring.overall}</div>
-            </div>
-            <div className="overall-score-label">Score Global</div>
-          </div>
-
-          <div className="score-details">
-            <ScoreGauge
-              label="✅ Fiabilité"
-              value={influencer.influscoring.reliability}
-            />
-            <ScoreGauge
-              label="⚠️ Controverses"
-              value={100 - influencer.influscoring.controversies}
-              color={
-                influencer.influscoring.controversies < 20
-                  ? 'var(--accent-teal)'
-                  : influencer.influscoring.controversies < 50
-                  ? 'var(--accent-yellow)'
-                  : 'var(--accent-red)'
-              }
-            />
-            <ScoreGauge
-              label="📊 Authenticité"
-              value={influencer.influscoring.authenticity}
-            />
-            <ScoreGauge
-              label="🔍 Réputation"
-              value={influencer.influscoring.reputation}
-            />
-            <ScoreGauge
-              label="💼 Professionnalisme"
-              value={influencer.influscoring.professionalism}
-            />
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Products Section */}
-      {influencerProducts.length > 0 && (
+      {/* Subscriber Growth Chart with Comparison */}
+      {influencer.subscriberGrowth && influencer.subscriberGrowth.length > 0 && (
         <motion.section
-          className="section products-section"
+          className="section chart-section"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <InfluencerComparison 
+            currentInfluencer={influencer} 
+            allInfluencers={influencers}
+          />
+        </motion.section>
+      )}
+
+      {/* Two Column Layout */}
+      <div className="detail-two-column">
+        {/* Left Column */}
+        <div className="detail-column-left">
+          {/* Network Connections */}
+          {influencer.networkConnections && influencer.networkConnections.length > 0 && (
+            <motion.section
+              className="section network-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="section-header">
+                <Network className="section-icon" size={28} />
+                <div className="section-header-text">
+                  <h2>Network Connections</h2>
+                  <p className="section-subtitle">Click on influencer nodes to navigate</p>
+                </div>
+              </div>
+              <NetworkConnections connections={influencer.networkConnections} />
+            </motion.section>
+          )}
+        </div>
+
+        {/* Right Column */}
+        <div className="detail-column-right">
+          {/* Products Section */}
+          {influencerProducts.length > 0 && (
+            <motion.section
+              className="section products-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div className="section-header">
+                <Package className="section-icon" size={28} />
+                <div className="section-header-text">
+                  <h2>Products & Sponsorships</h2>
+                  <p className="section-subtitle">{influencerProducts.length} produit{influencerProducts.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <div className="products-list">
+                {influencerProducts.slice(0, 3).map((product, index) => (
+                  <motion.div
+                    key={product.id}
+                    className="product-item"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="product-compact-info">
+                      <div className="product-compact-header">
+                        <h4 className="product-compact-name">{product.name}</h4>
+                        <Tag variant={product.status === 'active' ? 'teal' : 'default'} size="small">
+                          {product.status === 'active' ? 'Active' : 'Ended'}
+                        </Tag>
+                      </div>
+                      <p className="product-compact-brand">{product.brand}</p>
+                      {product.price && (
+                        <p className="product-compact-price">${product.price.toFixed(2)}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* User Comments from Social Media */}
+          {influencerComments.length > 0 && (
+            <motion.section
+              className="section comments-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <div className="section-header">
+                <MessageCircle className="section-icon" size={28} />
+                <div className="section-header-text">
+                  <h2>User Comments from Social Media</h2>
+                  <p className="section-subtitle">{influencerComments.length} comment{influencerComments.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <SocialComments comments={influencerComments} />
+            </motion.section>
+          )}
+        </div>
+      </div>
+
+      {/* Platform Presence */}
+      {influencer.platformPresence && influencer.platformPresence.length > 0 && (
+        <motion.section
+          className="section platform-section"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
         >
           <div className="section-header">
-            <Package className="section-icon" />
-            <h2>Produits & Collaborations</h2>
+            <Globe className="section-icon" size={28} />
+            <div className="section-header-text">
+              <h2>Platform Presence</h2>
+              <p className="section-subtitle">{influencer.platformPresence.length} plateformes</p>
+            </div>
           </div>
-          <div className="products-grid">
-            {influencerProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                className="product-card"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-              >
-                <img src={product.image} alt={product.name} className="product-image" />
-                <div className="product-info">
-                  <h3 className="product-name">{product.name}</h3>
-                  <p className="product-brand">{product.brand}</p>
-                  {product.price && (
-                    <p className="product-price">{product.price.toFixed(2)}€</p>
-                  )}
-                  {product.promoCode && (
-                    <Tag variant="orange" size="small">
-                      Code: {product.promoCode}
-                    </Tag>
-                  )}
-                  <Tag variant={product.status === 'active' ? 'teal' : 'default'} size="small">
-                    {product.status === 'active' ? 'Actif' : 'Terminé'}
-                  </Tag>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <PlatformPresence platforms={influencer.platformPresence} />
         </motion.section>
       )}
 
@@ -261,11 +305,14 @@ export const InfluencerDetail = () => {
           className="section news-section"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
           <div className="section-header">
-            <Newspaper className="section-icon" />
-            <h2>Actualités & Timeline</h2>
+            <Newspaper className="section-icon" size={28} />
+            <div className="section-header-text">
+              <h2>Actualités & Timeline</h2>
+              <p className="section-subtitle">{influencerNews.length} événement{influencerNews.length > 1 ? 's' : ''} récent{influencerNews.length > 1 ? 's' : ''}</p>
+            </div>
           </div>
           <div className="news-timeline">
             {influencerNews.map((news, index) => (
@@ -276,22 +323,28 @@ export const InfluencerDetail = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <div className="news-icon">{getNewsIcon(news.type)}</div>
+                <div className="news-marker" />
                 <div className="news-content">
                   <div className="news-header">
-                    <h3 className="news-title">{news.title}</h3>
-                    <div className="news-meta">
-                      <Tag variant={getSeverityColor(news.severity)} size="small">
-                        {news.type}
-                      </Tag>
-                      <span className="news-date">
-                        {new Date(news.date).toLocaleDateString('fr-FR')}
-                      </span>
+                    <div className="news-title-row">
+                      <h3 className="news-title">{news.title}</h3>
+                      <div className="news-meta">
+                        <Tag variant={getSeverityColor(news.severity)} size="small">
+                          {news.type}
+                        </Tag>
+                      </div>
                     </div>
+                    <span className="news-date">
+                      {new Date(news.date).toLocaleDateString('fr-FR', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric' 
+                      })}
+                    </span>
                   </div>
                   <p className="news-description">{news.description}</p>
                   {news.source && (
-                    <p className="news-source">Source: {news.source}</p>
+                    <p className="news-source">Source · {news.source}</p>
                   )}
                 </div>
               </motion.div>
@@ -300,24 +353,6 @@ export const InfluencerDetail = () => {
         </motion.section>
       )}
 
-      {/* Relationship Graph Teaser */}
-      <motion.section
-        className="section graph-section"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-      >
-        <div className="section-header">
-          <Network className="section-icon" />
-          <h2>Réseau & Relations</h2>
-        </div>
-        <div className="graph-teaser">
-          <p>Explorez le réseau de {influencer.name} et ses connexions avec d'autres influenceurs, agences et marques.</p>
-          <button className="cta-button" onClick={() => navigate(`/graph/${influencer.id}`)}>
-            Voir le graphe interactif
-          </button>
-        </div>
-      </motion.section>
     </div>
   );
 };

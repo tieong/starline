@@ -1,12 +1,12 @@
 .influencer-card {
-  background: var(--surface-card);
-  border-radius: var(--radius-card);
+  background: var(--white);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
   padding: var(--space-lg);
   cursor: pointer;
-  box-shadow: var(--shadow-card-glow);
-  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  transition: all 0.2s ease;
 }
 
 .influencer-card::before {
@@ -15,11 +15,16 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary-main), var(--accent-blue));
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-purple), var(--primary-blue), var(--primary-green));
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s ease;
+}
+
+.influencer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
 .influencer-card:hover::before {
@@ -37,9 +42,8 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-light), var(--surface-card-soft));
-  padding: 4px;
-  box-shadow: var(--shadow-soft);
+  border: 2px solid var(--border-subtle);
+  object-fit: cover;
 }
 
 .score-badge {
@@ -53,9 +57,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--white);
   font-weight: 600;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-card);
   animation: float 3s ease-in-out infinite;
 }
 
@@ -66,18 +70,7 @@
 
 .trend-icon {
   margin-top: 2px;
-}
-
-.trend-up {
   color: rgba(255, 255, 255, 0.9);
-}
-
-.trend-down {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.trend-stable {
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .card-content {
@@ -85,6 +78,7 @@
 }
 
 .influencer-name {
+  font-family: var(--font-serif);
   font-size: 22px;
   font-weight: 600;
   color: var(--text-strong);
@@ -103,8 +97,8 @@
   gap: var(--space-lg);
   margin-bottom: var(--space-md);
   padding: var(--space-md);
-  background: var(--surface-card-soft);
-  border-radius: var(--radius-tooltip);
+  background: var(--surface-subtle);
+  border-radius: var(--radius-sm);
 }
 
 .stat {
@@ -116,7 +110,7 @@
 }
 
 .stat svg {
-  color: var(--primary-main);
+  color: var(--black);
 }
 
 .stat-label {
@@ -126,7 +120,7 @@
 
 .stat-value {
   font-weight: 600;
-  color: var(--primary-main);
+  color: var(--black);
 }
 
 .tags {
@@ -142,8 +136,9 @@
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
-  background: linear-gradient(135deg, var(--primary-light), var(--surface-card-soft));
-  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text-normal);
   font-weight: 500;
@@ -154,5 +149,5 @@
 }
 
 .agency-name {
-  color: var(--primary-dark);
+  color: var(--text-strong);
 }

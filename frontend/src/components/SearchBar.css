@@ -1,8 +1,7 @@
 .search-bar {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 100%;
 }
 
 .search-bar .search-icon {
@@ -12,21 +11,20 @@
   transform: translateY(-50%);
   color: var(--text-muted);
   pointer-events: none;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
 .search-input {
   width: 100%;
   height: 56px;
-  background: var(--surface-card);
-  border: none;
-  border-radius: var(--radius-pill);
+  background: var(--white);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
   padding: 0 var(--space-lg) 0 56px;
   font-size: 16px;
-  font-family: var(--font-family);
-  color: var(--text-normal);
-  box-shadow: var(--shadow-card-glow);
-  transition: all 0.3s ease;
+  font-family: var(--font-sans);
+  color: var(--text-strong);
+  transition: all 0.2s ease;
   outline: none;
 }
 
@@ -35,11 +33,10 @@
 }
 
 .search-input:focus {
-  box-shadow:
-    var(--shadow-card-glow),
-    0 0 0 2px var(--primary-main);
+  border-color: var(--black);
+  box-shadow: var(--shadow-card);
 }
 
 .search-input:focus + .search-icon {
-  color: var(--primary-main);
+  color: var(--black);
 }

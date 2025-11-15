@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home } from 'lucide-react';
 import { graphNodes, relationships, influencers } from '../data/mockData';
 import { InfluencerInfoPanel } from '../components/InfluencerInfoPanel';
+import { ThreeDInfluencerMap } from '../components/ThreeDInfluencerMap';
 import './NetworkGraph.css';
 
 interface Node extends d3.SimulationNodeDatum {
@@ -28,12 +29,25 @@ export const NetworkGraph = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(id || null);
   const [centralInfluencer, setCentralInfluencer] = useState<string | null>(id || null);
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>(id ? '2d' : '3d');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
 
   useEffect(() => {
+    if (id) {
+      setCentralInfluencer(id);
+      setSelectedInfluencerId(id);
+      setViewMode('2d');
+    }
+  }, [id]);
+
+  useEffect(() => {
     if (!svgRef.current) return;
+    if (viewMode !== '2d') {
+      d3.select(svgRef.current).selectAll('*').remove();
+      return;
+    }
 
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
@@ -88,32 +102,31 @@ export const NetworkGraph = () => {
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius((d: any) => d.size + 10));
 
-    // Create links with colorful style
+    // Create links with colorful style (following GUIDELINES.md: high contrast, bold)
     const link = g.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', (d: any) => linkColorMap[d.type as keyof typeof linkColorMap] || 'rgba(100, 116, 139, 0.3)')
+      .attr('stroke', (d: any) => linkColorMap[d.type as keyof typeof linkColorMap] || '#000000')
       .attr('stroke-opacity', (d: any) => {
-        if (!centralInfluencer) return 0.4;
+        if (!centralInfluencer) return 0.7;
 
         const source = typeof d.source === 'object' ? d.source.id : d.source;
         const target = typeof d.target === 'object' ? d.target.id : d.target;
 
         // Highlight links connected to central node
         const isConnectedToCenter = source === centralInfluencer || target === centralInfluencer;
-        return isConnectedToCenter ? 0.6 : 0.1;
+        return isConnectedToCenter ? 0.9 : 0.4;
       })
       .attr('stroke-width', (d: any) => {
-        if (!centralInfluencer) return 2;
+        if (!centralInfluencer) return 2.5;
 
         const source = typeof d.source === 'object' ? d.source.id : d.source;
         const target = typeof d.target === 'object' ? d.target.id : d.target;
 
         const isConnectedToCenter = source === centralInfluencer || target === centralInfluencer;
-        return isConnectedToCenter ? 2.5 : 1;
-      })
-      .style('filter', 'drop-shadow(0 0 2px currentColor)');
+        return isConnectedToCenter ? 3.5 : 2;
+      });
 
     // Create link labels (hidden for cleaner Obsidian look)
     const linkLabel = g.append('g')
@@ -151,7 +164,7 @@ export const NetworkGraph = () => {
     };
 
     // Node circles - Colorful with gradient shadows
-    const nodeCircles = node.append('circle')
+    node.append('circle')
       .attr('r', (d: Node) => {
         const baseSize = d.size * 0.4;
         const isConnected = isNodeConnected(d.id);
@@ -179,10 +192,12 @@ export const NetworkGraph = () => {
         // Set this node as the new center
         setCentralInfluencer(d.id);
         if (d.type === 'influencer') {
-          setSelectedNode(d);
+          setSelectedInfluencerId(d.id);
+        } else {
+          setSelectedInfluencerId(null);
         }
       })
-      .on('mouseenter', function(event, d) {
+      .on('mouseenter', function() {
         d3.select(this)
           .transition()
           .duration(200)
@@ -196,7 +211,7 @@ export const NetworkGraph = () => {
           })
           .attr('stroke-width', 3);
       })
-      .on('mouseleave', function(event, d) {
+      .on('mouseleave', function() {
         d3.select(this)
           .transition()
           .duration(200)
@@ -211,7 +226,7 @@ export const NetworkGraph = () => {
       });
 
     // Add score badges for influencers with colors
-    node.filter((d: Node) => d.type === 'influencer' && d.score)
+    node.filter((d: Node) => d.type === 'influencer' && !!d.score)
       .append('circle')
       .attr('r', 10)
       .attr('cx', (d: Node) => d.size * 0.25)
@@ -230,7 +245,7 @@ export const NetworkGraph = () => {
         return `drop-shadow(0 0 4px ${color})`;
       });
 
-    const scoreText = node.filter((d: Node) => d.type === 'influencer' && d.score)
+    const scoreText = node.filter((d: Node) => d.type === 'influencer' && !!d.score)
       .append('text')
       .attr('class', 'score-text')
       .attr('x', (d: Node) => d.size * 0.25)
@@ -244,54 +259,8 @@ export const NetworkGraph = () => {
       .style('opacity', 0) // Hidden by default, shown when zoomed
       .text((d: Node) => d.score || '');
 
-    // Add technical illustration under nodes (Chroma style) - only for connected influencers
-    const techRects = node.filter((d: Node) => d.type === 'influencer')
-      .append('rect')
-      .attr('class', 'tech-diagram')
-      .attr('x', (d: Node) => -d.size * 0.3)
-      .attr('y', (d: Node) => d.size * 0.5 + 5)
-      .attr('width', (d: Node) => d.size * 0.6)
-      .attr('height', (d: Node) => d.size * 0.4)
-      .attr('fill', 'white')
-      .attr('stroke', '#DDDDDD')
-      .attr('stroke-width', 1)
-      .attr('rx', 2)
-      .style('opacity', (d: Node) => {
-        const isConnected = isNodeConnected(d.id);
-        return isConnected ? 0.6 : 0.2;
-      });
-
-    // Add pattern lines inside rectangle (technical diagram style)
-    node.filter((d: Node) => d.type === 'influencer')
-      .append('line')
-      .attr('class', 'tech-line')
-      .attr('x1', (d: Node) => -d.size * 0.25)
-      .attr('y1', (d: Node) => d.size * 0.5 + 12)
-      .attr('x2', (d: Node) => d.size * 0.25)
-      .attr('y2', (d: Node) => d.size * 0.5 + 12)
-      .attr('stroke', '#CCCCCC')
-      .attr('stroke-width', 0.5)
-      .style('opacity', (d: Node) => {
-        const isConnected = isNodeConnected(d.id);
-        return isConnected ? 0.5 : 0.1;
-      });
-
-    node.filter((d: Node) => d.type === 'influencer')
-      .append('line')
-      .attr('class', 'tech-line')
-      .attr('x1', (d: Node) => -d.size * 0.25)
-      .attr('y1', (d: Node) => d.size * 0.5 + 18)
-      .attr('x2', (d: Node) => d.size * 0.15)
-      .attr('y2', (d: Node) => d.size * 0.5 + 18)
-      .attr('stroke', '#CCCCCC')
-      .attr('stroke-width', 0.5)
-      .style('opacity', (d: Node) => {
-        const isConnected = isNodeConnected(d.id);
-        return isConnected ? 0.5 : 0.1;
-      });
-
     // Node labels - Visible for major nodes or when zoomed
-    // First add background rectangle for labels
+    // First add background rectangle for labels (following GUIDELINES.md: black border 1px, no radius)
     const labelBackgrounds = node.append('rect')
       .attr('class', 'label-bg')
       .attr('x', (d: Node) => {
@@ -302,20 +271,20 @@ export const NetworkGraph = () => {
       .attr('y', (d: Node) => (d.size * 0.5) + 38 - 10)
       .attr('width', (d: Node) => d.name.length * 6 + 8)
       .attr('height', 16)
-      .attr('fill', 'rgba(255, 255, 255, 0.9)')
-      .attr('stroke', 'rgba(0, 0, 0, 0.1)')
-      .attr('stroke-width', 0.5)
-      .attr('rx', 3)
+      .attr('fill', 'rgba(255, 255, 255, 0.95)')
+      .attr('stroke', '#000000')
+      .attr('stroke-width', 1)
+      .attr('rx', 0)
       .style('opacity', (d: Node) => {
         // Always show for central node
-        if (d.id === centralInfluencer) return 1;
+        if (d.id === centralInfluencer) return '1';
 
         // Show for major nodes (influencers, brands, agencies) if connected
         const isConnected = isNodeConnected(d.id);
         const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
 
-        if (isMajorNode && isConnected) return 0.7;
-        return 0; // Hidden for small nodes, shown on zoom
+        if (isMajorNode && isConnected) return '0.7';
+        return '0'; // Hidden for small nodes, shown on zoom
       });
 
     const nodeLabels = node.append('text')
@@ -330,14 +299,14 @@ export const NetworkGraph = () => {
       .style('pointer-events', 'none')
       .style('opacity', (d: Node) => {
         // Always show for central node
-        if (d.id === centralInfluencer) return 1;
+        if (d.id === centralInfluencer) return '1';
 
         // Show for major nodes (influencers, brands, agencies) if connected
         const isConnected = isNodeConnected(d.id);
         const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
 
-        if (isMajorNode && isConnected) return 0.7;
-        return 0; // Hidden for small nodes, shown on zoom
+        if (isMajorNode && isConnected) return '0.7';
+        return '0'; // Hidden for small nodes, shown on zoom
       });
 
     // Function to update details visibility based on zoom level
@@ -345,29 +314,25 @@ export const NetworkGraph = () => {
       const showDetails = zoomScale > 1.2;
 
       // Show/hide score text numbers
-      scoreText.style('opacity', showDetails ? 1 : 0);
+      scoreText.style('opacity', showDetails ? '1' : '0');
 
-      // Update labels visibility
-      const updateLabelOpacity = function(d: any) {
+      const computeLabelOpacity = (d: Node) => {
         if (d.id === centralInfluencer) return 1;
 
         const isConnected = isNodeConnected(d.id);
         const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
 
-        // Show all labels when zoomed
         if (showDetails && isConnected) return 0.8;
-
-        // Show only major nodes when not zoomed
         if (isMajorNode && isConnected) return 0.7;
         return 0;
       };
 
-      nodeLabels.style('opacity', updateLabelOpacity);
-      labelBackgrounds.style('opacity', updateLabelOpacity);
+      nodeLabels.style('opacity', (d: any) => computeLabelOpacity(d).toString());
+      labelBackgrounds.style('opacity', (d: any) => computeLabelOpacity(d).toString());
     };
 
     // Show labels on hover
-    node.on('mouseenter', function(event, d) {
+    node.on('mouseenter', function() {
       d3.select(this).select('.node-label')
         .transition()
         .duration(200)
@@ -377,7 +342,7 @@ export const NetworkGraph = () => {
         .duration(200)
         .style('opacity', 1);
     })
-    .on('mouseleave', function(event, d: any) {
+    .on('mouseleave', function(_event, d: any) {
       const currentZoom = zoomLevel;
       const showDetails = currentZoom > 1.2;
       const isConnected = isNodeConnected(d.id);
@@ -432,31 +397,25 @@ export const NetworkGraph = () => {
       d.fy = null;
     }
 
-    // Focus on specific node if ID provided
-    if (id) {
-      const focusNode = nodes.find(n => n.id === id);
-      if (focusNode) {
-        setSelectedNode(focusNode);
-      }
-    }
-
     // Cleanup
     return () => {
       simulation.stop();
     };
-  }, [id, centralInfluencer]);
+  }, [id, centralInfluencer, viewMode]);
 
   const resetView = () => {
+    if (viewMode !== '2d') return;
     const svg = d3.select(svgRef.current);
     svg.transition().duration(750).call(
       d3.zoom<SVGSVGElement, unknown>().transform as any,
       d3.zoomIdentity
     );
-    setSelectedNode(null);
+    setSelectedInfluencerId(null);
     setCentralInfluencer(null);
   };
 
   const zoomIn = () => {
+    if (viewMode !== '2d') return;
     const svg = d3.select(svgRef.current);
     svg.transition().duration(300).call(
       d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
@@ -465,11 +424,22 @@ export const NetworkGraph = () => {
   };
 
   const zoomOut = () => {
+    if (viewMode !== '2d') return;
     const svg = d3.select(svgRef.current);
     svg.transition().duration(300).call(
       d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
       0.7
     );
+  };
+
+  const selectedInfluencer = selectedInfluencerId
+    ? influencers.find(inf => inf.id === selectedInfluencerId) || null
+    : null;
+
+  const handleThreeDSelection = (targetId: string) => {
+    setCentralInfluencer(targetId);
+    setSelectedInfluencerId(targetId);
+    setViewMode('2d');
   };
 
   return (
@@ -490,16 +460,32 @@ export const NetworkGraph = () => {
           </button>
         </div>
 
-        <h1>Réseau d'Influence</h1>
+        <div className="graph-header-center">
+          <h1>Réseau d'Influence</h1>
+          <div className="graph-view-toggle">
+            <button
+              className={viewMode === '3d' ? 'active' : ''}
+              onClick={() => setViewMode('3d')}
+            >
+              Vue globale 3D
+            </button>
+            <button
+              className={viewMode === '2d' ? 'active' : ''}
+              onClick={() => setViewMode('2d')}
+            >
+              Réseau 2D
+            </button>
+          </div>
+        </div>
 
         <div className="graph-controls">
-          <button onClick={zoomIn} title="Zoom avant">
+          <button onClick={zoomIn} title="Zoom avant" disabled={viewMode !== '2d'}>
             <ZoomIn size={20} />
           </button>
-          <button onClick={zoomOut} title="Zoom arrière">
+          <button onClick={zoomOut} title="Zoom arrière" disabled={viewMode !== '2d'}>
             <ZoomOut size={20} />
           </button>
-          <button onClick={resetView} title="Réinitialiser">
+          <button onClick={resetView} title="Réinitialiser" disabled={viewMode !== '2d'}>
             <Maximize2 size={20} />
           </button>
         </div>
@@ -507,49 +493,57 @@ export const NetworkGraph = () => {
 
       <motion.div
         className="graph-container"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <svg ref={svgRef} className="graph-svg"></svg>
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.2 }}
+    >
+        {viewMode === '2d' ? (
+          <svg ref={svgRef} className="graph-svg"></svg>
+        ) : (
+          <ThreeDInfluencerMap onSelectInfluencer={handleThreeDSelection} />
+        )}
 
-        <AnimatePresence>
-          {selectedNode && selectedNode.type === 'influencer' && (
-            <InfluencerInfoPanel
-              influencer={influencers.find(inf => inf.id === selectedNode.id)!}
-              onClose={() => setSelectedNode(null)}
-              onViewProfile={() => navigate(`/influencer/${selectedNode.id}`)}
-            />
-          )}
-        </AnimatePresence>
-      </motion.div>
+        {viewMode === '2d' && (
+          <AnimatePresence>
+            {selectedInfluencer && (
+              <InfluencerInfoPanel
+                influencer={selectedInfluencer}
+                onClose={() => setSelectedInfluencerId(null)}
+                onViewProfile={() => navigate(`/influencer/${selectedInfluencer.id}`)}
+              />
+            )}
+          </AnimatePresence>
+        )}
+    </motion.div>
 
-      <motion.div
-        className="graph-legend"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h3>Légende</h3>
-        <div className="legend-items">
-          <div className="legend-item">
-            <div className="legend-color" style={{ background: '#8B5CF6' }}></div>
-            <span>Influenceur</span>
+      {viewMode === '2d' && (
+        <motion.div
+          className="graph-legend"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h3>Légende</h3>
+          <div className="legend-items">
+            <div className="legend-item">
+              <div className="legend-color" style={{ background: '#8B5CF6' }}></div>
+              <span>Influenceur</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ background: '#F59E0B' }}></div>
+              <span>Agence</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ background: '#3B82F6' }}></div>
+              <span>Marque</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color" style={{ background: '#10B981' }}></div>
+              <span>Événement</span>
+            </div>
           </div>
-          <div className="legend-item">
-            <div className="legend-color" style={{ background: '#F59E0B' }}></div>
-            <span>Agence</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color" style={{ background: '#3B82F6' }}></div>
-            <span>Marque</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color" style={{ background: '#10B981' }}></div>
-            <span>Événement</span>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

@@ -7,7 +7,7 @@
   font-family: var(--font-sans);
   font-weight: 500;
   white-space: nowrap;
-  transition: all 0.1s ease;
+  transition: all 0.2s ease;
 }
 
 .tag--small {
@@ -25,10 +25,8 @@
   color: var(--text-normal);
 }
 
-.tag--orange {
-  background: var(--primary-yellow);
-  color: var(--white);
-  border-color: var(--primary-yellow);
+.tag--default:hover {
+  background: var(--state-hover);
 }
 
 .tag--blue {
@@ -43,6 +41,7 @@
   border-color: var(--primary-green);
 }
 
+.tag--orange,
 .tag--yellow {
   background: var(--primary-yellow);
   color: var(--white);

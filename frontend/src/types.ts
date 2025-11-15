@@ -11,6 +11,14 @@ export interface Influencer {
   influscoring: InfluScoring;
   stats: Stats;
   socialLinks: SocialLinks;
+  subscriberGrowth?: SubscriberGrowthPoint[];
+  networkConnections?: NetworkConnection[];
+  platformPresence?: PlatformPresence[];
+}
+
+export interface SubscriberGrowthPoint {
+  date: string;
+  followers: number;
 }
 
 export interface InfluScoring {
@@ -79,4 +87,39 @@ export interface GraphNode {
   avatar?: string;
   score?: number;
   size: number;
+}
+
+export interface GlobalInfluencerMarker {
+  id: string;
+  name: string;
+  followers: number;
+  lat: number;
+  lng: number;
+  country: string;
+  platform: 'YouTube' | 'TikTok' | 'Instagram' | 'Twitch';
+  color: string;
+  highlight?: string;
+}
+
+export interface NetworkConnection {
+  id: string;
+  name: string;
+  type: 'influencer' | 'agency' | 'brand' | 'event';
+  color: string;
+}
+
+export interface PlatformPresence {
+  platform: 'Youtube' | 'TikTok' | 'Instagram' | 'Twitter' | 'Twitch';
+  handle: string;
+  followers: number;
+}
+
+export interface SocialComment {
+  id: string;
+  influencerId: string;
+  platform: string;
+  author: string;
+  date: string;
+  content: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
 }

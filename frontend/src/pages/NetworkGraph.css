@@ -39,14 +39,50 @@
   gap: var(--space-sm);
 }
 
-.graph-header h1 {
+.graph-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.graph-header-center h1 {
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 600;
   color: var(--text-strong);
-  flex: 1;
   text-align: center;
   letter-spacing: -0.01em;
+}
+
+.graph-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
+  overflow: hidden;
+  background: var(--surface-card-soft);
+}
+
+.graph-view-toggle button {
+  border: none;
+  background: transparent;
+  padding: var(--space-xs) var(--space-md);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.graph-view-toggle button.active {
+  background: var(--text-strong);
+  color: var(--white);
+}
+
+.graph-view-toggle button:not(.active):hover {
+  background: var(--state-hover);
 }
 
 .graph-controls {
@@ -78,6 +114,14 @@
   box-shadow: var(--shadow-card);
 }
 
+.graph-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--surface-card-soft);
+  box-shadow: none;
+  transform: none;
+}
+
 .graph-container {
   flex: 1;
   position: relative;
@@ -94,6 +138,92 @@
 
 .graph-svg:active {
   cursor: grabbing;
+}
+
+.three-d-map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--white);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.three-d-map canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.map-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: var(--space-md);
+  background: var(--white);
+  color: var(--text-normal);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  min-width: 200px;
+  box-shadow: var(--shadow-card);
+  z-index: 100;
+}
+
+.map-tooltip strong {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-serif);
+  color: var(--text-strong);
+}
+
+.map-tooltip span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.map-overlay {
+  position: absolute;
+  top: var(--space-lg);
+  left: var(--space-lg);
+  max-width: 340px;
+  padding: var(--space-lg);
+  background: var(--white);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-none);
+  color: var(--text-normal);
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.map-overlay h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.map-overlay p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
 }
 
 .node-info-panel {

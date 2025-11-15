@@ -23,42 +23,58 @@
 
 .search-autocomplete-input {
   width: 100%;
-  height: 56px;
+  height: 64px;
   background: var(--white);
-  border: 1px solid var(--border-main);
+  border: 2px solid var(--border-main);
   border-radius: var(--radius-none);
-  padding: 0 var(--space-lg) 0 52px;
-  font-size: 16px;
+  padding: 0 var(--space-xl) 0 56px;
+  font-size: 17px;
   font-family: var(--font-sans);
   color: var(--text-normal);
-  transition: all 0.15s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .search-autocomplete-input::placeholder {
   color: var(--text-muted);
+  font-weight: 400;
 }
 
 .search-autocomplete-input:focus {
-  border-color: var(--gray-600);
-  box-shadow: var(--shadow-subtle);
+  border-color: var(--gray-900);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
 .search-autocomplete-input:focus ~ .search-autocomplete-icon {
-  color: var(--primary-main);
+  color: var(--gray-900);
+  transform: translateY(-50%) scale(1.1);
 }
 
 .search-autocomplete-dropdown {
   position: absolute;
-  top: calc(100% + var(--space-sm));
+  top: calc(100% + var(--space-md));
   left: 0;
   right: 0;
   background: var(--white);
-  border: 1px solid var(--border-main);
+  border: 2px solid var(--border-main);
   border-radius: var(--radius-none);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   z-index: 100;
+  animation: dropdown-appear 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .search-autocomplete-item {
@@ -70,9 +86,23 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: all 0.15s ease;
   text-align: left;
   border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+
+/* Hover highlight bar */
+.search-autocomplete-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--primary-purple), var(--primary-blue));
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
 }
 
 .search-autocomplete-item:last-child {
@@ -82,6 +112,11 @@
 .search-autocomplete-item.selected,
 .search-autocomplete-item:hover {
   background: var(--state-hover);
+}
+
+.search-autocomplete-item.selected::before,
+.search-autocomplete-item:hover::before {
+  transform: scaleY(1);
 }
 
 .search-autocomplete-avatar {

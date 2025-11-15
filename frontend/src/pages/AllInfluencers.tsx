@@ -24,6 +24,20 @@ export const AllInfluencers = () => {
     return matchesSearch && matchesNiche;
   });
 
+  const datasetForInsights = filteredInfluencers.length > 0 ? filteredInfluencers : influencers;
+  const datasetSize = datasetForInsights.length || 1;
+  const averageScore = Math.round(
+    datasetForInsights.reduce((sum, inf) => sum + inf.influscoring.overall, 0) / datasetSize
+  );
+  const averageEngagementRate = (
+    datasetForInsights.reduce((sum, inf) => sum + inf.engagementRate, 0) / datasetSize
+  ).toFixed(1);
+  const totalFollowersDisplayed = new Intl.NumberFormat('fr-FR', {
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(datasetForInsights.reduce((sum, inf) => sum + inf.followers, 0));
+  const activeFilterLabel = selectedNiche ?? 'Toutes les niches';
+
   return (
     <div className="all-influencers">
       <motion.button
@@ -43,9 +57,32 @@ export const AllInfluencers = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
+        <span className="header-eyebrow">Base Starline</span>
         <h1>Tous les Influenceurs</h1>
-        <p className="subtitle">Explorez et comparez tous les influenceurs de notre base</p>
+        <p className="subtitle">
+          Explorez et comparez tous les influenceurs de notre base
+        </p>
       </motion.header>
+
+      <motion.div
+        className="stats-bar"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <div className="stat-item">
+          <span className="stat-value">{filteredInfluencers.length}</span>
+          <span className="stat-label">Influenceurs</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-value">{averageScore}</span>
+          <span className="stat-label">Score moyen</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-value">{averageEngagementRate}%</span>
+          <span className="stat-label">Engagement</span>
+        </div>
+      </motion.div>
 
       <motion.div
         className="search-section"
