@@ -1,3 +1,15 @@
+export interface TimelineMilestone {
+  id: string;
+  date: string;
+  type: 'video' | 'tweet' | 'instagram' | 'tiktok' | 'collaboration' | 'achievement';
+  title: string;
+  description: string;
+  platform: string;
+  views?: number;
+  likes?: number;
+  url?: string;
+}
+
 export interface Influencer {
   id: string;
   name: string;
@@ -7,6 +19,8 @@ export interface Influencer {
   trustScore: number; // 0-100
   avatarUrl: string;
   bio: string;
+  timeline?: TimelineMilestone[];
+  trendingScore?: number; // How many times this influencer has been searched
 }
 
 export interface InfluencerConnection {

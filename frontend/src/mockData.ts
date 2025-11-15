@@ -2,6 +2,104 @@ import type { Influencer, Review, TrustMetrics, NetworkGraphData } from './types
 
 export const mockInfluencers: Influencer[] = [
   {
+    id: 'mrbeast',
+    name: 'MrBeast',
+    platform: 'YouTube',
+    followerCount: 234000000,
+    verified: true,
+    trustScore: 96,
+    avatarUrl: 'https://i.pravatar.cc/150?img=33',
+    bio: 'YouTuber known for extreme challenges, philanthropy, and viral content',
+    trendingScore: 15420,
+    timeline: [
+      {
+        id: 't1',
+        date: '2012-02-19',
+        type: 'video',
+        title: 'Channel Launch',
+        description: 'Started YouTube channel at age 13',
+        platform: 'YouTube',
+      },
+      {
+        id: 't2',
+        date: '2017-01-01',
+        type: 'video',
+        title: 'Counting to 100,000',
+        description: 'Gained initial viral attention by counting to 100,000',
+        platform: 'YouTube',
+        views: 20000000,
+      },
+      {
+        id: 't3',
+        date: '2018-06-15',
+        type: 'video',
+        title: 'I Gave My 40,000,000th Subscriber 40 Cars',
+        description: 'Started large-scale giveaway videos',
+        platform: 'YouTube',
+        views: 50000000,
+      },
+      {
+        id: 't4',
+        date: '2019-10-25',
+        type: 'achievement',
+        title: 'Team Trees Campaign',
+        description: 'Launched #TeamTrees with Mark Rober, raising $20M to plant 20M trees',
+        platform: 'YouTube',
+      },
+      {
+        id: 't5',
+        date: '2020-05-01',
+        type: 'video',
+        title: 'I Opened A Restaurant That Pays You To Eat At It',
+        description: 'Created elaborate challenge videos with huge budgets',
+        platform: 'YouTube',
+        views: 75000000,
+      },
+      {
+        id: 't6',
+        date: '2020-12-01',
+        type: 'achievement',
+        title: 'MrBeast Burger Launch',
+        description: 'Launched virtual restaurant brand MrBeast Burger',
+        platform: 'Business',
+      },
+      {
+        id: 't7',
+        date: '2021-03-01',
+        type: 'video',
+        title: 'Squid Game In Real Life!',
+        description: 'Recreated Squid Game with $456,000 prize',
+        platform: 'YouTube',
+        views: 456000000,
+      },
+      {
+        id: 't8',
+        date: '2022-01-29',
+        type: 'achievement',
+        title: 'Feastables Chocolate Launch',
+        description: 'Launched Feastables chocolate brand',
+        platform: 'Business',
+      },
+      {
+        id: 't9',
+        date: '2022-03-15',
+        type: 'video',
+        title: '1,000 Blind People See For The First Time',
+        description: 'Funded cataract surgeries for 1,000 people',
+        platform: 'YouTube',
+        views: 125000000,
+      },
+      {
+        id: 't10',
+        date: '2023-11-04',
+        type: 'achievement',
+        title: 'Became Most Subscribed YouTuber',
+        description: 'Surpassed 200M subscribers, becoming most subscribed individual creator',
+        platform: 'YouTube',
+      },
+    ],
+  },
+  {
     id: '1',
     name: 'Sarah Johnson',
     platform: 'Instagram',
@@ -20,6 +118,7 @@ export const mockInfluencers: Influencer[] = [
     trustScore: 92,
     avatarUrl: 'https://i.pravatar.cc/150?img=12',
     bio: 'Tech reviews and tutorials. Honest opinions only.',
+    trendingScore: 8930,
   },
   {
     id: '3',
@@ -30,6 +129,7 @@ export const mockInfluencers: Influencer[] = [
     trustScore: 78,
     avatarUrl: 'https://i.pravatar.cc/150?img=5',
     bio: 'Fashion & lifestyle content creator',
+    trendingScore: 12150,
   },
   {
     id: '4',
@@ -54,6 +154,46 @@ export const mockInfluencers: Influencer[] = [
 ];
 
 export const mockReviews: Record<string, Review[]> = {
+  'mrbeast': [
+    {
+      id: 'rmb1',
+      userId: 'umb1',
+      userName: 'Chris P.',
+      rating: 5,
+      comment: 'Got a MrBeast Burger and it was amazing! Plus his videos are always entertaining and genuine.',
+      productName: 'MrBeast Burger',
+      date: '2025-11-14',
+      verified: true,
+    },
+    {
+      id: 'rmb2',
+      userId: 'umb2',
+      userName: 'Rachel M.',
+      rating: 5,
+      comment: 'His philanthropy work is incredible. Actually helps people instead of just talking about it.',
+      date: '2025-11-13',
+      verified: true,
+    },
+    {
+      id: 'rmb3',
+      userId: 'umb3',
+      userName: 'Kevin L.',
+      rating: 5,
+      comment: 'Feastables chocolate is genuinely good. Not just influencer merch.',
+      productName: 'Feastables Chocolate',
+      date: '2025-11-12',
+      verified: true,
+    },
+    {
+      id: 'rmb4',
+      userId: 'umb4',
+      userName: 'Samantha R.',
+      rating: 5,
+      comment: 'Most trustworthy creator on YouTube. Always delivers on his promises.',
+      date: '2025-11-10',
+      verified: true,
+    },
+  ],
   '1': [
     {
       id: 'r1',
@@ -130,6 +270,13 @@ export const mockReviews: Record<string, Review[]> = {
 };
 
 export const mockTrustMetrics: Record<string, TrustMetrics> = {
+  'mrbeast': {
+    overallScore: 96,
+    authenticity: 98,
+    productQuality: 94,
+    transparency: 97,
+    engagement: 95,
+  },
   '1': {
     overallScore: 87,
     authenticity: 90,
