@@ -1,5 +1,6 @@
 """Influencer analyzer orchestrator."""
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict
@@ -228,10 +229,46 @@ class InfluencerAnalyzer:
                 name=product_data.get("name", ""),
                 category=product_data.get("category", ""),
                 description=product_data.get("description", ""),
-                quality_score=70,  # Default, will be updated by sentiment analysis
+                quality_score=70,  # Default, will be updated
             )
             self.db.add(product)
             self.db.flush()  # Flush to get product ID
+
+            # Check OpenFoodFacts for food or cosmetics products
+            category = product_data.get("category", "").lower()
+            if category in ["food", "cosmetics", "beauty"]:
+                try:
+                    logger.info(f"   🔍 Checking OpenFoodFacts for '{product.name}'...")
+                    from src.services.openfoodfacts import openfoodfacts_client
+
+                    # Determine API category
+                    api_category = "food" if category == "food" else "cosmetics"
+
+                    # Search for product
+                    def search_product():
+                        return openfoodfacts_client.search_product(product.name, api_category)
+
+                    off_data = await self._run_in_thread(search_product)
+
+                    if off_data:
+                        # Store the data as JSON
+                        import json
+                        product.openfoodfacts_data = json.dumps(off_data)
+
+                        # Use the quality score from OpenFoodFacts
+                        product.quality_score = off_data.get("quality_score", 70)
+
+                        if category == "food":
+                            nutriscore = off_data.get("nutriscore", "N/A")
+                            nova = off_data.get("nova_group", "N/A")
+                            is_healthy = off_data.get("is_healthy", False)
+                            logger.info(f"      ✓ NutriScore: {nutriscore}, NOVA: {nova}, Healthy: {is_healthy}, Score: {product.quality_score}")
+                        else:
+                            logger.info(f"      ✓ Beauty Score: {product.quality_score}/100")
+                    else:
+                        logger.info(f"      ⚠️  Product not found in OpenFoodFacts database")
+                except Exception as e:
+                    logger.warning(f"      ⚠️  OpenFoodFacts lookup failed: {str(e)}")
 
             # Fetch reviews for this product
             try:
@@ -244,6 +281,8 @@ class InfluencerAnalyzer:
                 )
 
                 if isinstance(reviews_data, dict) and reviews_data.get("reviews"):
+                    sentiments = []
+
                     for review_item in reviews_data.get("reviews", []):
                         try:
                             # Parse date if provided
@@ -254,12 +293,15 @@ class InfluencerAnalyzer:
                         except:
                             review_date = None
 
+                        sentiment = review_item.get("sentiment", "neutral")
+                        sentiments.append(sentiment)
+
                         review = ProductReview(
                             product_id=product.id,
                             author=review_item.get("author", "Anonymous"),
                             comment=review_item.get("comment", ""),
                             platform=review_item.get("platform", ""),
-                            sentiment=review_item.get("sentiment", "neutral"),
+                            sentiment=sentiment,
                             url=review_item.get("url"),
                             date=review_date,
                         )
@@ -267,7 +309,19 @@ class InfluencerAnalyzer:
 
                     # Update review count
                     product.review_count = len(reviews_data.get("reviews", []))
-                    logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
+
+                    # Calculate sentiment score (-1 to 1)
+                    if sentiments:
+                        positive = sentiments.count("positive")
+                        negative = sentiments.count("negative")
+                        neutral = sentiments.count("neutral")
+                        total = len(sentiments)
+
+                        # Sentiment score: (positive - negative) / total
+                        product.sentiment_score = (positive - negative) / total
+                        logger.info(f"      ✓ Found {product.review_count} reviews (😊 {positive} / 😐 {neutral} / 😞 {negative}) - Sentiment: {product.sentiment_score:.2f}")
+                    else:
+                        logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
             except Exception as e:
                 # If review fetching fails, just continue without reviews
                 logger.warning(f"      ⚠️  Failed to fetch reviews for {product.name}: {str(e)}")
@@ -565,6 +619,8 @@ class InfluencerAnalyzer:
                     "quality_score": p.quality_score,
                     "description": p.description,
                     "review_count": p.review_count,
+                    "sentiment_score": p.sentiment_score,
+                    "openfoodfacts_data": json.loads(p.openfoodfacts_data) if p.openfoodfacts_data else None,
                     "reviews": [
                         {
                             "author": r.author,
