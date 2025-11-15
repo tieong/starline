@@ -160,16 +160,16 @@ async def get_trending(
 @router.get("/api/influencers/top")
 async def get_top_influencers(
     country: str = None,
-    limit: int = 10,
+    limit: int = 5,
     auto_discover: bool = True,
     db: Session = Depends(get_db)
 ):
     """
-    Get top N influencers globally or by country.
+    Get top N influencers globally or by country (default: 5).
 
     Query parameters:
     - country: ISO country code or country name (optional, returns global if not provided)
-    - limit: Number of influencers to return (default: 10, max: 50)
+    - limit: Number of influencers to return (default: 5, max: 50)
     - auto_discover: If true, automatically discover and analyze new influencers if database has insufficient results (default: true)
 
     Returns influencers sorted by trending_score (descending).

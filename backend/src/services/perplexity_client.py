@@ -64,14 +64,18 @@ class PerplexityClient:
         logger.info(f"   🤖 Perplexity: Searching for platforms...")
         prompt = f"""Find all social media accounts for the influencer '{influencer_name}'.
 
+IMPORTANT: We are looking for people who became famous THROUGH social media (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors.
+
 CRITICAL REQUIREMENTS:
-1. ONLY return data if this is a REAL, VERIFIED influencer with actual social media presence
-2. If you cannot find ANY social media accounts, return {{"platforms": [], "error": "Influencer not found"}}
-3. DO NOT make up or hallucinate data - if unsure, return empty platforms array
-4. ALL platforms MUST belong to the SAME person/influencer
-5. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
-6. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
-7. The influencer MUST have at least one verified platform or significant follower count (>10,000) to be considered real
+1. ONLY return data if this is a REAL, VERIFIED social media influencer
+2. EXCLUDE: Movie actors, TV stars, athletes, musicians who became famous through traditional media
+3. INCLUDE: YouTubers, TikTokers, Instagram creators, Twitter personalities who built their fame online
+4. If you cannot find ANY social media accounts, return {{"platforms": [], "error": "Influencer not found"}}
+5. DO NOT make up or hallucinate data - if unsure, return empty platforms array
+6. ALL platforms MUST belong to the SAME person/influencer
+7. Verify identity by cross-referencing between platforms (similar content, same person in photos/videos, mutual references)
+8. If you find accounts with the same name but belonging to different people, ONLY include the main influencer's accounts
+9. The influencer MUST have at least one verified platform or significant follower count (>10,000) to be considered real
 
 Search across YouTube, TikTok, Instagram, Twitter/X, and other relevant platforms.
 
@@ -126,7 +130,7 @@ If the influencer is not found, return:
 }}"""
 
         messages = [
-            {"role": "system", "content": "You are an AI assistant that researches social media influencers. CRITICAL: Only return data for REAL influencers with verifiable social media presence. If you cannot find the influencer or verify their identity, return empty platforms array with an error message. DO NOT hallucinate or make up data. Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
+            {"role": "system", "content": "You are an AI assistant that researches social media influencers. Focus on people who became famous through social media (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors. CRITICAL: Only return data for REAL influencers with verifiable social media presence. If you cannot find the influencer or verify their identity, return empty platforms array with an error message. DO NOT hallucinate or make up data. Verify all platforms belong to the SAME person by cross-referencing content, appearance, and mutual platform references. Never mix accounts from different people with the same name. Always return valid JSON."},
             {"role": "user", "content": prompt}
         ]
 
@@ -444,12 +448,17 @@ IMPORTANT: Focus on recent events (last 2 years) and significant events that def
 
 Based on the latest search results, list the top {limit} social media influencers.
 
+DEFINITION: "Influencer" means someone who became famous THROUGH social media platforms (YouTube, TikTok, Instagram, Twitter/X).
+
 REQUIREMENTS:
 1. Use ONLY information from current {current_year} sources
-2. Only include REAL influencers with verified large followings (>5M followers)
-3. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
-4. Provide a diverse mix from different niches (gaming, beauty, lifestyle, comedy, tech, etc.)
-5. Use their most commonly known name/handle
+2. Only include people who became famous through social media (NOT traditional celebrities, athletes, or movie/TV actors)
+3. EXCLUDE: Movie actors, TV stars, athletes, musicians who became famous through traditional media
+4. INCLUDE: YouTubers, TikTokers, Instagram creators, Twitter personalities who built their fame online
+5. Only include REAL influencers with verified large followings (>5M followers)
+6. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
+7. Provide a diverse mix from different niches (gaming, beauty, lifestyle, comedy, tech, etc.)
+8. Use their most commonly known name/handle
 
 For each influencer, provide:
 - name: Their full name or most commonly known name (e.g., "MrBeast", "Charli D'Amelio")
@@ -472,7 +481,7 @@ Return ONLY valid JSON with NO additional text:
 CRITICAL: Return ONLY the JSON object. Do NOT include any explanatory text before or after."""
 
         messages = [
-            {"role": "system", "content": "You are an AI assistant that discovers trending social media influencers. Use web search to find current, accurate information about popular influencers. Always return valid JSON with real influencer names."},
+            {"role": "system", "content": "You are an AI assistant that discovers trending social media influencers. Focus ONLY on people who became famous through social media platforms (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors. Use web search to find current, accurate information. Always return valid JSON with real influencer names."},
             {"role": "user", "content": prompt}
         ]
 
