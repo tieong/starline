@@ -9,6 +9,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     create_engine,
@@ -29,12 +30,14 @@ class Influencer(Base):
 
     __tablename__ = "influencers"
 
-    id = Column(String, primary_key=True)
-    name = Column(String, nullable=False, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False, index=True, unique=True)
     bio = Column(Text)
     verified = Column(Boolean, default=False)
     trust_score = Column(Integer, default=0)
     avatar_url = Column(String)
+    avatar_data = Column(LargeBinary)  # Store actual image data
+    avatar_content_type = Column(String)  # e.g., 'image/jpeg', 'image/png'
     trending_score = Column(Integer, default=0)
 
     # Cache control
@@ -62,7 +65,7 @@ class Platform(Base):
     __tablename__ = "platforms"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
     platform_name = Column(String, nullable=False)  # youtube, tiktok, instagram, etc.
     username = Column(String)
     follower_count = Column(Integer, default=0)
@@ -82,7 +85,7 @@ class TimelineEvent(Base):
     __tablename__ = "timeline_events"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
     date = Column(DateTime, nullable=False)
     event_type = Column(String)  # video, tweet, instagram, tiktok, collaboration, achievement
     title = Column(String, nullable=False)
@@ -104,7 +107,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
     name = Column(String, nullable=False)
     category = Column(String)  # food, cosmetics, merch, etc.
     quality_score = Column(Integer)  # 0-100
@@ -147,10 +150,10 @@ class Connection(Base):
     __tablename__ = "connections"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
 
     # Can connect to either an influencer or an entity (agency, brand, etc.)
-    connected_influencer_id = Column(String, ForeignKey("influencers.id"), nullable=True)
+    connected_influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=True)
 
     # For non-influencer entities (ad agencies, brands, management companies, etc.)
     entity_name = Column(String)  # Name of the entity if not an influencer
@@ -173,7 +176,7 @@ class NewsArticle(Base):
     __tablename__ = "news_articles"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    influencer_id = Column(String, ForeignKey("influencers.id"), nullable=False)
+    influencer_id = Column(Integer, ForeignKey("influencers.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     article_type = Column(String)  # news, drama, controversy, achievement, collaboration

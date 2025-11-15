@@ -295,15 +295,22 @@ export default function InfluencerDetail() {
 
             <ResponsiveContainer width="100%" height={400}>
               <AreaChart
-                data={influencer.timeline.map((event, idx) => ({
-                  date: new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-                  views: event.views || 0,
-                  likes: event.likes || 0,
-                  title: event.title,
-                  description: event.description,
-                  platform: event.platform,
-                  type: event.type,
-                }))}
+                data={influencer.timeline
+                  .filter(event => event.date) // Remove events without dates
+                  .sort((a, b) => {
+                    const dateA = new Date(a.date).getTime();
+                    const dateB = new Date(b.date).getTime();
+                    return dateA - dateB;
+                  })
+                  .map((event, idx) => ({
+                    date: new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                    views: event.views || 0,
+                    likes: event.likes || 0,
+                    title: event.title,
+                    description: event.description,
+                    platform: event.platform,
+                    type: event.type,
+                  }))}
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <defs>

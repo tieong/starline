@@ -77,13 +77,13 @@ class InfluencerAnalyzer:
         # Create or update influencer record
         if not influencer:
             influencer = Influencer(
-                id=influencer_name.lower().replace(" ", "_"),
                 name=influencer_name,
                 is_analyzing=True,
                 last_analyzed=datetime.utcnow(),
                 cache_expires=datetime.utcnow() + timedelta(days=1),  # Cache for 24 hours
             )
             self.db.add(influencer)
+            self.db.flush()  # Flush to get the auto-generated ID
             self.db.commit()
         else:
             influencer.is_analyzing = True
@@ -135,6 +135,11 @@ class InfluencerAnalyzer:
                 logger.info(f"🖼️  Fetching profile picture...")
                 avatar_url = await self._fetch_profile_picture(influencer_name, platforms_data)
                 influencer.avatar_url = avatar_url
+
+                # Download and store the actual image data
+                if avatar_url:
+                    logger.info(f"   📥 Downloading image from: {avatar_url}")
+                    await self._download_and_store_image(influencer, avatar_url)
 
             # Run remaining analyses in parallel
             logger.info(f"🔄 Step 2/6: Running parallel analyses (products, timeline, connections, news)...")
@@ -304,19 +309,43 @@ class InfluencerAnalyzer:
 
             # If it's an influencer, create or link to influencer record
             if entity_type == "influencer":
-                connected_id = entity_name.lower().replace(" ", "_")
-
+                # Search by name instead of ID
                 connected_influencer = self.db.query(Influencer).filter(
-                    Influencer.id == connected_id
+                    Influencer.name.ilike(entity_name)
                 ).first()
 
                 if not connected_influencer:
+                    logger.info(f"      Creating stub record for connected influencer: {entity_name}")
                     connected_influencer = Influencer(
-                        id=connected_id,
                         name=entity_name,
                     )
                     self.db.add(connected_influencer)
-                    self.db.flush()
+                    self.db.flush()  # Get auto-generated ID
+
+                    # Fetch profile picture for the connected influencer
+                    try:
+                        logger.info(f"      Fetching profile picture for {entity_name}...")
+                        # Use image search to find their profile picture
+                        from src.services.image_search import image_search_service
+
+                        def search_for_connected():
+                            return image_search_service.search_profile_picture(
+                                entity_name,
+                                "",  # No platform info available
+                                ""   # No username available
+                            )
+
+                        avatar_url = await self._run_in_thread(search_for_connected)
+
+                        if avatar_url:
+                            connected_influencer.avatar_url = avatar_url
+                            logger.info(f"      Downloading image for {entity_name}...")
+                            await self._download_and_store_image(connected_influencer, avatar_url)
+                            logger.info(f"      ✓ Saved profile picture for {entity_name}")
+                        else:
+                            logger.info(f"      ⚠ Could not find profile picture for {entity_name}")
+                    except Exception as e:
+                        logger.warning(f"      ⚠ Failed to fetch profile picture for {entity_name}: {str(e)}")
 
                 connection = Connection(
                     influencer_id=influencer.id,
@@ -429,6 +458,53 @@ class InfluencerAnalyzer:
         logger.warning(f"   ⚠ Could not find profile picture")
         return None
 
+    async def _download_and_store_image(self, influencer: Influencer, image_url: str):
+        """
+        Download image from URL and store binary data in database.
+
+        Args:
+            influencer: Influencer record to update
+            image_url: URL of the image to download
+        """
+        try:
+            import requests
+            from io import BytesIO
+
+            # Download image with proper argument handling
+            def download_image():
+                return requests.get(
+                    image_url,
+                    timeout=10,
+                    headers={'User-Agent': 'Mozilla/5.0'}
+                )
+
+            response = await self._run_in_thread(download_image)
+            response.raise_for_status()
+
+            # Get content type from response headers
+            content_type = response.headers.get('Content-Type', 'image/jpeg')
+
+            # If content type is not an image, try to detect from URL
+            if not content_type.startswith('image/'):
+                if image_url.lower().endswith('.png'):
+                    content_type = 'image/png'
+                elif image_url.lower().endswith('.gif'):
+                    content_type = 'image/gif'
+                elif image_url.lower().endswith('.webp'):
+                    content_type = 'image/webp'
+                else:
+                    content_type = 'image/jpeg'
+
+            # Store image data
+            influencer.avatar_data = response.content
+            influencer.avatar_content_type = content_type
+
+            logger.info(f"   ✓ Stored {len(response.content)} bytes ({content_type})")
+
+        except Exception as e:
+            logger.warning(f"   ⚠ Failed to download image: {str(e)}")
+            # Don't fail the whole analysis if image download fails
+
     def _calculate_trust_score(self, platforms_data: Dict[str, Any], products_data: Dict[str, Any]) -> int:
         """Calculate basic trust score."""
         score = 50  # Base score
@@ -473,7 +549,10 @@ class InfluencerAnalyzer:
                     "views": t.views,
                     "likes": t.likes,
                 }
-                for t in sorted(influencer.timeline, key=lambda x: x.date)
+                for t in sorted(
+                    influencer.timeline,
+                    key=lambda x: x.date if x.date else datetime.min
+                )
             ],
             "products": [
                 {

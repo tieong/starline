@@ -79,17 +79,13 @@ For each platform found, provide:
 5. Direct profile URL
 
 PROFILE PICTURE REQUIREMENT:
-- You MUST find the ACTUAL, DIRECT profile picture URL from their platform's CDN
-- Examples of VALID URLs:
-  * YouTube: https://yt3.googleusercontent.com/ytc/AIdro_k...
-  * Instagram: https://scontent.cdninstagram.com/v/t51...
-  * Twitter: https://pbs.twimg.com/profile_images/...
-  * TikTok: https://p16-sign-sg.tiktokcdn.com/...
-- The URL MUST be a complete, working image URL from the platform's actual CDN
+⚠️ CRITICAL: DO NOT make up or guess profile picture URLs!
+- If you cannot find a REAL, WORKING profile picture URL, set profile_picture_url to null
+- DO NOT generate fake YouTube CDN URLs or any other fake URLs
 - DO NOT use placeholder text like "ACTUAL_PROFILE_IMAGE_URL" or "COMPLETE_URL_HERE"
 - DO NOT use unavatar.io or any proxy service
-- DO NOT return the URL if you cannot find a real one - just omit the field or set it to null
-- Research the influencer's actual profile page to extract the real CDN URL
+- The URL MUST be a complete, working image URL that you can actually verify
+- If in doubt, set it to null - the system will find it automatically
 
 Return ONLY a valid JSON object in this exact format:
 {{

@@ -2,6 +2,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ class InfluencerSearchRequest(BaseModel):
 
 class InfluencerResponse(BaseModel):
     """Response model for influencer data."""
-    id: str
+    id: int
     name: str
     bio: str | None = None
     verified: bool
@@ -149,7 +150,7 @@ async def get_trending(
 
 @router.get("/api/influencers/{influencer_id}")
 async def get_influencer(
-    influencer_id: str,
+    influencer_id: int,
     db: Session = Depends(get_db)
 ):
     """Get detailed influencer profile by ID."""
@@ -164,10 +165,42 @@ async def get_influencer(
     return analyzer._build_response(influencer)
 
 
+@router.get("/api/influencers/{influencer_id}/avatar")
+async def get_influencer_avatar(
+    influencer_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get influencer's avatar image.
+
+    Returns the stored avatar image data with appropriate content type.
+    If no image is stored, returns 404.
+    """
+    influencer = db.query(Influencer).filter(
+        Influencer.id == influencer_id
+    ).first()
+
+    if not influencer:
+        raise HTTPException(status_code=404, detail="Influencer not found")
+
+    if not influencer.avatar_data:
+        raise HTTPException(status_code=404, detail="No avatar image stored for this influencer")
+
+    # Return image data with appropriate content type
+    return Response(
+        content=influencer.avatar_data,
+        media_type=influencer.avatar_content_type or "image/jpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
+            "Content-Disposition": f'inline; filename="{influencer_id}_avatar.jpg"'
+        }
+    )
+
+
 @router.get("/api/news")
 async def get_all_news(
     limit: int = 50,
-    influencer_id: str = None,
+    influencer_id: int = None,
     article_type: str = None,
     sentiment: str = None,
     db: Session = Depends(get_db)
@@ -219,7 +252,7 @@ async def get_all_news(
 
 @router.get("/api/influencers/{influencer_id}/news")
 async def get_influencer_news(
-    influencer_id: str,
+    influencer_id: int,
     limit: int = 20,
     db: Session = Depends(get_db)
 ):

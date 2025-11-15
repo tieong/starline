@@ -1,6 +1,9 @@
 """Service to validate profile picture URLs from social media platforms."""
+import logging
 import requests
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ProfilePictureFetcher:
@@ -38,16 +41,17 @@ class ProfilePictureFetcher:
                 # Check if it's actually an image
                 content_type = response.headers.get('content-type', '').lower()
                 if 'image' in content_type:
+                    logger.info(f"   ✓ AI-provided URL is valid: {url[:80]}...")
                     return True
                 else:
-                    print(f"URL is not an image: {url} (content-type: {content_type})")
+                    logger.warning(f"   ✗ URL is not an image (content-type: {content_type}): {url[:80]}...")
                     return False
             else:
-                print(f"URL returned {response.status_code}: {url}")
+                logger.warning(f"   ✗ URL returned {response.status_code}: {url[:80]}...")
                 return False
 
         except Exception as e:
-            print(f"Error validating URL {url}: {e}")
+            logger.warning(f"   ✗ Error validating URL: {str(e)}")
             return False
 
 
