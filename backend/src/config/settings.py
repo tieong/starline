@@ -1,4 +1,5 @@
 """Application configuration settings."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://starline:starline@localhost:5432/starline"
 
     # AI Provider Settings
-    ai_provider: str = "blackbox"  # Options: "blackbox" or "perplexity"
+    ai_provider: str = "perplexity"  # Options: "blackbox" or "perplexity"
 
     # Blackbox AI Settings
     blackbox_api_key: str = ""
