@@ -1,0 +1,192 @@
+import type { Influencer, Review, TrustMetrics, NetworkGraphData } from './types';
+
+export const mockInfluencers: Influencer[] = [
+  {
+    id: '1',
+    name: 'Sarah Johnson',
+    platform: 'Instagram',
+    followerCount: 1200000,
+    verified: true,
+    trustScore: 87,
+    avatarUrl: 'https://i.pravatar.cc/150?img=1',
+    bio: 'Fitness & wellness coach. Helping you live your best life!',
+  },
+  {
+    id: '2',
+    name: 'Mike Chen',
+    platform: 'YouTube',
+    followerCount: 850000,
+    verified: true,
+    trustScore: 92,
+    avatarUrl: 'https://i.pravatar.cc/150?img=12',
+    bio: 'Tech reviews and tutorials. Honest opinions only.',
+  },
+  {
+    id: '3',
+    name: 'Emma Davis',
+    platform: 'TikTok',
+    followerCount: 2500000,
+    verified: true,
+    trustScore: 78,
+    avatarUrl: 'https://i.pravatar.cc/150?img=5',
+    bio: 'Fashion & lifestyle content creator',
+  },
+  {
+    id: '4',
+    name: 'Alex Rivera',
+    platform: 'Instagram',
+    followerCount: 450000,
+    verified: false,
+    trustScore: 65,
+    avatarUrl: 'https://i.pravatar.cc/150?img=8',
+    bio: 'Travel blogger exploring the world',
+  },
+  {
+    id: '5',
+    name: 'Jessica Lee',
+    platform: 'YouTube',
+    followerCount: 1800000,
+    verified: true,
+    trustScore: 95,
+    avatarUrl: 'https://i.pravatar.cc/150?img=9',
+    bio: 'Beauty & skincare expert. Science-based recommendations.',
+  },
+];
+
+export const mockReviews: Record<string, Review[]> = {
+  '1': [
+    {
+      id: 'r1',
+      userId: 'u1',
+      userName: 'John D.',
+      rating: 5,
+      comment: 'Bought the protein powder she recommended. Great quality and actually works!',
+      productName: 'Premium Whey Protein',
+      date: '2025-11-10',
+      verified: true,
+    },
+    {
+      id: 'r2',
+      userId: 'u2',
+      userName: 'Maria S.',
+      rating: 4,
+      comment: 'Her workout plans are solid. Lost 10 pounds in 2 months!',
+      date: '2025-11-08',
+      verified: true,
+    },
+    {
+      id: 'r3',
+      userId: 'u3',
+      userName: 'Tom R.',
+      rating: 3,
+      comment: 'Good content but some products are overpriced.',
+      productName: 'Yoga Mat Pro',
+      date: '2025-11-05',
+      verified: true,
+    },
+  ],
+  '2': [
+    {
+      id: 'r4',
+      userId: 'u4',
+      userName: 'Lisa M.',
+      rating: 5,
+      comment: 'Most honest tech reviewer on YouTube. Helped me choose the perfect laptop.',
+      productName: 'Dell XPS 15',
+      date: '2025-11-12',
+      verified: true,
+    },
+    {
+      id: 'r5',
+      userId: 'u5',
+      userName: 'David K.',
+      rating: 5,
+      comment: 'Always transparent about sponsorships. Very trustworthy.',
+      date: '2025-11-09',
+      verified: true,
+    },
+  ],
+  '3': [
+    {
+      id: 'r6',
+      userId: 'u6',
+      userName: 'Sophie B.',
+      rating: 4,
+      comment: 'Love her style! Bought the dress she wore and it looks amazing.',
+      productName: 'Summer Floral Dress',
+      date: '2025-11-11',
+      verified: true,
+    },
+    {
+      id: 'r7',
+      userId: 'u7',
+      userName: 'Amy L.',
+      rating: 2,
+      comment: 'Some products don\'t match her claims. Be careful.',
+      date: '2025-11-07',
+      verified: false,
+    },
+  ],
+};
+
+export const mockTrustMetrics: Record<string, TrustMetrics> = {
+  '1': {
+    overallScore: 87,
+    authenticity: 90,
+    productQuality: 85,
+    transparency: 88,
+    engagement: 85,
+  },
+  '2': {
+    overallScore: 92,
+    authenticity: 95,
+    productQuality: 93,
+    transparency: 94,
+    engagement: 88,
+  },
+  '3': {
+    overallScore: 78,
+    authenticity: 80,
+    productQuality: 75,
+    transparency: 76,
+    engagement: 82,
+  },
+};
+
+export const mockNetworkData: Record<string, NetworkGraphData> = {
+  '1': {
+    nodes: [
+      { id: '1', name: 'Sarah Johnson', val: 30, color: '#3b82f6' },
+      { id: 'c1', name: 'Mike Chen', val: 20, color: '#10b981' },
+      { id: 'c2', name: 'Emma Davis', val: 15, color: '#10b981' },
+      { id: 'c3', name: 'Trainer Bob', val: 10, color: '#8b5cf6' },
+      { id: 'c4', name: 'Nutritionist Amy', val: 12, color: '#8b5cf6' },
+      { id: 'c5', name: 'Brand X', val: 8, color: '#f59e0b' },
+    ],
+    links: [
+      { source: '1', target: 'c1', value: 5 },
+      { source: '1', target: 'c2', value: 4 },
+      { source: '1', target: 'c3', value: 8 },
+      { source: '1', target: 'c4', value: 7 },
+      { source: '1', target: 'c5', value: 3 },
+      { source: 'c1', target: 'c2', value: 2 },
+    ],
+  },
+  '2': {
+    nodes: [
+      { id: '2', name: 'Mike Chen', val: 30, color: '#3b82f6' },
+      { id: 'c1', name: 'Sarah Johnson', val: 15, color: '#10b981' },
+      { id: 'c2', name: 'Tech Reviewer A', val: 18, color: '#10b981' },
+      { id: 'c3', name: 'Tech Reviewer B', val: 16, color: '#10b981' },
+      { id: 'c4', name: 'Dell', val: 10, color: '#f59e0b' },
+      { id: 'c5', name: 'Apple', val: 12, color: '#f59e0b' },
+    ],
+    links: [
+      { source: '2', target: 'c1', value: 4 },
+      { source: '2', target: 'c2', value: 7 },
+      { source: '2', target: 'c3', value: 6 },
+      { source: '2', target: 'c4', value: 5 },
+      { source: '2', target: 'c5', value: 6 },
+    ],
+  },
+};
