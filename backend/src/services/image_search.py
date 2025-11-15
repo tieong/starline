@@ -1,4 +1,5 @@
 """Image search service for finding profile pictures."""
+
 import concurrent.futures
 import logging
 import re
@@ -18,17 +19,19 @@ class ImageSearchService:
     def __init__(self):
         """Initialize image search service."""
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         self.timeout = 10
 
-    def _make_request_with_backoff(self, url: str, max_total_time: int = 120) -> Optional[requests.Response]:
+    def _make_request_with_backoff(
+        self, url: str, max_total_time: int = 20
+    ) -> Optional[requests.Response]:
         """
         Make HTTP request with exponential backoff for 429 errors.
 
         Args:
             url: URL to fetch
-            max_total_time: Maximum total time to spend retrying (default: 120 seconds = 2 minutes)
+            max_total_time: Maximum total time to spend retrying per search engine (default: 20 seconds)
 
         Returns:
             Response object or None if all retries failed
@@ -40,7 +43,9 @@ class ImageSearchService:
         while True:
             elapsed = time.time() - start_time
             if elapsed >= max_total_time:
-                logger.warning(f"      ⚠ Giving up after {max_total_time}s")
+                logger.warning(
+                    f"      ⚠ Giving up after {max_total_time}s for URL: {url[:80]}..."
+                )
                 return None
 
             try:
@@ -50,12 +55,21 @@ class ImageSearchService:
                     # Calculate remaining time
                     remaining = max_total_time - elapsed
                     if remaining <= 0:
-                        logger.warning(f"      ⚠ Rate limited, no time left for retry")
+                        logger.warning(
+                            f"      ⚠ Rate limited, no time left for retry on: {url[:80]}..."
+                        )
                         return None
+
+                    # Extract domain from URL for clearer logging
+                    from urllib.parse import urlparse
+
+                    domain = urlparse(url).netloc
 
                     # Use the smaller of retry_delay and remaining time
                     actual_delay = min(retry_delay, remaining)
-                    logger.warning(f"      ⚠ Rate limited (429), waiting {actual_delay:.1f}s before retry...")
+                    logger.warning(
+                        f"      🚫 RATE LIMITED (429) by {domain} - waiting {actual_delay:.1f}s before retry... (elapsed: {elapsed:.1f}s)"
+                    )
                     time.sleep(actual_delay)
 
                     # Exponential backoff: double the delay (up to max)
@@ -66,13 +80,15 @@ class ImageSearchService:
                 return response
 
             except requests.exceptions.Timeout:
-                logger.warning(f"      ⚠ Request timeout")
+                logger.warning(f"      ⚠ Request timeout for: {url[:80]}...")
                 return None
             except requests.exceptions.RequestException as e:
-                logger.warning(f"      ⚠ Request failed: {str(e)}")
+                logger.warning(f"      ⚠ Request failed for {url[:80]}...: {str(e)}")
                 return None
 
-    def search_profile_picture(self, influencer_name: str, platform: str = "", username: str = "") -> Optional[str]:
+    def search_profile_picture(
+        self, influencer_name: str, platform: str = "", username: str = ""
+    ) -> Optional[str]:
         """
         Search for influencer profile picture using multiple search engines.
 
@@ -105,14 +121,16 @@ class ImageSearchService:
 
         # Run all search engines in parallel
         search_engines = {
-            'Google': self._search_google,
-            'Bing': self._search_bing,
-            'Kagi': self._search_kagi,
-            'Yandex': self._search_yandex,
-            'DuckDuckGo': self._search_duckduckgo,
+            "Google": self._search_google,
+            "Bing": self._search_bing,
+            "Kagi": self._search_kagi,
+            "Yandex": self._search_yandex,
+            "DuckDuckGo": self._search_duckduckgo,
         }
 
         results = {}
+        min_results_threshold = 2  # Stop waiting if we have at least 2 good results
+        max_wait_time = 25  # Maximum time to wait for all engines (seconds)
 
         # Execute all searches concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -121,17 +139,38 @@ class ImageSearchService:
                 for engine_name, search_func in search_engines.items()
             }
 
-            for future in concurrent.futures.as_completed(future_to_engine):
-                engine_name = future_to_engine[future]
-                try:
-                    image_url = future.result()
-                    if image_url:
-                        results[engine_name] = image_url
-                        logger.info(f"      ✓ {engine_name} found: {image_url[:60]}...")
-                    else:
-                        logger.debug(f"      ⚠ {engine_name}: No valid results")
-                except Exception as e:
-                    logger.warning(f"      ⚠ {engine_name} failed: {str(e)}")
+            # Use timeout and stop early if we have enough results
+            try:
+                for future in concurrent.futures.as_completed(
+                    future_to_engine, timeout=max_wait_time
+                ):
+                    engine_name = future_to_engine[future]
+                    try:
+                        image_url = future.result()
+                        if image_url:
+                            results[engine_name] = image_url
+                            logger.info(
+                                f"      ✓ {engine_name} found: {image_url[:60]}..."
+                            )
+
+                            # Early exit if we have enough good results
+                            if len(results) >= min_results_threshold:
+                                logger.info(
+                                    f"      ⚡ Got {len(results)} results, stopping early (not waiting for rate-limited engines)"
+                                )
+                                # Cancel remaining futures
+                                for f in future_to_engine:
+                                    if not f.done():
+                                        f.cancel()
+                                break
+                        else:
+                            logger.debug(f"      ⚠ {engine_name}: No valid results")
+                    except Exception as e:
+                        logger.warning(f"      ⚠ {engine_name} failed: {str(e)}")
+            except concurrent.futures.TimeoutError:
+                logger.warning(
+                    f"      ⏱ Timeout after {max_wait_time}s, using {len(results)} results from faster engines"
+                )
 
         if not results:
             logger.warning(f"      ⚠ No search engines found a valid profile picture")
@@ -143,7 +182,9 @@ class ImageSearchService:
 
         return best_url
 
-    def _pick_best_result(self, results: Dict[str, str], name_parts: List[str], platform: str = "") -> str:
+    def _pick_best_result(
+        self, results: Dict[str, str], name_parts: List[str], platform: str = ""
+    ) -> str:
         """
         Score all results and pick the best one.
 
@@ -173,12 +214,12 @@ class ImageSearchService:
 
             # Score 2: Prefer platform CDNs (official sources)
             platform_cdns = {
-                'youtube': ['yt3.googleusercontent.com', 'ytimg.com', 'youtube.com'],
-                'instagram': ['cdninstagram.com', 'instagram.com'],
-                'twitter': ['twimg.com', 'twitter.com', 'x.com'],
-                'tiktok': ['tiktokcdn.com', 'tiktok.com'],
-                'twitch': ['static-cdn.jtvnw.net', 'twitch.tv'],
-                'facebook': ['fbcdn.net', 'facebook.com'],
+                "youtube": ["yt3.googleusercontent.com", "ytimg.com", "youtube.com"],
+                "instagram": ["cdninstagram.com", "instagram.com"],
+                "twitter": ["twimg.com", "twitter.com", "x.com"],
+                "tiktok": ["tiktokcdn.com", "tiktok.com"],
+                "twitch": ["static-cdn.jtvnw.net", "twitch.tv"],
+                "facebook": ["fbcdn.net", "facebook.com"],
             }
 
             # Check if URL is from the primary platform CDN
@@ -196,50 +237,62 @@ class ImageSearchService:
                         break
 
             # Score 3: Penalize generic image hosting sites and blocked CDNs
-            generic_hosts = ['imgur', 'purepeople', 'gettyimages', 'shutterstock', 'wikimedia']
+            generic_hosts = [
+                "imgur",
+                "purepeople",
+                "gettyimages",
+                "shutterstock",
+                "wikimedia",
+            ]
             for generic in generic_hosts:
                 if generic in url_lower:
                     score -= 20  # Penalty for generic image sites
 
             # Heavily penalize Instagram/TikTok lookaside/blocked URLs
             blocked_cdns = [
-                'lookaside.fbsbx.com',
-                'lookaside.instagram.com',
-                'scontent.cdninstagram.com',
-                'p16-sign',  # TikTok CDN
-                'p77-sign',  # TikTok CDN
-                'tiktokcdn.com',
-                'tiktok.com/avatar'
+                "lookaside.fbsbx.com",
+                "lookaside.instagram.com",
+                "scontent.cdninstagram.com",
+                "p16-sign",  # TikTok CDN
+                "p77-sign",  # TikTok CDN
+                "tiktokcdn.com",
+                "tiktok.com/avatar",
             ]
             for blocked in blocked_cdns:
                 if blocked in url_lower:
                     score -= 100  # Heavy penalty - these don't work
 
             # Score 4: Prefer URLs with "profile" or "avatar" in them
-            if 'profile' in url_lower or 'avatar' in url_lower:
+            if "profile" in url_lower or "avatar" in url_lower:
                 score += 10
 
             # Score 5: Search engine reliability bonus
             engine_reliability = {
-                'Google': 10,
-                'Bing': 8,
-                'Kagi': 7,
-                'Yandex': 5,
-                'DuckDuckGo': 3,
+                "Google": 10,
+                "Bing": 8,
+                "Kagi": 7,
+                "Yandex": 5,
+                "DuckDuckGo": 3,
             }
             score += engine_reliability.get(engine_name, 0)
 
             scores[engine_name] = score
-            logger.info(f"         {engine_name}: {score} points (matched: {', '.join(matched_identifiers) if matched_identifiers else 'none'})")
+            logger.info(
+                f"         {engine_name}: {score} points (matched: {', '.join(matched_identifiers) if matched_identifiers else 'none'})"
+            )
 
         # Pick the highest scoring result
         best_engine = max(scores, key=scores.get)
         best_url = results[best_engine]
-        logger.info(f"      🏆 Best result: {best_engine} ({scores[best_engine]} points)")
+        logger.info(
+            f"      🏆 Best result: {best_engine} ({scores[best_engine]} points)"
+        )
 
         return best_url
 
-    def _extract_name_identifiers(self, influencer_name: str, username: str = "") -> list:
+    def _extract_name_identifiers(
+        self, influencer_name: str, username: str = ""
+    ) -> list:
         """
         Extract key identifiers from influencer name and username for URL validation.
 
@@ -299,29 +352,37 @@ class ImageSearchService:
         if not response:
             return None
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Google uses various data attributes for images
         # Try to find images in img tags
-        img_tags = soup.find_all('img')
+        img_tags = soup.find_all("img")
 
         for img in img_tags[1:15]:  # Skip first (Google logo), check next 14
             # Try multiple attributes where Google stores image URLs
-            for attr in ['src', 'data-src', 'data-iurl']:
+            for attr in ["src", "data-src", "data-iurl"]:
                 src = img.get(attr)
-                if src and self._is_valid_image_url(src) and not src.startswith('data:'):
+                if (
+                    src
+                    and self._is_valid_image_url(src)
+                    and not src.startswith("data:")
+                ):
                     # Validate URL contains influencer name
                     if self._url_contains_identifier(src, name_parts):
                         return src
 
         # Try finding images in script tags (Google often embeds data in JS)
-        scripts = soup.find_all('script')
+        scripts = soup.find_all("script")
         for script in scripts:
             if script.string:
                 # Look for image URLs in JavaScript
-                image_urls = re.findall(r'https?://[^\s<>"\\]+?\.(?:jpg|jpeg|png|webp)', script.string)
+                image_urls = re.findall(
+                    r'https?://[^\s<>"\\]+?\.(?:jpg|jpeg|png|webp)', script.string
+                )
                 for img_url in image_urls[:10]:
-                    if self._is_valid_image_url(img_url) and self._url_contains_identifier(img_url, name_parts):
+                    if self._is_valid_image_url(
+                        img_url
+                    ) and self._url_contains_identifier(img_url, name_parts):
                         return img_url
 
         return None
@@ -334,25 +395,29 @@ class ImageSearchService:
         if not response:
             return None
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Kagi uses specific classes for image results
-        img_containers = soup.find_all('a', class_='thumbnail-wrapper')
+        img_containers = soup.find_all("a", class_="thumbnail-wrapper")
 
         for container in img_containers[:10]:
-            img_tag = container.find('img')
+            img_tag = container.find("img")
             if img_tag:
-                for attr in ['src', 'data-src']:
+                for attr in ["src", "data-src"]:
                     src = img_tag.get(attr)
-                    if src and self._is_valid_image_url(src) and not src.startswith('data:'):
+                    if (
+                        src
+                        and self._is_valid_image_url(src)
+                        and not src.startswith("data:")
+                    ):
                         if self._url_contains_identifier(src, name_parts):
                             return src
 
         # Fallback: try any img tags
-        img_tags = soup.find_all('img')
+        img_tags = soup.find_all("img")
         for img in img_tags[:15]:
-            src = img.get('src')
-            if src and self._is_valid_image_url(src) and not src.startswith('data:'):
+            src = img.get("src")
+            if src and self._is_valid_image_url(src) and not src.startswith("data:"):
                 if self._url_contains_identifier(src, name_parts):
                     return src
 
@@ -367,19 +432,20 @@ class ImageSearchService:
             return None
 
         # Parse HTML to find image URLs
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Bing stores image data in m attribute
-        img_tags = soup.find_all('a', class_='iusc')
+        img_tags = soup.find_all("a", class_="iusc")
 
         for img_tag in img_tags[:15]:
-            m_attr = img_tag.get('m')
+            m_attr = img_tag.get("m")
             if m_attr:
                 # Parse the JSON-like m attribute
                 import json
+
                 try:
                     m_data = json.loads(m_attr)
-                    image_url = m_data.get('murl') or m_data.get('turl')
+                    image_url = m_data.get("murl") or m_data.get("turl")
                     if image_url and self._is_valid_image_url(image_url):
                         # Validate URL contains influencer name
                         if self._url_contains_identifier(image_url, name_parts):
@@ -388,10 +454,10 @@ class ImageSearchService:
                     continue
 
         # Fallback: try to find img tags directly
-        img_tags = soup.find_all('img', class_='mimg')
+        img_tags = soup.find_all("img", class_="mimg")
         for img in img_tags[:10]:
-            src = img.get('src')
-            if src and self._is_valid_image_url(src) and not src.startswith('data:'):
+            src = img.get("src")
+            if src and self._is_valid_image_url(src) and not src.startswith("data:"):
                 if self._url_contains_identifier(src, name_parts):
                     return src
 
@@ -405,20 +471,24 @@ class ImageSearchService:
         if not response:
             return None
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Yandex uses serp-item class for image results
-        img_containers = soup.find_all('div', class_='serp-item')
+        img_containers = soup.find_all("div", class_="serp-item")
 
         for container in img_containers[:15]:
             # Look for img tag
-            img_tag = container.find('img')
+            img_tag = container.find("img")
             if img_tag:
-                src = img_tag.get('src')
-                if src and self._is_valid_image_url(src) and not src.startswith('data:'):
+                src = img_tag.get("src")
+                if (
+                    src
+                    and self._is_valid_image_url(src)
+                    and not src.startswith("data:")
+                ):
                     # Yandex often uses protocol-relative URLs
-                    if src.startswith('//'):
-                        src = 'https:' + src
+                    if src.startswith("//"):
+                        src = "https:" + src
                     # Validate URL contains influencer name
                     if self._url_contains_identifier(src, name_parts):
                         return src
@@ -435,10 +505,12 @@ class ImageSearchService:
 
         # DuckDuckGo loads images via JavaScript, so scraping is harder
         # Try to find image URLs in the page source
-        image_urls = re.findall(r'https?://[^\s<>"]+?\.(?:jpg|jpeg|png|webp)', response.text)
+        image_urls = re.findall(
+            r'https?://[^\s<>"]+?\.(?:jpg|jpeg|png|webp)', response.text
+        )
 
         for url in image_urls[:20]:
-            if self._is_valid_image_url(url) and 'logo' not in url.lower():
+            if self._is_valid_image_url(url) and "logo" not in url.lower():
                 # Validate URL contains influencer name
                 if self._url_contains_identifier(url, name_parts):
                     return url
@@ -454,27 +526,29 @@ class ImageSearchService:
 
         # Filter out Instagram/Facebook/TikTok blocked URLs early
         blocked_patterns = [
-            'lookaside.fbsbx.com',
-            'lookaside.instagram.com',
-            'scontent.cdninstagram.com',
-            'p16-sign',  # TikTok CDN
-            'p77-sign',  # TikTok CDN
-            'tiktokcdn.com',
-            'tiktok.com/avatar'
+            "lookaside.fbsbx.com",
+            "lookaside.instagram.com",
+            "scontent.cdninstagram.com",
+            "p16-sign",  # TikTok CDN
+            "p77-sign",  # TikTok CDN
+            "tiktokcdn.com",
+            "tiktok.com/avatar",
         ]
         if any(pattern in lower_url for pattern in blocked_patterns):
             return False
 
         # Check if it's a reasonable image URL
-        image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
+        image_extensions = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 
         # Must be http/https
-        if not (url.startswith('http://') or url.startswith('https://')):
+        if not (url.startswith("http://") or url.startswith("https://")):
             return False
 
         # Should have image extension or be from known CDN
         has_extension = any(ext in lower_url for ext in image_extensions)
-        is_cdn = any(cdn in lower_url for cdn in ['cdn', 'img', 'image', 'media', 'photo'])
+        is_cdn = any(
+            cdn in lower_url for cdn in ["cdn", "img", "image", "media", "photo"]
+        )
 
         return has_extension or is_cdn
 

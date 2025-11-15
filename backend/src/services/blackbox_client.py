@@ -1,10 +1,13 @@
 """Blackbox AI API client."""
 import json
+import logging
 from typing import Any, Dict, List, Optional
 
 from openai import OpenAI
 
 from src.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class BlackboxClient:
@@ -58,6 +61,7 @@ class BlackboxClient:
         Returns:
             Dict with platform information
         """
+        logger.info(f"   🤖 Blackbox: Searching for platforms...")
         prompt = f"""Find all social media accounts for the influencer '{influencer_name}'.
 
 CRITICAL REQUIREMENTS:
@@ -156,6 +160,7 @@ If the influencer is not found, return:
         Returns:
             Dict with product information
         """
+        logger.info(f"   🤖 Blackbox: Analyzing products...")
         prompt = f"""Analyze products sold or promoted by '{influencer_name}'.
 
 Based on their social media presence: {json.dumps(platforms_data, indent=2)}
@@ -213,6 +218,7 @@ Return ONLY valid JSON:
         Returns:
             Dict with breakthrough information and timeline
         """
+        logger.info(f"   🤖 Blackbox: Researching breakthrough moments...")
         prompt = f"""Research how '{influencer_name}' became famous.
 
 Platform data: {json.dumps(platforms_data, indent=2)}
@@ -220,10 +226,18 @@ Platform data: {json.dumps(platforms_data, indent=2)}
 Find:
 1. Their first viral video/post/content
 2. The breakthrough moment that launched their career
-3. Top 5-6 most significant milestones in their growth (chronological order)
-4. Major collaborations or turning points
+3. Top 5-6 most significant GROWTH milestones (chronological order)
+4. Major collaborations or turning points that drove growth
 
-IMPORTANT:
+CRITICAL INSTRUCTIONS FOR GROWTH TIMELINE:
+- Timeline should show POSITIVE growth events only (viral videos, subscriber milestones, major achievements)
+- HIGH VIEW COUNTS = SUCCESS = POSITIVE GROWTH (e.g., a video with 2M views is a MILESTONE, not a problem)
+- DO NOT interpret viral content or high engagement as negative events
+- Focus on upward progression: channel launches, viral hits, subscriber milestones, major collabs, awards
+- Avoid controversies or negative events unless they led to significant growth
+- Timeline should demonstrate their rise to success
+
+FORMATTING:
 - Limit timeline to 5-6 most significant events only (no more than 6)
 - ENSURE the most recent event is from 2024 or 2025 if the influencer is still active
 - Include their latest major milestone or achievement to show current activity
@@ -279,6 +293,7 @@ Return ONLY valid JSON:
         Returns:
             Dict with connection information
         """
+        logger.info(f"   🤖 Blackbox: Finding connections (influencers, agencies, brands)...")
         prompt = f"""Find ALL connections for '{influencer_name}' including:
 1. Other influencers they collaborate with
 2. Ad agencies representing them
@@ -354,6 +369,7 @@ Return ONLY valid JSON:
         Returns:
             Dict with news and drama information
         """
+        logger.info(f"   🤖 Blackbox: Searching for news and drama...")
         prompt = f"""Research all recent and significant news, drama, and controversies about '{influencer_name}'.
 
 Platform data: {json.dumps(platforms_data, indent=2)}
@@ -539,6 +555,94 @@ IMPORTANT: Limit to MAXIMUM 8-10 most representative comments."""
             return json.loads(json_str)
         except json.JSONDecodeError:
             return {"overall_sentiment": "neutral", "comments": []}
+
+    def discover_top_influencers(self, country: str = None, limit: int = 10) -> Dict[str, Any]:
+        """
+        Discover top/trending influencers globally or by country.
+
+        Args:
+            country: Country name (optional, global if not provided)
+            limit: Number of influencers to discover
+
+        Returns:
+            Dict with list of influencer names
+        """
+        from datetime import datetime
+        current_year = datetime.now().year
+
+        location = f"in {country}" if country else "globally"
+        logger.info(f"   🤖 Blackbox: Searching for top {limit} influencers of {current_year} {location}...")
+
+        # Build search query
+        if country:
+            search_query = f"Top {limit} social media influencers of {current_year} in {country}"
+        else:
+            search_query = f"Top {limit} social media influencers of {current_year}"
+
+        prompt = f"""Find: "{search_query}"
+
+Based on current information, list the top {limit} social media influencers.
+
+DEFINITION: "Influencer" means someone who became famous THROUGH social media platforms (YouTube, TikTok, Instagram, Twitter/X).
+
+REQUIREMENTS:
+1. Use ONLY information from current {current_year} sources
+2. Only include people who became famous through social media (NOT traditional celebrities, athletes, or movie/TV actors)
+3. EXCLUDE: Movie actors, TV stars, athletes, musicians who became famous through traditional media
+4. INCLUDE: YouTubers, TikTokers, Instagram creators, Twitter personalities who built their fame online
+5. MINIMUM FOLLOWER THRESHOLD: Only include influencers with at least 10,000 total followers across all platforms (this prevents volatility and ensures established presence)
+6. Include influencers across different platforms (YouTube, TikTok, Instagram, Twitter)
+7. Provide a diverse mix from different niches (gaming, beauty, lifestyle, comedy, tech, etc.)
+8. Use their most commonly known name/handle
+
+For each influencer, provide:
+- name: Their most searchable name that will work when searching platforms
+  * CRITICAL: Use the name format they actually use on YouTube/Instagram/TikTok
+  * For French influencers: Use their stage name with proper spacing
+  * Examples of CORRECT names:
+    - "Tibo InShape" (NOT "Tiboinshape" or "Tibo Inshape")
+    - "Squeezie" (NOT "Lucas Hauchard")
+    - "Nabilla" (NOT "Nabilla Vergara" or "Nabilla Benattia")
+    - "Norman" (NOT "Norman Thavaud")
+    - "Cyprien" (NOT "Cyprien Iov")
+  * If unsure, use their single-word stage name or most common username
+  * The name MUST be searchable on YouTube, Instagram, and TikTok
+- primary_platform: Their main platform (youtube, tiktok, instagram, twitter)
+- estimated_followers: Total followers across all platforms (approximate)
+- niche: Content category (gaming, beauty, comedy, tech, lifestyle, etc.)
+
+Return ONLY valid JSON with NO additional text:
+{{
+    "influencers": [
+        {{
+            "name": "MrBeast",
+            "primary_platform": "youtube",
+            "estimated_followers": 250000000,
+            "niche": "entertainment"
+        }}
+    ]
+}}
+
+CRITICAL: Return ONLY the JSON object. Do NOT include any explanatory text before or after."""
+
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that discovers trending social media influencers. Focus ONLY on people who became famous through social media platforms (YouTube, TikTok, Instagram, Twitter), NOT traditional celebrities, athletes, or movie/TV actors. Always return valid JSON with real influencer names."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = self.chat(messages, temperature=0.3, max_tokens=1200)
+
+        try:
+            if "```json" in response:
+                json_str = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                json_str = response.split("```")[1].split("```")[0].strip()
+            else:
+                json_str = response.strip()
+
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            return {"influencers": []}
 
 
 # Global client instance

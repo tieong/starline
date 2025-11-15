@@ -249,9 +249,17 @@ Platform data: {json.dumps(platforms_data, indent=2)}
 
 Find:
 1. Their breakthrough moment that launched their career
-2. Top 5-6 most significant milestones in their growth (chronological order)
+2. Top 5-6 most significant GROWTH milestones (chronological order)
 
-IMPORTANT:
+CRITICAL INSTRUCTIONS FOR GROWTH TIMELINE:
+- Timeline should show POSITIVE growth events only (viral videos, subscriber milestones, major achievements)
+- HIGH VIEW COUNTS = SUCCESS = POSITIVE GROWTH (e.g., a video with 2M views is a MILESTONE, not a problem)
+- DO NOT interpret viral content or high engagement as negative events
+- Focus on upward progression: channel launches, viral hits, subscriber milestones, major collabs, awards
+- Avoid controversies or negative events unless they led to significant growth
+- Timeline should demonstrate their rise to success
+
+FORMATTING:
 - Limit timeline to 5-6 most significant events only (no more than 6)
 - ENSURE the most recent event is from 2024 or 2025 if the influencer is still active
 - Include their latest major milestone or achievement to show current activity

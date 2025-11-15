@@ -19,8 +19,15 @@ from sqlalchemy.orm import relationship, sessionmaker
 
 from src.config.settings import settings
 
-# Create database engine (echo disabled, use logging configuration instead)
-engine = create_engine(settings.database_url, echo=False)
+# Create database engine with connection pooling for concurrent requests
+engine = create_engine(
+    settings.database_url,
+    echo=False,
+    pool_size=10,  # Number of connections to keep open
+    max_overflow=20,  # Additional connections when pool is full
+    pool_pre_ping=True,  # Verify connections before using
+    pool_recycle=3600,  # Recycle connections after 1 hour
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

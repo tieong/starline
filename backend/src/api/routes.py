@@ -612,23 +612,33 @@ async def get_top_influencers(
     # Auto-discover and analyze new influencers
     import asyncio
     import logging
+    from src.config.settings import settings
     from src.services.perplexity_client import perplexity_client
+    from src.services.blackbox_client import blackbox_client
 
     logger = logging.getLogger(__name__)
+
+    # Select AI provider based on settings
+    if settings.ai_provider == "perplexity":
+        ai_client = perplexity_client
+        provider_name = "Perplexity"
+    else:
+        ai_client = blackbox_client
+        provider_name = "Blackbox"
 
     # Calculate how many we need to discover
     needed = limit - len(influencers)
 
-    logger.info(f"Need {needed} influencers, discovering exactly {needed} (no buffer)...")
+    logger.info(f"Need {needed} influencers, discovering exactly {needed} (no buffer) using {provider_name}...")
 
     # Discover top influencers using AI - request exactly what we need
     def discover():
-        return perplexity_client.discover_top_influencers(country, needed)
+        return ai_client.discover_top_influencers(country, needed)
 
     discovered_data = await asyncio.to_thread(discover)
     discovered_influencers = discovered_data.get("influencers", [])
 
-    logger.info(f"Perplexity returned {len(discovered_influencers)} influencers")
+    logger.info(f"{provider_name} returned {len(discovered_influencers)} influencers")
 
     # Analyze each discovered influencer (no retries - fail fast)
     analyzer = InfluencerAnalyzer(db)

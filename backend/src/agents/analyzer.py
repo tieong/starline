@@ -42,8 +42,10 @@ class InfluencerAnalyzer:
         # Select AI provider based on settings
         if settings.ai_provider == "perplexity":
             self.ai_client = perplexity_client
+            logger.info(f"🤖 Using AI Provider: Perplexity (setting: {settings.ai_provider})")
         else:
             self.ai_client = blackbox_client
+            logger.info(f"🤖 Using AI Provider: Blackbox (setting: {settings.ai_provider})")
 
     def _generate_name_variations(self, name: str) -> list[str]:
         """

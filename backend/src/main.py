@@ -50,9 +50,17 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
+    import multiprocessing
+
+    # Use multiple workers for better concurrency
+    # Dev: 8 workers for testing concurrent load
+    # Prod: 4 workers or CPU count
+    workers = 8 if settings.debug else min(4, multiprocessing.cpu_count())
+
     uvicorn.run(
         "src.main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.debug,
+        workers=workers if not settings.debug else 1,  # Workers don't work with reload
     )
