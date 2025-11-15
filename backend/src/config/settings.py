@@ -13,10 +13,18 @@ class Settings(BaseSettings):
     # Database Settings
     database_url: str = "postgresql://starline:starline@localhost:5432/starline"
 
+    # AI Provider Settings
+    ai_provider: str = "blackbox"  # Options: "blackbox" or "perplexity"
+
     # Blackbox AI Settings
     blackbox_api_key: str = ""
     blackbox_base_url: str = "https://api.blackbox.ai"
     blackbox_model: str = "blackboxai/openai/gpt-4"
+
+    # Perplexity AI Settings
+    perplexity_api_key: str = ""
+    perplexity_base_url: str = "https://api.perplexity.ai"
+    perplexity_model: str = "sonar-pro"  # Options: "sonar-pro" or "sonar"
 
     # External APIs
     youtube_api_key: str = ""

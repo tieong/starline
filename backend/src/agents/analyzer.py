@@ -12,7 +12,9 @@ from src.models.database import (
     Product,
     TimelineEvent,
 )
+from src.config.settings import settings
 from src.services.blackbox_client import blackbox_client
+from src.services.perplexity_client import perplexity_client
 from src.services.profile_fetcher import profile_fetcher
 
 
@@ -22,7 +24,12 @@ class InfluencerAnalyzer:
     def __init__(self, db: Session):
         """Initialize analyzer with database session."""
         self.db = db
-        self.blackbox = blackbox_client
+
+        # Select AI provider based on settings
+        if settings.ai_provider == "perplexity":
+            self.ai_client = perplexity_client
+        else:
+            self.ai_client = blackbox_client
 
     async def analyze_influencer(self, influencer_name: str) -> Dict[str, Any]:
         """
@@ -70,7 +77,7 @@ class InfluencerAnalyzer:
         try:
             # Run all analysis tasks in parallel
             platforms_data = await self._run_in_thread(
-                self.blackbox.analyze_influencer_platforms,
+                self.ai_client.analyze_influencer_platforms,
                 influencer_name
             )
 
@@ -85,9 +92,9 @@ class InfluencerAnalyzer:
 
             # Run remaining analyses in parallel
             results = await asyncio.gather(
-                self._run_in_thread(self.blackbox.analyze_products, influencer_name, platforms_data),
-                self._run_in_thread(self.blackbox.analyze_breakthrough_moment, influencer_name, platforms_data),
-                self._run_in_thread(self.blackbox.analyze_connections, influencer_name, platforms_data),
+                self._run_in_thread(self.ai_client.analyze_products, influencer_name, platforms_data),
+                self._run_in_thread(self.ai_client.analyze_breakthrough_moment, influencer_name, platforms_data),
+                self._run_in_thread(self.ai_client.analyze_connections, influencer_name, platforms_data),
                 return_exceptions=True
             )
 
