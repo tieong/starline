@@ -48,11 +48,13 @@ export interface InfluencerDetail {
     likes?: number;
   }>;
   products: Array<{
+    id: number;
     name: string;
     category: string;
     quality_score: number;
     description: string;
     review_count: number;
+    openfoodfacts_data?: string | null;
     reviews: Array<{
       author: string;
       comment: string;
@@ -141,15 +143,26 @@ class ApiClient {
 
   /**
    * Analyze an influencer (triggers real-time AI analysis)
+   * @param name - Influencer name
+   * @param analysisLevel - "platforms_only" (top lists), "basic" (profile view), or "full" (everything)
    */
-  async analyzeInfluencer(name: string): Promise<InfluencerDetail | { status: string; message: string }> {
-    const response = await fetch(`${this.baseUrl}/api/influencers/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name }),
-    });
+  async analyzeInfluencer(
+    name: string,
+    analysisLevel: 'platforms_only' | 'basic' | 'full' = 'basic'
+  ): Promise<InfluencerDetail | { status: string; message: string }> {
+    const params = new URLSearchParams();
+    params.set('analysis_level', analysisLevel);
+
+    const response = await fetch(
+      `${this.baseUrl}/api/influencers/analyze?${params.toString()}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Failed to analyze influencer');
@@ -184,6 +197,86 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to fetch top influencers');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch timeline events on-demand for an influencer
+   */
+  async fetchTimeline(influencerId: string): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/api/influencers/${influencerId}/timeline/fetch`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch timeline');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch network connections on-demand for an influencer
+   */
+  async fetchConnections(influencerId: string): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/api/influencers/${influencerId}/connections/fetch`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch connections');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch product reviews on-demand
+   */
+  async fetchProductReviews(productId: number): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/api/products/${productId}/reviews/fetch`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch product reviews');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch OpenFoodFacts data on-demand for a product
+   */
+  async fetchOpenFoodFacts(productId: number): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/api/products/${productId}/openfoodfacts/fetch`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch OpenFoodFacts data');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Fetch news and drama on-demand for an influencer
+   */
+  async fetchNews(influencerId: string): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/api/influencers/${influencerId}/news/fetch`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch news');
     }
 
     return response.json();

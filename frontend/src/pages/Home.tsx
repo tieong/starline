@@ -15,6 +15,14 @@ export default function Home() {
   // Fetch top 5 French influencers on mount
   useEffect(() => {
     const fetchTopInfluencers = async () => {
+      // Check if auto-discovery is enabled via environment variable
+      const autoDiscoveryEnabled = import.meta.env.VITE_ENABLE_AUTO_DISCOVERY !== 'false';
+
+      if (!autoDiscoveryEnabled) {
+        console.log('Auto-discovery is disabled via VITE_ENABLE_AUTO_DISCOVERY env variable');
+        return;
+      }
+
       try {
         setLoadingTop(true);
         const response = await apiClient.getTopInfluencers({ limit: 5, country: 'FR', auto_discover: true });

@@ -36,7 +36,121 @@ export default function InfluencerDetail() {
         };
 
         console.log('Fetched influencer data:', normalizedData);
-        setInfluencer(normalizedData);
+
+        // Check if we only have platforms (trust_score === 0 means platforms_only analysis)
+        // If so, trigger basic analysis to fetch products and calculate trust score
+        let finalData = normalizedData;
+        if (normalizedData.trust_score === 0 || normalizedData.products.length === 0) {
+          console.log('Influencer has platforms only, fetching products and calculating trust score...');
+          try {
+            // Trigger basic analysis to get products + trust score
+            await apiClient.analyzeInfluencer(normalizedData.name, 'basic');
+
+            // Fetch updated data with products and trust score
+            const updatedData = await apiClient.getInfluencer(id);
+            finalData = {
+              ...updatedData,
+              platforms: updatedData.platforms || [],
+              timeline: updatedData.timeline || [],
+              products: updatedData.products || [],
+              connections: updatedData.connections || [],
+              news: updatedData.news || [],
+              bio: updatedData.bio || 'No bio available',
+              avatar_url: updatedData.avatar_url || normalizedData.avatar_url,
+            };
+            setInfluencer(finalData);
+          } catch (err) {
+            console.error('Failed to fetch products:', err);
+            // Still show the influencer with platforms only
+            setInfluencer(normalizedData);
+          }
+        } else {
+          setInfluencer(normalizedData);
+        }
+
+        // Auto-fetch missing data on-demand when viewing profile
+        // This runs in the background after initial display
+        // Use finalData to check what's missing (not the original normalizedData)
+        if (id) {
+          // Fetch timeline if missing
+          if (finalData.timeline.length === 0) {
+            console.log('Timeline missing, fetching on-demand...');
+            apiClient.fetchTimeline(id).then(async () => {
+              const refreshedData = await apiClient.getInfluencer(id);
+              setInfluencer(prev => ({
+                ...prev!,
+                timeline: refreshedData.timeline || []
+              }));
+              console.log('Timeline fetched successfully');
+            }).catch(err => {
+              console.error('Failed to fetch timeline:', err);
+            });
+          }
+
+          // Fetch connections if missing
+          if (finalData.connections.length === 0) {
+            console.log('Connections missing, fetching on-demand...');
+            apiClient.fetchConnections(id).then(async () => {
+              const refreshedData = await apiClient.getInfluencer(id);
+              setInfluencer(prev => ({
+                ...prev!,
+                connections: refreshedData.connections || []
+              }));
+              console.log('Connections fetched successfully');
+            }).catch(err => {
+              console.error('Failed to fetch connections:', err);
+            });
+          }
+
+          // Fetch news if missing
+          if (finalData.news.length === 0) {
+            console.log('News missing, fetching on-demand...');
+            apiClient.fetchNews(id).then(async () => {
+              const refreshedData = await apiClient.getInfluencer(id);
+              setInfluencer(prev => ({
+                ...prev!,
+                news: refreshedData.news || []
+              }));
+              console.log('News fetched successfully');
+            }).catch(err => {
+              console.error('Failed to fetch news:', err);
+            });
+          }
+
+          // Fetch reviews for products that don't have them
+          if (finalData.products.length > 0) {
+            finalData.products.forEach((product: any, index: number) => {
+              if (!product.reviews || product.reviews.length === 0) {
+                console.log(`Product "${product.name}" has no reviews, fetching on-demand...`);
+                apiClient.fetchProductReviews(product.id).then(async () => {
+                  const refreshedData = await apiClient.getInfluencer(id);
+                  setInfluencer(prev => ({
+                    ...prev!,
+                    products: refreshedData.products || []
+                  }));
+                  console.log(`Reviews for "${product.name}" fetched successfully`);
+                }).catch(err => {
+                  console.error(`Failed to fetch reviews for "${product.name}":`, err);
+                });
+              }
+
+              // Fetch OpenFoodFacts data for food products without it
+              if (product.category === 'food' && !product.openfoodfacts_data) {
+                console.log(`Product "${product.name}" missing OpenFoodFacts data, fetching...`);
+                apiClient.fetchOpenFoodFacts(product.id).then(async () => {
+                  const refreshedData = await apiClient.getInfluencer(id);
+                  setInfluencer(prev => ({
+                    ...prev!,
+                    products: refreshedData.products || []
+                  }));
+                  console.log(`OpenFoodFacts data for "${product.name}" fetched successfully`);
+                }).catch(err => {
+                  console.error(`Failed to fetch OpenFoodFacts for "${product.name}":`, err);
+                });
+              }
+            });
+          }
+        }
       } catch (err: any) {
         console.error('Failed to fetch influencer:', err);
 
@@ -46,8 +160,8 @@ export default function InfluencerDetail() {
             setError('Influencer not in database. Analyzing now...');
             console.log(`Influencer "${id}" not found, triggering analysis...`);
 
-            // Use the ID as the name for analysis
-            const analysisResult = await apiClient.analyzeInfluencer(id);
+            // Use the ID as the name for analysis (use "basic" to get products + trust score)
+            const analysisResult = await apiClient.analyzeInfluencer(id, 'basic');
 
             // Check if analysis completed or is in progress
             if ('status' in analysisResult && analysisResult.status === 'analyzing') {
