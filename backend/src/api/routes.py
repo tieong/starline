@@ -237,59 +237,94 @@ async def get_top_influencers(
 
     # Auto-discover and analyze new influencers
     import asyncio
+    import logging
     from src.services.perplexity_client import perplexity_client
+
+    logger = logging.getLogger(__name__)
 
     # Calculate how many we need to discover
     needed = limit - len(influencers)
 
+    # Request extra influencers as buffer (50% more) to account for failures
+    discover_count = int(needed * 1.5) + 2  # Request 50% more + 2 as buffer
+
+    logger.info(f"Need {needed} influencers, discovering {discover_count} to account for potential failures...")
+
     # Discover top influencers using AI
     def discover():
-        return perplexity_client.discover_top_influencers(country, needed)
+        return perplexity_client.discover_top_influencers(country, discover_count)
 
     discovered_data = await asyncio.to_thread(discover)
     discovered_influencers = discovered_data.get("influencers", [])
 
-    # Analyze each discovered influencer
+    logger.info(f"Perplexity returned {len(discovered_influencers)} influencers")
+
+    # Analyze each discovered influencer with retry logic
     analyzer = InfluencerAnalyzer(db)
     newly_analyzed = []
+    max_retries = 2  # Retry failed analyses up to 2 times
 
-    for inf_data in discovered_influencers[:needed]:  # Limit to what we need
-        try:
-            # Check if already exists
-            existing = db.query(Influencer).filter(
-                Influencer.name.ilike(inf_data["name"])
-            ).first()
+    for inf_data in discovered_influencers:
+        # Stop if we have enough
+        if len(newly_analyzed) + len(influencers) >= limit:
+            break
 
-            if existing and existing.analysis_complete:
-                newly_analyzed.append(existing)
-                continue
+        retries = 0
+        while retries <= max_retries:
+            try:
+                # Check if already exists
+                existing = db.query(Influencer).filter(
+                    Influencer.name.ilike(inf_data["name"])
+                ).first()
 
-            # Analyze the influencer
-            result = await analyzer.analyze_influencer(inf_data["name"])
+                if existing and existing.analysis_complete:
+                    newly_analyzed.append(existing)
+                    logger.info(f"✓ {inf_data['name']} already analyzed ({len(newly_analyzed)}/{needed})")
+                    break
 
-            # Fetch the analyzed influencer from database
-            inf = db.query(Influencer).filter(
-                Influencer.name.ilike(inf_data["name"])
-            ).first()
+                # Analyze the influencer
+                logger.info(f"Analyzing {inf_data['name']} (attempt {retries + 1}/{max_retries + 1})...")
+                result = await analyzer.analyze_influencer(inf_data["name"])
 
-            if inf:
-                newly_analyzed.append(inf)
+                # Fetch the analyzed influencer from database
+                inf = db.query(Influencer).filter(
+                    Influencer.name.ilike(inf_data["name"])
+                ).first()
 
-        except Exception as e:
-            # Log error but continue with other influencers
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to analyze {inf_data.get('name')}: {str(e)}")
-            continue
+                if inf and inf.analysis_complete:
+                    newly_analyzed.append(inf)
+                    logger.info(f"✓ Successfully analyzed {inf_data['name']} ({len(newly_analyzed)}/{needed})")
+                    break
+                else:
+                    raise Exception("Analysis incomplete")
+
+            except Exception as e:
+                retries += 1
+                if retries > max_retries:
+                    logger.warning(f"✗ Failed to analyze {inf_data.get('name')} after {max_retries + 1} attempts: {str(e)}")
+                    break
+                else:
+                    logger.warning(f"⚠ Analysis failed for {inf_data.get('name')}, retrying ({retries}/{max_retries})...")
+                    await asyncio.sleep(2)  # Wait 2 seconds before retry
 
     # Combine existing and newly analyzed influencers
     all_influencers = list(influencers) + newly_analyzed
 
-    # Sort by trending_score
-    all_influencers.sort(key=lambda x: (x.trending_score or 0, x.trust_score or 0), reverse=True)
+    # Calculate total followers and sort
+    influencers_with_followers_combined = []
+    for inf in all_influencers:
+        total_followers = sum(p.follower_count or 0 for p in inf.platforms)
+        influencers_with_followers_combined.append((inf, total_followers))
 
-    # Limit to requested amount
-    all_influencers = all_influencers[:limit]
+    # Sort by total followers (descending)
+    influencers_with_followers_combined.sort(key=lambda x: x[1], reverse=True)
+
+    # Take top N
+    all_influencers = [inf for inf, _ in influencers_with_followers_combined[:limit]]
+
+    # Log warning if we couldn't get the full amount
+    if len(all_influencers) < limit:
+        logger.warning(f"⚠ Only got {len(all_influencers)}/{limit} influencers (some analyses may have failed)")
 
     return {
         "country": country or "global",
@@ -297,6 +332,7 @@ async def get_top_influencers(
         "count": len(all_influencers),
         "auto_discovered": len(newly_analyzed) > 0,
         "newly_analyzed_count": len(newly_analyzed),
+        "requested": limit,
         "influencers": [
             {
                 "id": inf.id,
