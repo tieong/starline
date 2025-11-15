@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.agents.analyzer import InfluencerAnalyzer
-from src.models.database import Influencer, get_db
+from src.models.database import Influencer, NewsArticle, get_db
 
 router = APIRouter()
 
@@ -162,3 +162,100 @@ async def get_influencer(
 
     analyzer = InfluencerAnalyzer(db)
     return analyzer._build_response(influencer)
+
+
+@router.get("/api/news")
+async def get_all_news(
+    limit: int = 50,
+    influencer_id: str = None,
+    article_type: str = None,
+    sentiment: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get news and drama articles.
+
+    Query parameters:
+    - limit: Maximum number of articles to return (default: 50)
+    - influencer_id: Filter by specific influencer
+    - article_type: Filter by type (news, drama, controversy, achievement, collaboration, legal)
+    - sentiment: Filter by sentiment (positive, negative, neutral)
+    """
+    query = db.query(NewsArticle)
+
+    # Apply filters
+    if influencer_id:
+        query = query.filter(NewsArticle.influencer_id == influencer_id)
+    if article_type:
+        query = query.filter(NewsArticle.article_type == article_type)
+    if sentiment:
+        query = query.filter(NewsArticle.sentiment == sentiment)
+
+    # Order by date (newest first) and severity (highest first)
+    articles = query.order_by(
+        NewsArticle.date.desc().nullslast(),
+        NewsArticle.severity.desc()
+    ).limit(limit).all()
+
+    return {
+        "news": [
+            {
+                "id": article.id,
+                "influencer_id": article.influencer_id,
+                "title": article.title,
+                "description": article.description,
+                "article_type": article.article_type,
+                "date": article.date.isoformat() if article.date else None,
+                "source": article.source,
+                "url": article.url,
+                "sentiment": article.sentiment,
+                "severity": article.severity,
+                "created_at": article.created_at.isoformat(),
+            }
+            for article in articles
+        ]
+    }
+
+
+@router.get("/api/influencers/{influencer_id}/news")
+async def get_influencer_news(
+    influencer_id: str,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """Get news and drama for a specific influencer."""
+    # Check if influencer exists
+    influencer = db.query(Influencer).filter(
+        Influencer.id == influencer_id
+    ).first()
+
+    if not influencer:
+        raise HTTPException(status_code=404, detail="Influencer not found")
+
+    articles = db.query(NewsArticle).filter(
+        NewsArticle.influencer_id == influencer_id
+    ).order_by(
+        NewsArticle.date.desc().nullslast(),
+        NewsArticle.severity.desc()
+    ).limit(limit).all()
+
+    return {
+        "influencer": {
+            "id": influencer.id,
+            "name": influencer.name,
+        },
+        "news": [
+            {
+                "id": article.id,
+                "title": article.title,
+                "description": article.description,
+                "article_type": article.article_type,
+                "date": article.date.isoformat() if article.date else None,
+                "source": article.source,
+                "url": article.url,
+                "sentiment": article.sentiment,
+                "severity": article.severity,
+            }
+            for article in articles
+        ]
+    }
