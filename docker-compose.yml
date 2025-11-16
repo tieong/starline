@@ -6,8 +6,12 @@ services:
       dockerfile: Dockerfile
     container_name: starline-backend
     environment:
-      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      AI_PROVIDER: blackbox
+      BLACKBOX_MODEL: ${BLACKBOX_MODEL}
       BLACKBOX_API_KEY: ${BLACKBOX_API_KEY}
+      BLACKBOX_BASE_URL: ${BLACKBOX_BASE_URL}
       DEBUG: "true"
     ports:
       - "8000:8000"
