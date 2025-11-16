@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Blackbox AI Settings
     blackbox_api_key: str = ""
     blackbox_base_url: str = "https://api.blackbox.ai"
-    blackbox_model: str = "blackboxai/openai/gpt-4"
+    blackbox_model: str = "gpt-4o"
 
     # Perplexity AI Settings
     perplexity_api_key: str = ""

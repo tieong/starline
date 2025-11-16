@@ -1080,6 +1080,248 @@ async def fetch_reputation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/api/explore/start",
+    response_model=None,
+    summary="Start graph exploration from an influencer name",
+    description="""
+Start an iterative graph exploration from an influencer's name using AI-powered analysis.
+
+**Workflow:**
+1. Analyze the influencer if not already in the database
+2. Fetch their connections (collaborators, agencies, brands)
+3. Return initial graph data with the influencer and their immediate connections
+4. Mark connections as "unexplored" - can be expanded later
+
+**Use Case:** When user types "Squeezie" in search bar and clicks "Generate Graph"
+    
+**Returns:** Initial graph with center node and first-level connections
+    """,
+    tags=["Graph Exploration"],
+)
+async def start_exploration(
+    request: InfluencerSearchRequest
+):
+    """Start graph exploration from an influencer name."""
+    try:
+        analyzer = InfluencerAnalyzer()
+        
+        # Step 1: Analyze influencer (basic mode to get platforms + products)
+        influencer_data = await analyzer.analyze_influencer(request.name, analysis_level="basic")
+        influencer_id = influencer_data["id"]
+        
+        # Step 2: Fetch connections if not already present
+        if not influencer_data.get("connections") or len(influencer_data["connections"]) == 0:
+            connections_result = await analyzer.fetch_connections(influencer_id)
+            influencer_data["connections"] = connections_result.get("connections", [])
+        
+        # Step 3: Build graph structure
+        nodes = []
+        links = []
+        
+        # Add center node (the main influencer)
+        nodes.append({
+            "id": f"influencer-{influencer_id}",
+            "name": influencer_data["name"],
+            "type": "influencer",
+            "avatar": influencer_data.get("avatar_url"),
+            "score": influencer_data.get("trust_score", 0),
+            "size": 100,
+            "explored": True,
+            "data": influencer_data
+        })
+        
+        # Add connection nodes
+        for conn in influencer_data.get("connections", []):
+            entity_type = conn.get("entity_type", "influencer")
+            entity_name = conn.get("name")
+            
+            # Create node ID based on type
+            if entity_type == "influencer":
+                # For influencer connections, check if they exist in database
+                conn_influencer = supabase.table("influencers").select("id, name, trust_score, avatar_url").ilike("name", entity_name).execute()
+                if conn_influencer.data and len(conn_influencer.data) > 0:
+                    conn_id = f"influencer-{conn_influencer.data[0]['id']}"
+                    node_data = {
+                        "id": conn_id,
+                        "name": entity_name,
+                        "type": "influencer",
+                        "avatar": conn_influencer.data[0].get("avatar_url"),
+                        "score": conn_influencer.data[0].get("trust_score", 0),
+                        "size": 60,
+                        "explored": conn_influencer.data[0].get("analysis_complete", False),
+                        "influencer_id": conn_influencer.data[0]["id"]
+                    }
+                else:
+                    # Influencer not yet in database - can be explored later
+                    node_id = f"influencer-pending-{entity_name.replace(' ', '-').lower()}"
+                    node_data = {
+                        "id": node_id,
+                        "name": entity_name,
+                        "type": "influencer",
+                        "size": 60,
+                        "explored": False,
+                        "pending_name": entity_name
+                    }
+            else:
+                # Non-influencer entities (agencies, brands, etc.)
+                node_id = f"{entity_type}-{entity_name.replace(' ', '-').lower()}"
+                node_data = {
+                    "id": node_id,
+                    "name": entity_name,
+                    "type": entity_type,
+                    "size": 50,
+                    "explored": False  # These can't be explored further
+                }
+            
+            nodes.append(node_data)
+            
+            # Create link
+            links.append({
+                "source": f"influencer-{influencer_id}",
+                "target": node_data["id"],
+                "type": conn.get("type", "collaboration"),
+                "strength": conn.get("strength", 5) / 10.0,
+                "label": conn.get("description", "")[:30]
+            })
+        
+        return {
+            "status": "success",
+            "center_influencer_id": influencer_id,
+            "center_influencer_name": influencer_data["name"],
+            "nodes": nodes,
+            "links": links,
+            "explored_count": 1,
+            "unexplored_count": sum(1 for n in nodes if not n.get("explored", True) and n["type"] == "influencer")
+        }
+        
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Exploration failed for '{request.name}': {str(e)}")
+        logger.debug(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/api/explore/expand/{node_id}",
+    response_model=None,
+    summary="Expand a node in the exploration graph",
+    description="""
+Expand a node in the exploration graph by analyzing the influencer and fetching their connections.
+
+**Workflow:**
+1. If node is a pending influencer name: analyze them first
+2. Fetch connections for the influencer
+3. Return new nodes and links to add to the graph
+
+**Use Case:** When user clicks on an unexplored node in the exploration graph
+
+**Returns:** New nodes and links to add to the existing graph
+    """,
+    tags=["Graph Exploration"],
+)
+async def expand_node(
+    node_id: str,
+    influencer_name: Optional[str] = Query(None, description="Name of influencer if node is pending")
+):
+    """Expand a node by analyzing and fetching connections."""
+    try:
+        analyzer = InfluencerAnalyzer()
+        
+        # Parse node_id to get influencer ID or name
+        if node_id.startswith("influencer-pending-"):
+            # This is a pending influencer - need to analyze first
+            if not influencer_name:
+                raise HTTPException(status_code=400, detail="influencer_name required for pending nodes")
+            
+            influencer_data = await analyzer.analyze_influencer(influencer_name, analysis_level="basic")
+            influencer_id = influencer_data["id"]
+        elif node_id.startswith("influencer-"):
+            # Extract influencer ID from node_id
+            influencer_id = int(node_id.replace("influencer-", ""))
+            influencer_data = await analyzer.analyze_influencer("", analysis_level="basic")  # Will use cache
+        else:
+            raise HTTPException(status_code=400, detail="Can only expand influencer nodes")
+        
+        # Fetch connections if not already present
+        if not influencer_data.get("connections") or len(influencer_data["connections"]) == 0:
+            connections_result = await analyzer.fetch_connections(influencer_id)
+            influencer_data["connections"] = connections_result.get("connections", [])
+        
+        # Build new nodes and links
+        new_nodes = []
+        new_links = []
+        
+        for conn in influencer_data.get("connections", []):
+            entity_type = conn.get("entity_type", "influencer")
+            entity_name = conn.get("name")
+            
+            if entity_type == "influencer":
+                conn_influencer = supabase.table("influencers").select("id, name, trust_score, avatar_url, analysis_complete").ilike("name", entity_name).execute()
+                if conn_influencer.data and len(conn_influencer.data) > 0:
+                    conn_id = f"influencer-{conn_influencer.data[0]['id']}"
+                    node_data = {
+                        "id": conn_id,
+                        "name": entity_name,
+                        "type": "influencer",
+                        "avatar": conn_influencer.data[0].get("avatar_url"),
+                        "score": conn_influencer.data[0].get("trust_score", 0),
+                        "size": 60,
+                        "explored": conn_influencer.data[0].get("analysis_complete", False),
+                        "influencer_id": conn_influencer.data[0]["id"]
+                    }
+                else:
+                    node_id = f"influencer-pending-{entity_name.replace(' ', '-').lower()}"
+                    node_data = {
+                        "id": node_id,
+                        "name": entity_name,
+                        "type": "influencer",
+                        "size": 60,
+                        "explored": False,
+                        "pending_name": entity_name
+                    }
+            else:
+                node_id = f"{entity_type}-{entity_name.replace(' ', '-').lower()}"
+                node_data = {
+                    "id": node_id,
+                    "name": entity_name,
+                    "type": entity_type,
+                    "size": 50,
+                    "explored": False
+                }
+            
+            new_nodes.append(node_data)
+            
+            new_links.append({
+                "source": f"influencer-{influencer_id}",
+                "target": node_data["id"],
+                "type": conn.get("type", "collaboration"),
+                "strength": conn.get("strength", 5) / 10.0,
+                "label": conn.get("description", "")[:30]
+            })
+        
+        return {
+            "status": "success",
+            "expanded_node_id": f"influencer-{influencer_id}",
+            "expanded_node_name": influencer_data["name"],
+            "new_nodes": new_nodes,
+            "new_links": new_links,
+            "influencer_data": influencer_data
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Expansion failed for node '{node_id}': {str(e)}")
+        logger.debug(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============= Data Retrieval Endpoints =============
 
 @router.get(
