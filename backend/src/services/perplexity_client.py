@@ -316,27 +316,34 @@ Return ONLY valid JSON:
             Dict with connection information
         """
         logger.info(f"   🤖 Perplexity: Finding connections (influencers, agencies, brands)...")
-        prompt = f"""Find the TOP 5 MOST SIGNIFICANT connections for '{influencer_name}' including:
-1. Other influencers they collaborate with
-2. Ad agencies representing them
-3. Brands they're sponsored by or partnered with
-4. Management companies managing them
-5. Record labels (if musician)
-6. Networks or media companies they work with
-7. Any other business entities they're connected to
+        prompt = f"""Find the TOP 8 MOST SIGNIFICANT connections for '{influencer_name}'.
 
 Platform data: {json.dumps(platforms_data, indent=2)}
 
-IMPORTANT: Limit to TOP 5 most significant connections only.
+PRIORITY ORDER (most important first):
+1. **Primary Management/Agency** - Who manages their career? (1 max)
+2. **Frequent Collaborators** - Other influencers they work with regularly (2-3 max)
+3. **Major Brand Deals** - Big sponsorships/partnerships (1-2 max)
+4. **Creative Partners** - Studios, networks, production companies (1-2 max)
+5. **Other significant connections** - Record labels, investors, etc. (1-2 max)
+
+CRITICAL REQUIREMENTS:
+- Limit to TOP 8 connections maximum (quality over quantity)
+- Sort by strength (most significant first)
+- VERIFY that connections are REAL and CURRENT (not outdated)
+- Use EXACT names that can be searched on social media
+- For influencers: Use their stage name or most common username (e.g., "Gotaga" not "Corentin Houssein")
+- Include only well-documented, verifiable relationships
+- Focus on active, ongoing relationships (not past/ended ones)
 
 For EACH connection, provide:
-- name: Full name of the entity/person
+- name: EXACT searchable name (for influencers: use stage name like "Cyprien" not "Cyprien Iov")
 - entity_type: One of: "influencer", "ad_agency", "brand", "management", "record_label", "network", "studio", "other"
 - connection_type: One of: "collaboration", "sponsorship", "managed_by", "signed_to", "partnership", "contracted_to", "owned_by"
-- strength: 1-10 (how strong/significant is this relationship?)
-- description: Brief description of the relationship
+- strength: 1-10 (10 = core relationship like manager, 8-9 = frequent collaborator, 5-7 = regular partnership, 1-4 = occasional)
+- description: Brief, specific description (e.g., "Co-founded gaming collective Solary" not just "Gaming partner")
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (MAXIMUM 8 connections):
 {{
     "connections": [
         {{

@@ -26,8 +26,8 @@ from src.models.database import (
 from src.config.settings import settings
 from src.services.blackbox_client import blackbox_client
 from src.services.perplexity_client import perplexity_client
-from src.services.profile_fetcher import profile_fetcher
 from src.services.image_search import image_search_service
+from src.services.wikipedia_image import wikipedia_image_service
 from src.services.supabase_db import supabase_db
 
 
@@ -110,6 +110,10 @@ class InfluencerAnalyzer:
 
         Note: For top influencer lists, use "platforms_only" to minimize token usage.
         """
+        # Validate influencer name
+        if not influencer_name or not influencer_name.strip():
+            raise ValueError("Influencer name cannot be empty")
+        
         logger.info(f"🔍 Starting {analysis_level} analysis for: {influencer_name}")
 
         # Check if influencer exists in cache
@@ -129,9 +133,12 @@ class InfluencerAnalyzer:
             # Reset the analyzing flag so we can retry
             self.db.update_influencer(influencer["id"], {"is_analyzing": False})
 
-        # If analysis is in progress, return status
-        if influencer and influencer.get("is_analyzing") and influencer.get("analysis_complete"):
-            logger.info(f"⏳ Analysis already in progress for: {influencer_name}")
+        # If analysis is in progress, wait a bit and return partial data if available
+        if influencer and influencer.get("is_analyzing") and not influencer.get("analysis_complete"):
+            logger.info(f"⏳ Analysis already in progress for: {influencer_name}, returning existing data")
+            # Return whatever data we have so far (partial response is better than error)
+            if influencer.get("name"):
+                return self._build_response(influencer)
             return {
                 "status": "analyzing",
                 "message": "Analysis in progress, please wait...",
@@ -144,7 +151,7 @@ class InfluencerAnalyzer:
                 "name": influencer_name,
                 "is_analyzing": True,
                 "last_analyzed": datetime.utcnow().isoformat(),
-                "cache_expires": (datetime.utcnow() + timedelta(days=1)).isoformat(),  # Cache for 24 hours
+                "cache_expires": (datetime.utcnow() + timedelta(days=7)).isoformat(),  # Cache for 7 days
             })
         else:
             influencer = self.db.update_influencer(influencer["id"], {
@@ -187,7 +194,7 @@ class InfluencerAnalyzer:
                             logger.info(f"   ✅ SUCCESS! Found {len(variation_data.get('platforms', []))} platforms using '{variation}'")
                             platforms_data = variation_data
                             # Update the influencer name to the working variation
-                            influencer.name = variation
+                            influencer = self.db.update_influencer(influencer["id"], {"name": variation})
                             break
                         else:
                             logger.info(f"   ✗ No platforms found for '{variation}'")
@@ -234,18 +241,15 @@ class InfluencerAnalyzer:
 
                     raise Exception(f"Influencer '{influencer_name}' does not meet the minimum follower threshold (10,000+ required, found {total_followers:,}). This prevents volatility and ensures established presence.")
 
-                # Fetch profile picture only if not already stored
-                if not influencer.avatar_data:
-                    logger.info(f"🖼️  Fetching profile picture...")
+                # Fetch profile picture URL only if not already stored
+                if not influencer.get("avatar_url"):
+                    logger.info(f"🖼️  Fetching profile picture URL...")
                     avatar_url = await self._fetch_profile_picture(influencer_name, platforms_data)
-                    influencer.avatar_url = avatar_url
-
-                    # Download and store the actual image data
                     if avatar_url:
-                        logger.info(f"   📥 Downloading image from: {avatar_url}")
-                        await self._download_and_store_image(influencer, avatar_url)
+                        influencer = self.db.update_influencer(influencer["id"], {"avatar_url": avatar_url})
+                        logger.info(f"   ✓ Profile picture URL saved")
                 else:
-                    logger.info(f"✓ Profile picture already exists, skipping download")
+                    logger.info(f"✓ Profile picture URL already exists")
 
             # Run analyses based on level
             if analysis_level == "platforms_only":
@@ -307,17 +311,20 @@ class InfluencerAnalyzer:
             # Calculate trust score only when we have product data (not for platforms_only mode)
             if analysis_level == "platforms_only":
                 # For platforms_only, set default trust score (will be calculated when viewing full profile)
-                influencer.trust_score = 0
+                trust_score = 0
                 logger.info(f"✅ Platforms-only analysis complete! Trust score will be calculated on profile view")
             else:
                 # Calculate trust score for basic/full analysis
                 logger.info(f"🎯 Calculating trust score...")
-                influencer.trust_score = self._calculate_trust_score(platforms_data, products_data)
-                logger.info(f"✅ Analysis complete for {influencer_name}! Trust score: {influencer.trust_score}")
+                trust_score = self._calculate_trust_score(platforms_data, products_data)
+                logger.info(f"✅ Analysis complete for {influencer_name}! Trust score: {trust_score}")
 
-            influencer.is_analyzing = False
-            influencer.analysis_complete = True
-            self.db.commit()
+            # Update influencer with final status and trust score
+            influencer = self.db.update_influencer(influencer["id"], {
+                "is_analyzing": False,
+                "analysis_complete": True,
+                "trust_score": trust_score
+            })
 
             return self._build_response(influencer)
 
@@ -329,8 +336,7 @@ class InfluencerAnalyzer:
 
             # Update influencer status
             if influencer:
-                influencer.is_analyzing = False
-                self.db.commit()
+                self.db.update_influencer(influencer["id"], {"is_analyzing": False})
 
             raise Exception(f"Analysis failed for '{influencer_name}': {str(e)}")
 
@@ -339,45 +345,43 @@ class InfluencerAnalyzer:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, func, *args)
 
-    async def _save_platforms(self, influencer: Influencer, data: Dict[str, Any]):
+    async def _save_platforms(self, influencer: Dict[str, Any], data: Dict[str, Any]):
         """Save platform data to database."""
         # Clear existing platforms
-        self.db.query(Platform).filter(Platform.influencer_id == influencer.id).delete()
+        self.db.delete_platforms(influencer["id"])
 
         for platform_data in data.get("platforms", []):
-            platform = Platform(
-                influencer_id=influencer.id,
-                platform_name=platform_data.get("platform", ""),
-                username=platform_data.get("username", ""),
-                follower_count=platform_data.get("followers", 0),
-                verified=platform_data.get("verified", False),
-                url=platform_data.get("url", ""),
-            )
-            self.db.add(platform)
+            platform_dict = {
+                "influencer_id": influencer["id"],
+                "platform_name": platform_data.get("platform", ""),
+                "username": platform_data.get("username", ""),
+                "follower_count": platform_data.get("followers", 0),
+                "verified": platform_data.get("verified", False),
+                "url": platform_data.get("url", ""),
+            }
+            self.db.create_platform(platform_dict)
 
-        self.db.commit()
-
-    async def _save_products(self, influencer: Influencer, data: Dict[str, Any], platforms_data: Dict[str, Any], fetch_reviews: bool = False):
+    async def _save_products(self, influencer: Dict[str, Any], data: Dict[str, Any], platforms_data: Dict[str, Any], fetch_reviews: bool = False):
         """Save product data to database and optionally fetch reviews."""
         # Clear existing products and their reviews
-        self.db.query(Product).filter(Product.influencer_id == influencer.id).delete()
+        self.db.delete_products(influencer["id"])
 
         for product_data in data.get("products", []):
-            product = Product(
-                influencer_id=influencer.id,
-                name=product_data.get("name", ""),
-                category=product_data.get("category", ""),
-                description=product_data.get("description", ""),
-                quality_score=70,  # Default, will be updated
-            )
-            self.db.add(product)
-            self.db.flush()  # Flush to get product ID
+            product_dict = {
+                "influencer_id": influencer["id"],
+                "name": product_data.get("name", ""),
+                "category": product_data.get("category", ""),
+                "description": product_data.get("description", ""),
+                "quality_score": 70,  # Default, will be updated
+                "review_count": 0,
+                "sentiment_score": 0.0,
+            }
 
             # Check OpenFoodFacts for food or cosmetics products
             category = product_data.get("category", "").lower()
             if category in ["food", "cosmetics", "beauty"]:
                 try:
-                    logger.info(f"   🔍 Checking OpenFoodFacts for '{product.name}'...")
+                    logger.info(f"   🔍 Checking OpenFoodFacts for '{product_dict['name']}'...")
                     from src.services.openfoodfacts import openfoodfacts_client
 
                     # Determine API category
@@ -385,38 +389,42 @@ class InfluencerAnalyzer:
 
                     # Search for product
                     def search_product():
-                        return openfoodfacts_client.search_product(product.name, api_category)
+                        return openfoodfacts_client.search_product(product_dict["name"], api_category)
 
                     off_data = await self._run_in_thread(search_product)
 
                     if off_data:
                         # Store the data as JSON
                         import json
-                        product.openfoodfacts_data = json.dumps(off_data)
+                        product_dict["openfoodfacts_data"] = json.dumps(off_data)
 
                         # Use the quality score from OpenFoodFacts
-                        product.quality_score = off_data.get("quality_score", 70)
+                        product_dict["quality_score"] = off_data.get("quality_score", 70)
 
                         if category == "food":
                             nutriscore = off_data.get("nutriscore", "N/A")
                             nova = off_data.get("nova_group", "N/A")
                             is_healthy = off_data.get("is_healthy", False)
-                            logger.info(f"      ✓ NutriScore: {nutriscore}, NOVA: {nova}, Healthy: {is_healthy}, Score: {product.quality_score}")
+                            logger.info(f"      ✓ NutriScore: {nutriscore}, NOVA: {nova}, Healthy: {is_healthy}, Score: {product_dict['quality_score']}")
                         else:
-                            logger.info(f"      ✓ Beauty Score: {product.quality_score}/100")
+                            logger.info(f"      ✓ Beauty Score: {product_dict['quality_score']}/100")
                     else:
                         logger.info(f"      ⚠️  Product not found in OpenFoodFacts database")
                 except Exception as e:
                     logger.warning(f"      ⚠️  OpenFoodFacts lookup failed: {str(e)}")
 
+            # Create the product and get its ID
+            created_product = self.db.create_product(product_dict)
+            product_id = created_product["id"]
+
             # Fetch reviews for this product (only if requested)
             if fetch_reviews:
                 try:
-                    logger.info(f"   🔍 Searching for reviews of '{product.name}'...")
+                    logger.info(f"   🔍 Searching for reviews of '{product_dict['name']}'...")
                     reviews_data = await self._run_in_thread(
                         self.ai_client.analyze_product_reviews,
-                        influencer.name,
-                        product.name,
+                        influencer["name"],
+                        product_dict["name"],
                         platforms_data
                     )
 
@@ -430,7 +438,7 @@ class InfluencerAnalyzer:
                             try:
                                 # Parse date if provided
                                 if review_item.get("date"):
-                                    review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
+                                    review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d").isoformat()
                                 else:
                                     review_date = None
                             except:
@@ -439,19 +447,20 @@ class InfluencerAnalyzer:
                             sentiment = review_item.get("sentiment", "neutral")
                             sentiments.append(sentiment)
 
-                            review = ProductReview(
-                                product_id=product.id,
-                                author=review_item.get("author", "Anonymous"),
-                                comment=review_item.get("comment", ""),
-                                platform=review_item.get("platform", ""),
-                                sentiment=sentiment,
-                                url=review_item.get("url"),
-                                date=review_date,
-                            )
-                            self.db.add(review)
+                            review_dict = {
+                                "product_id": product_id,
+                                "author": review_item.get("author", "Anonymous"),
+                                "comment": review_item.get("comment", ""),
+                                "platform": review_item.get("platform", ""),
+                                "sentiment": sentiment,
+                                "url": review_item.get("url"),
+                                "date": review_date,
+                            }
+                            self.db.create_product_review(review_dict)
 
-                        # Update review count (limited to 2)
-                        product.review_count = len(reviews_list)
+                        # Update review count and sentiment score
+                        review_count = len(reviews_list)
+                        sentiment_score = 0.0
 
                         # Calculate sentiment score (-1 to 1)
                         if sentiments:
@@ -461,132 +470,131 @@ class InfluencerAnalyzer:
                             total = len(sentiments)
 
                             # Sentiment score: (positive - negative) / total
-                            product.sentiment_score = (positive - negative) / total
-                            logger.info(f"      ✓ Found {product.review_count} reviews (😊 {positive} / 😐 {neutral} / 😞 {negative}) - Sentiment: {product.sentiment_score:.2f}")
+                            sentiment_score = (positive - negative) / total
+                            logger.info(f"      ✓ Found {review_count} reviews (😊 {positive} / 😐 {neutral} / 😞 {negative}) - Sentiment: {sentiment_score:.2f}")
                         else:
-                            logger.info(f"      ✓ Found {product.review_count} reviews for '{product.name}'")
+                            logger.info(f"      ✓ Found {review_count} reviews for '{product_dict['name']}'")
+
+                        # Update product with review stats
+                        self.db.update_product(product_id, {
+                            "review_count": review_count,
+                            "sentiment_score": sentiment_score,
+                        })
                 except Exception as e:
                     # If review fetching fails, just continue without reviews
-                    logger.warning(f"      ⚠️  Failed to fetch reviews for {product.name}: {str(e)}")
+                    logger.warning(f"      ⚠️  Failed to fetch reviews for {product_dict['name']}: {str(e)}")
 
-        self.db.commit()
-
-    async def _save_timeline(self, influencer: Influencer, data: Dict[str, Any]):
+    async def _save_timeline(self, influencer: Dict[str, Any], data: Dict[str, Any]):
         """Save timeline events to database."""
         # Clear existing timeline
-        self.db.query(TimelineEvent).filter(TimelineEvent.influencer_id == influencer.id).delete()
+        self.db.delete_timeline_events(influencer["id"])
 
         # Limit to maximum 7 timeline events to control API costs
         timeline_events = data.get("timeline", [])[:7]
 
         for event_data in timeline_events:
             try:
-                event_date = datetime.strptime(event_data.get("date", ""), "%Y-%m-%d")
+                event_date = datetime.strptime(event_data.get("date", ""), "%Y-%m-%d").isoformat()
             except:
-                event_date = datetime.utcnow()
+                event_date = datetime.utcnow().isoformat()
 
-            event = TimelineEvent(
-                influencer_id=influencer.id,
-                date=event_date,
-                event_type=event_data.get("type", "achievement"),
-                title=event_data.get("title", ""),
-                description=event_data.get("description", ""),
-                platform=event_data.get("platform", ""),
-                views=event_data.get("views"),
-                likes=event_data.get("likes"),
-                url=event_data.get("url"),
-            )
-            self.db.add(event)
+            event_dict = {
+                "influencer_id": influencer["id"],
+                "date": event_date,
+                "event_type": event_data.get("type", "achievement"),
+                "title": event_data.get("title", ""),
+                "description": event_data.get("description", ""),
+                "platform": event_data.get("platform", ""),
+                "views": event_data.get("views"),
+                "likes": event_data.get("likes"),
+                "url": event_data.get("url"),
+            }
+            self.db.create_timeline_event(event_dict)
 
-        self.db.commit()
-
-    async def _save_connections(self, influencer: Influencer, data: Dict[str, Any]):
+    async def _save_connections(self, influencer: Dict[str, Any], data: Dict[str, Any]):
         """Save connection data to database (both influencers and entities like agencies/brands)."""
         # Clear existing connections
-        self.db.query(Connection).filter(Connection.influencer_id == influencer.id).delete()
+        self.db.delete_connections(influencer["id"])
 
-        for conn_data in data.get("connections", []):
+        # Limit to top 8 connections (sorted by strength)
+        connections_list = data.get("connections", [])
+        # Sort by strength descending
+        connections_list = sorted(connections_list, key=lambda x: x.get("strength", 0), reverse=True)
+        # Take top 8
+        connections_list = connections_list[:8]
+        
+        logger.info(f"   💾 Saving {len(connections_list)} connections (limited to top 8 by strength)")
+
+        for conn_data in connections_list:
             entity_name = conn_data.get("name", "")
             entity_type = conn_data.get("entity_type", "influencer")
             connection_type = conn_data.get("connection_type", conn_data.get("type", "collaboration"))
 
+            connected_influencer_id = None
+
             # If it's an influencer, create or link to influencer record
             if entity_type == "influencer":
-                # Search by name instead of ID
-                connected_influencer = self.db.query(Influencer).filter(
-                    Influencer.name.ilike(entity_name)
-                ).first()
+                # Search by name (case-insensitive)
+                connected_influencer = self.db.get_influencer_by_name(entity_name)
 
                 if not connected_influencer:
                     logger.info(f"      Creating stub record for connected influencer: {entity_name}")
-                    connected_influencer = Influencer(
-                        name=entity_name,
-                    )
-                    self.db.add(connected_influencer)
-                    self.db.flush()  # Get auto-generated ID
+                    connected_influencer = self.db.create_influencer({
+                        "name": entity_name,
+                    })
 
                     # Skip fetching profile pictures for connected influencers to avoid rate limiting
                     # Their avatars will be fetched if/when user navigates to their profile
                     logger.info(f"      ✓ Created stub record (avatar will be fetched on-demand)")
 
-                connection = Connection(
-                    influencer_id=influencer.id,
-                    connected_influencer_id=connected_influencer.id,
-                    entity_name=entity_name,
-                    entity_type=entity_type,
-                    connection_type=connection_type,
-                    strength=conn_data.get("strength", 1),
-                    description=conn_data.get("description", ""),
-                )
-            else:
-                # For non-influencer entities (agencies, brands, etc.)
-                connection = Connection(
-                    influencer_id=influencer.id,
-                    connected_influencer_id=None,
-                    entity_name=entity_name,
-                    entity_type=entity_type,
-                    connection_type=connection_type,
-                    strength=conn_data.get("strength", 1),
-                    description=conn_data.get("description", ""),
-                )
+                connected_influencer_id = connected_influencer["id"]
 
-            self.db.add(connection)
+            # Create connection (both for influencers and other entities)
+            connection_dict = {
+                "influencer_id": influencer["id"],
+                "connected_influencer_id": connected_influencer_id,
+                "entity_name": entity_name,
+                "entity_type": entity_type,
+                "connection_type": connection_type,
+                "strength": conn_data.get("strength", 1),
+                "description": conn_data.get("description", ""),
+            }
+            self.db.create_connection(connection_dict)
 
-        self.db.commit()
-
-    async def _save_news(self, influencer: Influencer, data: Dict[str, Any]):
+    async def _save_news(self, influencer: Dict[str, Any], data: Dict[str, Any]):
         """Save news and drama articles to database."""
         # Clear existing news
-        self.db.query(NewsArticle).filter(NewsArticle.influencer_id == influencer.id).delete()
+        self.db.delete_news_articles(influencer["id"])
 
         for news_item in data.get("news", []):
             try:
                 # Parse date if provided
                 if news_item.get("date"):
-                    article_date = datetime.strptime(news_item.get("date", ""), "%Y-%m-%d")
+                    article_date = datetime.strptime(news_item.get("date", ""), "%Y-%m-%d").isoformat()
                 else:
                     article_date = None
             except:
                 article_date = None
 
-            article = NewsArticle(
-                influencer_id=influencer.id,
-                title=news_item.get("title", ""),
-                description=news_item.get("description", ""),
-                article_type=news_item.get("article_type", "news"),
-                date=article_date,
-                source=news_item.get("source", ""),
-                url=news_item.get("url"),
-                sentiment=news_item.get("sentiment", "neutral"),
-                severity=news_item.get("severity", 1),
-            )
-            self.db.add(article)
-
-        self.db.commit()
+            article_dict = {
+                "influencer_id": influencer["id"],
+                "title": news_item.get("title", ""),
+                "description": news_item.get("description", ""),
+                "article_type": news_item.get("article_type", "news"),
+                "date": article_date,
+                "source": news_item.get("source", ""),
+                "url": news_item.get("url"),
+                "sentiment": news_item.get("sentiment", "neutral"),
+                "severity": news_item.get("severity", 1),
+            }
+            self.db.create_news_article(article_dict)
 
     async def _fetch_profile_picture(self, influencer_name: str, platforms_data: Dict[str, Any]) -> str:
         """
-        Fetch profile picture URL using AI data or image search fallback.
+        Fetch profile picture URL with priority order:
+        1. Wikipedia (high quality, reliable, with smart resize)
+        2. AI-provided URL
+        3. Image search fallback
 
         Args:
             influencer_name: Name of the influencer
@@ -595,97 +603,62 @@ class InfluencerAnalyzer:
         Returns:
             Profile picture URL or None
         """
-        # Try to use the profile picture URL provided by the AI
-        profile_pic_url = platforms_data.get("profile_picture_url")
-
-        if profile_pic_url and isinstance(profile_pic_url, str):
-            # Validate the URL actually works
-            is_valid = await self._run_in_thread(
-                profile_fetcher.validate_url,
-                profile_pic_url
+        # PRIORITY 1: Try Wikipedia first (best quality + smart crop to square)
+        logger.info(f"   🔍 Checking Wikipedia for profile picture...")
+        try:
+            wikipedia_url = await self._run_in_thread(
+                wikipedia_image_service.search_profile_picture,
+                influencer_name,
+                300,  # Size: 300x300px
+                True  # Square crop with smart centering
             )
-            if is_valid:
-                logger.info(f"   ✓ Using AI-provided profile picture")
+            if wikipedia_url:
+                logger.info(f"   ✓ Found Wikipedia image (300x300 square crop, centered)")
+                return wikipedia_url
+        except Exception as e:
+            logger.warning(f"   ⚠ Wikipedia search failed: {str(e)}")
+
+        # PRIORITY 2: Try AI-provided URL
+        profile_pic_url = platforms_data.get("profile_picture_url")
+        if profile_pic_url and isinstance(profile_pic_url, str) and len(profile_pic_url) > 10:
+            # Quick check: skip obviously fake URLs
+            if not any(x in profile_pic_url.lower() for x in ["placeholder", "example.com", "lookaside"]):
+                logger.info(f"   ✓ Using AI-provided profile picture URL")
                 return profile_pic_url
 
-        # Fallback: Search for profile picture using image search
-        logger.info(f"   ⚠ AI didn't provide valid profile picture, searching with Bing/Yandex...")
+        # PRIORITY 3: Fallback to image search
+        logger.info(f"   ⚠ No Wikipedia/AI URL, trying image search...")
 
-        # Get primary platform and username for more accurate search
-        primary_platform = platforms_data.get("primary_platform", "")
+        # Get primary platform and username
+        primary_platform = platforms_data.get("primary_platform", "youtube")
         username = ""
 
-        # Try to get username from the primary platform or first platform
+        # Try to get username from platforms
         if platforms_data.get("platforms"):
             for platform in platforms_data["platforms"]:
                 if platform.get("platform") == primary_platform:
                     username = platform.get("username", "")
                     break
-            # If no primary platform match, use first platform's username
             if not username and platforms_data["platforms"]:
                 username = platforms_data["platforms"][0].get("username", "")
 
-        # Search for profile picture using username (more accurate) or name
-        search_result = await self._run_in_thread(
-            image_search_service.search_profile_picture,
-            influencer_name,
-            primary_platform,
-            username
-        )
-        if search_result:
-            logger.info(f"   ✓ Found profile picture via image search")
-            return search_result
-
-        # If all else fails, return None (will show fallback avatar)
-        logger.warning(f"   ⚠ Could not find profile picture")
-        return None
-
-    async def _download_and_store_image(self, influencer: Influencer, image_url: str):
-        """
-        Download image from URL and store binary data in database.
-
-        Args:
-            influencer: Influencer record to update
-            image_url: URL of the image to download
-        """
+        # Quick search (image_search_service already has early stopping)
         try:
-            import requests
-            from io import BytesIO
-
-            # Download image with proper argument handling
-            def download_image():
-                return requests.get(
-                    image_url,
-                    timeout=10,
-                    headers={'User-Agent': 'Mozilla/5.0'}
-                )
-
-            response = await self._run_in_thread(download_image)
-            response.raise_for_status()
-
-            # Get content type from response headers
-            content_type = response.headers.get('Content-Type', 'image/jpeg')
-
-            # If content type is not an image, try to detect from URL
-            if not content_type.startswith('image/'):
-                if image_url.lower().endswith('.png'):
-                    content_type = 'image/png'
-                elif image_url.lower().endswith('.gif'):
-                    content_type = 'image/gif'
-                elif image_url.lower().endswith('.webp'):
-                    content_type = 'image/webp'
-                else:
-                    content_type = 'image/jpeg'
-
-            # Store image data
-            influencer.avatar_data = response.content
-            influencer.avatar_content_type = content_type
-
-            logger.info(f"   ✓ Stored {len(response.content)} bytes ({content_type})")
-
+            search_result = await self._run_in_thread(
+                image_search_service.search_profile_picture,
+                influencer_name,
+                primary_platform,
+                username
+            )
+            if search_result:
+                logger.info(f"   ✓ Found profile picture via image search")
+                return search_result
         except Exception as e:
-            logger.warning(f"   ⚠ Failed to download image: {str(e)}")
-            # Don't fail the whole analysis if image download fails
+            logger.warning(f"   ⚠ Image search failed: {str(e)}")
+
+        # If all else fails, return None (frontend will show fallback avatar)
+        logger.warning(f"   ⚠ No profile picture found, will use fallback")
+        return None
 
     def _calculate_trust_score(self, platforms_data: Dict[str, Any], products_data: Dict[str, Any]) -> int:
         """Calculate basic trust score."""
@@ -701,93 +674,126 @@ class InfluencerAnalyzer:
         # Cap at 100
         return min(score, 100)
 
-    def _build_response(self, influencer: Influencer) -> Dict[str, Any]:
+    def _build_response(self, influencer: Dict[str, Any]) -> Dict[str, Any]:
         """Build complete influencer response."""
+        from src.services.supabase_client import supabase
+        
+        # Query all related data from Supabase
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer["id"]).execute()
+        timeline_response = supabase.table("timeline_events").select("*").eq("influencer_id", influencer["id"]).execute()
+        products_response = supabase.table("products").select("*").eq("influencer_id", influencer["id"]).execute()
+        connections_response = supabase.table("connections").select("*, connected_influencer:influencers!connections_connected_influencer_id_fkey(name)").eq("influencer_id", influencer["id"]).execute()
+        news_response = supabase.table("news_articles").select("*").eq("influencer_id", influencer["id"]).execute()
+        
+        # Build platforms list
+        platforms = [
+            {
+                "platform": p["platform_name"],
+                "username": p["username"],
+                "followers": p["follower_count"],
+                "verified": p["verified"],
+                "url": p["url"],
+            }
+            for p in platforms_response.data
+        ]
+        
+        # Build timeline list (sorted by date)
+        timeline_data = sorted(
+            timeline_response.data,
+            key=lambda x: x.get("date") or "1970-01-01"
+        )
+        timeline = [
+            {
+                "id": str(t["id"]),
+                "date": t["date"],
+                "type": t["event_type"],
+                "title": t["title"],
+                "description": t["description"],
+                "platform": t["platform"],
+                "views": t["views"],
+                "likes": t["likes"],
+            }
+            for t in timeline_data
+        ]
+        
+        # Build products list with reviews
+        products = []
+        for p in products_response.data:
+            # Get reviews for this product
+            reviews_response = supabase.table("product_reviews").select("*").eq("product_id", p["id"]).execute()
+            reviews = [
+                {
+                    "author": r["author"],
+                    "comment": r["comment"],
+                    "platform": r["platform"],
+                    "sentiment": r["sentiment"],
+                    "url": r["url"],
+                    "date": r["date"],
+                }
+                for r in reviews_response.data
+            ]
+            
+            products.append({
+                "id": p["id"],
+                "name": p["name"],
+                "category": p["category"],
+                "quality_score": p["quality_score"],
+                "description": p["description"],
+                "review_count": p["review_count"],
+                "sentiment_score": p["sentiment_score"],
+                "openfoodfacts_data": json.loads(p["openfoodfacts_data"]) if p.get("openfoodfacts_data") else None,
+                "reviews": reviews,
+            })
+        
+        # Build connections list
+        connections = [
+            {
+                "name": c["entity_name"] or (c.get("connected_influencer", {}).get("name") if c.get("connected_influencer") else "Unknown"),
+                "entity_type": c["entity_type"] or "influencer",
+                "type": c["connection_type"],
+                "strength": c["strength"],
+                "description": c["description"],
+            }
+            for c in connections_response.data
+        ]
+        
+        # Build news list (sorted by date, newest first)
+        news_data = sorted(
+            news_response.data,
+            key=lambda x: x.get("date") or "1970-01-01",
+            reverse=True
+        )
+        news = [
+            {
+                "id": n["id"],
+                "title": n["title"],
+                "description": n["description"],
+                "article_type": n["article_type"],
+                "date": n["date"],
+                "source": n["source"],
+                "url": n["url"],
+                "sentiment": n["sentiment"],
+                "severity": n["severity"],
+            }
+            for n in news_data
+        ]
+        
         return {
-            "id": influencer.id,
-            "name": influencer.name,
-            "bio": influencer.bio,
-            "country": influencer.country,
-            "verified": influencer.verified,
-            "trust_score": influencer.trust_score,
-            "overall_sentiment": influencer.overall_sentiment,
-            "avatar_url": influencer.avatar_url,
-            "platforms": [
-                {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "verified": p.verified,
-                    "url": p.url,
-                }
-                for p in influencer.platforms
-            ],
-            "timeline": [
-                {
-                    "id": str(t.id),
-                    "date": t.date.isoformat(),
-                    "type": t.event_type,
-                    "title": t.title,
-                    "description": t.description,
-                    "platform": t.platform,
-                    "views": t.views,
-                    "likes": t.likes,
-                }
-                for t in sorted(
-                    influencer.timeline,
-                    key=lambda x: x.date if x.date else datetime.min
-                )
-            ],
-            "products": [
-                {
-                    "id": p.id,
-                    "name": p.name,
-                    "category": p.category,
-                    "quality_score": p.quality_score,
-                    "description": p.description,
-                    "review_count": p.review_count,
-                    "sentiment_score": p.sentiment_score,
-                    "openfoodfacts_data": json.loads(p.openfoodfacts_data) if p.openfoodfacts_data else None,
-                    "reviews": [
-                        {
-                            "author": r.author,
-                            "comment": r.comment,
-                            "platform": r.platform,
-                            "sentiment": r.sentiment,
-                            "url": r.url,
-                            "date": r.date.isoformat() if r.date else None,
-                        }
-                        for r in p.reviews
-                    ],
-                }
-                for p in influencer.products
-            ],
-            "connections": [
-                {
-                    "name": c.entity_name or (c.connected_influencer.name if c.connected_influencer else "Unknown"),
-                    "entity_type": c.entity_type or "influencer",
-                    "type": c.connection_type,
-                    "strength": c.strength,
-                    "description": c.description,
-                }
-                for c in influencer.connections
-            ],
-            "news": [
-                {
-                    "id": n.id,
-                    "title": n.title,
-                    "description": n.description,
-                    "article_type": n.article_type,
-                    "date": n.date.isoformat() if n.date else None,
-                    "source": n.source,
-                    "url": n.url,
-                    "sentiment": n.sentiment,
-                    "severity": n.severity,
-                }
-                for n in sorted(influencer.news_articles, key=lambda x: (x.date or datetime.min), reverse=True)
-            ],
-            "last_analyzed": influencer.last_analyzed.isoformat() if influencer.last_analyzed else None,
-            "analysis_complete": influencer.analysis_complete,
+            "id": influencer["id"],
+            "name": influencer["name"],
+            "bio": influencer.get("bio"),
+            "country": influencer.get("country"),
+            "verified": influencer.get("verified", False),
+            "trust_score": influencer.get("trust_score", 0),
+            "overall_sentiment": influencer.get("overall_sentiment"),
+            "avatar_url": influencer.get("avatar_url"),
+            "platforms": platforms,
+            "timeline": timeline,
+            "products": products,
+            "connections": connections,
+            "news": news,
+            "last_analyzed": influencer.get("last_analyzed"),
+            "analysis_complete": influencer.get("analysis_complete", False),
         }
 
     async def fetch_timeline(self, influencer_id: int) -> Dict[str, Any]:
@@ -863,36 +869,38 @@ class InfluencerAnalyzer:
         Returns:
             Dict with product reviews
         """
-        product = self.db.query(Product).filter(Product.id == product_id).first()
+        product = self.db.get_product_by_id(product_id)
         if not product:
             raise ValueError(f"Product with ID {product_id} not found")
 
-        influencer = self.db.query(Influencer).filter(Influencer.id == product.influencer_id).first()
+        influencer = self.db.get_influencer_by_id(product["influencer_id"])
         if not influencer:
             raise ValueError(f"Influencer not found for product {product_id}")
 
         # Get platform data
+        from src.services.supabase_client import supabase
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer["id"]).execute()
         platforms_data = {
             "platforms": [
                 {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "url": p.url
+                    "platform": p.get("platform_name"),
+                    "username": p.get("username"),
+                    "followers": p.get("follower_count"),
+                    "url": p.get("url")
                 }
-                for p in influencer.platforms
+                for p in platforms_response.data
             ]
         }
 
         # Clear existing reviews
-        self.db.query(ProductReview).filter(ProductReview.product_id == product_id).delete()
+        self.db.delete_product_reviews(product_id)
 
         # Fetch reviews from AI
-        logger.info(f"🔍 Fetching reviews for: {product.name}")
+        logger.info(f"🔍 Fetching reviews for: {product['name']}")
         reviews_data = await self._run_in_thread(
             self.ai_client.analyze_product_reviews,
-            influencer.name,
-            product.name,
+            influencer["name"],
+            product["name"],
             platforms_data
         )
 
@@ -904,7 +912,7 @@ class InfluencerAnalyzer:
             for review_item in reviews_list:
                 try:
                     if review_item.get("date"):
-                        review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d")
+                        review_date = datetime.strptime(review_item.get("date", ""), "%Y-%m-%d").isoformat()
                     else:
                         review_date = None
                 except:
@@ -913,101 +921,142 @@ class InfluencerAnalyzer:
                 sentiment = review_item.get("sentiment", "neutral")
                 sentiments.append(sentiment)
 
-                review = ProductReview(
-                    product_id=product.id,
-                    author=review_item.get("author", "Anonymous"),
-                    comment=review_item.get("comment", ""),
-                    platform=review_item.get("platform", ""),
-                    sentiment=sentiment,
-                    url=review_item.get("url"),
-                    date=review_date,
-                )
-                self.db.add(review)
+                review_dict = {
+                    "product_id": product["id"],
+                    "author": review_item.get("author", "Anonymous"),
+                    "comment": review_item.get("comment", ""),
+                    "platform": review_item.get("platform", ""),
+                    "sentiment": sentiment,
+                    "url": review_item.get("url"),
+                    "date": review_date,
+                }
+                self.db.create_product_review(review_dict)
 
-            product.review_count = len(reviews_list)
+            review_count = len(reviews_list)
+            sentiment_score = 0.0
 
             if sentiments:
                 positive = sentiments.count("positive")
                 negative = sentiments.count("negative")
                 neutral = sentiments.count("neutral")
                 total = len(sentiments)
-                product.sentiment_score = (positive - negative) / total
+                sentiment_score = (positive - negative) / total
 
-            self.db.commit()
+            self.db.update_product(product_id, {
+                "review_count": review_count,
+                "sentiment_score": sentiment_score
+            })
             logger.info(f"   ✓ Saved {len(reviews_list)} reviews")
 
+            # Reload product to get updated values
+            product = self.db.get_product_by_id(product_id)
+
+        # Get reviews from database
+        reviews_response = supabase.table("product_reviews").select("*").eq("product_id", product_id).execute()
+        
         return {
             "product_id": product_id,
-            "product_name": product.name,
-            "review_count": product.review_count,
-            "sentiment_score": product.sentiment_score,
+            "product_name": product["name"],
+            "review_count": product.get("review_count", 0),
+            "sentiment_score": product.get("sentiment_score", 0.0),
             "reviews": [
                 {
-                    "id": r.id,
-                    "author": r.author,
-                    "comment": r.comment,
-                    "platform": r.platform,
-                    "sentiment": r.sentiment,
-                    "url": r.url,
-                    "date": r.date.isoformat() if r.date else None,
+                    "id": r["id"],
+                    "author": r["author"],
+                    "comment": r["comment"],
+                    "platform": r["platform"],
+                    "sentiment": r["sentiment"],
+                    "url": r["url"],
+                    "date": r["date"],
                 }
-                for r in product.reviews
+                for r in reviews_response.data
             ]
         }
 
-    async def fetch_connections(self, influencer_id: int) -> Dict[str, Any]:
+    async def fetch_connections(self, influencer_id: int, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Fetch network map/connections on-demand for an influencer.
 
         Args:
             influencer_id: ID of the influencer
+            force_refresh: If True, refetch from AI even if connections exist
 
         Returns:
             Dict with connections data
         """
-        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        influencer = self.db.get_influencer_by_id(influencer_id)
         if not influencer:
             raise ValueError(f"Influencer with ID {influencer_id} not found")
 
-        # Get platform data
+        from src.services.supabase_client import supabase
+        
+        # Check if connections already exist in cache
+        connections_response = supabase.table("connections").select("*").eq("influencer_id", influencer_id).execute()
+        
+        # If connections exist and not forcing refresh, return cached data
+        if connections_response.data and len(connections_response.data) > 0 and not force_refresh:
+            logger.info(f"✅ Returning cached connections for: {influencer['name']} ({len(connections_response.data)} connections)")
+            return {
+                "influencer_id": influencer_id,
+                "connections": [
+                    {
+                        "id": c["id"],
+                        "name": c["entity_name"],
+                        "entity_name": c["entity_name"],
+                        "entity_type": c["entity_type"],
+                        "connection_type": c["connection_type"],
+                        "strength": c["strength"],
+                        "description": c["description"],
+                        "connected_influencer_id": c["connected_influencer_id"],
+                    }
+                    for c in connections_response.data
+                ]
+            }
+
+        # Get platform data for AI analysis
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer_id).execute()
         platforms_data = {
             "platforms": [
                 {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "url": p.url
+                    "platform": p.get("platform_name"),
+                    "username": p.get("username"),
+                    "followers": p.get("follower_count"),
+                    "url": p.get("url")
                 }
-                for p in influencer.platforms
+                for p in platforms_response.data
             ]
         }
 
-        # Fetch connections from AI
-        logger.info(f"🔍 Fetching network map for: {influencer.name}")
+        # Fetch connections from AI (only if not cached)
+        logger.info(f"🔍 Fetching network map for: {influencer['name']}")
         connections_data = await self._run_in_thread(
             self.ai_client.analyze_connections,
-            influencer.name,
+            influencer["name"],
             platforms_data
         )
 
         # Save connections
-        if isinstance(connections_data, dict):
+        if isinstance(connections_data, dict) and connections_data.get("connections"):
             await self._save_connections(influencer, connections_data)
-            logger.info(f"   ✓ Saved network map")
+            logger.info(f"   ✓ Saved {len(connections_data.get('connections', []))} connections")
 
+        # Get connections from database
+        connections_response = supabase.table("connections").select("*").eq("influencer_id", influencer_id).execute()
+        
         return {
             "influencer_id": influencer_id,
             "connections": [
                 {
-                    "id": c.id,
-                    "entity_name": c.entity_name,
-                    "entity_type": c.entity_type,
-                    "connection_type": c.connection_type,
-                    "strength": c.strength,
-                    "description": c.description,
-                    "connected_influencer_id": c.connected_influencer_id,
+                    "id": c["id"],
+                    "name": c["entity_name"],
+                    "entity_name": c["entity_name"],
+                    "entity_type": c["entity_type"],
+                    "connection_type": c["connection_type"],
+                    "strength": c["strength"],
+                    "description": c["description"],
+                    "connected_influencer_id": c["connected_influencer_id"],
                 }
-                for c in influencer.connections
+                for c in connections_response.data
             ]
         }
 
@@ -1021,20 +1070,20 @@ class InfluencerAnalyzer:
         Returns:
             Dict with OpenFoodFacts data
         """
-        product = self.db.query(Product).filter(Product.id == product_id).first()
+        product = self.db.get_product_by_id(product_id)
         if not product:
             raise ValueError(f"Product with ID {product_id} not found")
 
-        category = product.category.lower() if product.category else ""
+        category = product.get("category", "").lower() if product.get("category") else ""
         if category not in ["food", "cosmetics", "beauty"]:
             return {
                 "product_id": product_id,
-                "product_name": product.name,
-                "category": product.category,
+                "product_name": product["name"],
+                "category": product.get("category"),
                 "error": "Product category must be 'food', 'cosmetics', or 'beauty' for OpenFoodFacts lookup"
             }
 
-        logger.info(f"🔍 Fetching OpenFoodFacts data for: {product.name}")
+        logger.info(f"🔍 Fetching OpenFoodFacts data for: {product['name']}")
 
         from src.services.openfoodfacts import openfoodfacts_client
 
@@ -1043,31 +1092,34 @@ class InfluencerAnalyzer:
 
         # Search for product
         def search_product():
-            return openfoodfacts_client.search_product(product.name, api_category)
+            return openfoodfacts_client.search_product(product["name"], api_category)
 
         off_data = await self._run_in_thread(search_product)
 
         if off_data:
             # Store the data as JSON
             import json
-            product.openfoodfacts_data = json.dumps(off_data)
-            product.quality_score = off_data.get("quality_score", 70)
-            self.db.commit()
+            quality_score = off_data.get("quality_score", 70)
+            
+            self.db.update_product(product_id, {
+                "openfoodfacts_data": json.dumps(off_data),
+                "quality_score": quality_score
+            })
 
-            logger.info(f"   ✓ Updated OpenFoodFacts data (quality score: {product.quality_score})")
+            logger.info(f"   ✓ Updated OpenFoodFacts data (quality score: {quality_score})")
 
             return {
                 "product_id": product_id,
-                "product_name": product.name,
-                "category": product.category,
+                "product_name": product["name"],
+                "category": product.get("category"),
                 "openfoodfacts_data": off_data,
-                "quality_score": product.quality_score
+                "quality_score": quality_score
             }
         else:
             return {
                 "product_id": product_id,
-                "product_name": product.name,
-                "category": product.category,
+                "product_name": product["name"],
+                "category": product.get("category"),
                 "error": "Product not found in OpenFoodFacts database"
             }
 
@@ -1196,33 +1248,33 @@ class InfluencerAnalyzer:
             ]
         }
 
-    async def _save_reputation(self, influencer: Influencer, data: Dict[str, Any]):
+    async def _save_reputation(self, influencer: Dict[str, Any], data: Dict[str, Any]):
         """Save reputation comments to database."""
         # Clear existing reputation comments
-        self.db.query(ReputationComment).filter(ReputationComment.influencer_id == influencer.id).delete()
+        self.db.delete_reputation_comments(influencer["id"])
 
         # Save overall sentiment to influencer record
         overall_sentiment = data.get("overall_sentiment", "neutral")
-        influencer.overall_sentiment = overall_sentiment
+        self.db.update_influencer(influencer["id"], {
+            "overall_sentiment": overall_sentiment
+        })
 
         # Limit to maximum 10 comments
         comments = data.get("comments", [])[:10]
 
         for comment_data in comments:
             try:
-                comment_date = datetime.strptime(comment_data.get("date", ""), "%Y-%m-%d")
+                comment_date = datetime.strptime(comment_data.get("date", ""), "%Y-%m-%d").isoformat()
             except:
                 comment_date = None
 
-            comment = ReputationComment(
-                influencer_id=influencer.id,
-                author=comment_data.get("author", ""),
-                comment=comment_data.get("comment", ""),
-                platform=comment_data.get("platform", ""),
-                sentiment=comment_data.get("sentiment", "neutral"),
-                url=comment_data.get("url"),
-                date=comment_date,
-            )
-            self.db.add(comment)
-
-        self.db.commit()
+            comment_dict = {
+                "influencer_id": influencer["id"],
+                "author": comment_data.get("author", ""),
+                "comment": comment_data.get("comment", ""),
+                "platform": comment_data.get("platform", ""),
+                "sentiment": comment_data.get("sentiment", "neutral"),
+                "url": comment_data.get("url"),
+                "date": comment_date,
+            }
+            self.db.create_reputation_comment(comment_dict)

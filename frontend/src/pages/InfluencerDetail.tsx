@@ -48,12 +48,22 @@ export const InfluencerDetail = () => {
 
   // Handler to fetch news on-demand
   const handleFetchNews = async () => {
-    if (!id || useMockData) return;
+    if (!id || useMockData || fetchingNews) return;
     setFetchingNews(true);
     try {
       await apiService.fetchNews(parseInt(id));
-      const news = await dataService.getNewsItems(useMockData, parseInt(id));
-      setInfluencerNews(news);
+      const news = await apiService.getInfluencerNews(parseInt(id));
+      const newsItems = news.map(n => ({
+        id: n.id.toString(),
+        influencerId: id,
+        title: n.title,
+        date: n.date || new Date().toISOString(),
+        description: n.description,
+        source: n.source || 'Unknown',
+        type: (n.article_type || 'news') as 'news' | 'drama' | 'partnership' | 'milestone',
+        severity: n.severity?.toString(),
+      }));
+      setInfluencerNews(newsItems);
     } catch (error) {
       console.error('Failed to fetch news:', error);
     } finally {
@@ -63,11 +73,20 @@ export const InfluencerDetail = () => {
 
   // Handler to fetch reputation on-demand
   const handleFetchReputation = async () => {
-    if (!id || useMockData) return;
+    if (!id || useMockData || fetchingReputation) return;
     setFetchingReputation(true);
     try {
       await apiService.fetchReputation(parseInt(id));
-      const comments = await dataService.getSocialComments(useMockData, parseInt(id));
+      const reputation = await apiService.getInfluencerReputation(parseInt(id));
+      const comments = reputation.comments.map(c => ({
+        id: c.author || Math.random().toString(),
+        text: c.comment,
+        author: c.author,
+        platform: c.platform as 'youtube' | 'twitter' | 'instagram' | 'tiktok',
+        sentiment: c.sentiment as 'positive' | 'negative' | 'neutral',
+        date: c.date || new Date().toISOString(),
+        influencerId: id,
+      }));
       setInfluencerComments(comments);
     } catch (error) {
       console.error('Failed to fetch reputation:', error);
@@ -78,7 +97,7 @@ export const InfluencerDetail = () => {
 
   // Handler to fetch timeline on-demand
   const handleFetchTimeline = async () => {
-    if (!id || useMockData) return;
+    if (!id || useMockData || fetchingTimeline) return;
     setFetchingTimeline(true);
     try {
       await apiService.fetchTimeline(parseInt(id));
@@ -109,37 +128,74 @@ export const InfluencerDetail = () => {
 
         setInfluencer(influencerData);
 
-        // Load related data and influencers for comparison
-        const [products, news, comments, influencersForComparison, timeline] = await Promise.all([
-          dataService.getProducts(useMockData, influencerId),
-          dataService.getNewsItems(useMockData, influencerId),
-          dataService.getSocialComments(useMockData, influencerId),
-          dataService.getInfluencers(useMockData),
-          useMockData ? Promise.resolve([]) : apiService.getInfluencerTimeline(influencerId).catch(() => []),
-        ]);
+        // Load related data efficiently
+        if (useMockData) {
+          // Mock data mode: load from mock data files
+          const [products, news, comments, influencersForComparison, timeline] = await Promise.all([
+            dataService.getProducts(useMockData, influencerId),
+            dataService.getNewsItems(useMockData, influencerId),
+            dataService.getSocialComments(useMockData, influencerId),
+            dataService.getInfluencers(useMockData),
+            Promise.resolve([]),
+          ]);
 
-        setInfluencerProducts(products);
-        setInfluencerNews(news);
-        setInfluencerComments(comments);
-        setAllInfluencers(influencersForComparison);
-        setInfluencerTimeline(timeline);
+          setInfluencerProducts(products);
+          setInfluencerNews(news);
+          setInfluencerComments(comments);
+          setAllInfluencers(influencersForComparison);
+          setInfluencerTimeline(timeline);
+        } else {
+          // API mode: Use data already included in influencer response
+          // Products are embedded in influencer data
+          const products = await dataService.getProducts(useMockData, influencerId);
+          setInfluencerProducts(products);
+          
+          // Load other influencers for comparison
+          const influencersForComparison = await dataService.getInfluencers(useMockData);
+          setAllInfluencers(influencersForComparison);
+          
+          // Load news, timeline, reputation ONCE
+          // Use catch to handle empty data gracefully
+          const [newsResult, reputationResult, timelineResult] = await Promise.all([
+            apiService.getInfluencerNews(influencerId).catch(err => {
+              console.log('News not yet loaded, will fetch on-demand');
+              return [];
+            }),
+            apiService.getInfluencerReputation(influencerId).catch(err => {
+              console.log('Reputation not yet loaded, will fetch on-demand');
+              return { overall_sentiment: 'neutral', comments: [] };
+            }),
+            apiService.getInfluencerTimeline(influencerId).catch(err => {
+              console.log('Timeline not yet loaded, will fetch on-demand');
+              return [];
+            }),
+          ]);
 
-        // Auto-fetch news, reputation, and timeline if empty in API mode
-        if (!useMockData) {
-          // Trigger news fetch if empty
-          if (news.length === 0) {
-            handleFetchNews();
-          }
+          // Convert and set data
+          const newsItems = newsResult.map(n => ({
+            id: n.id.toString(),
+            influencerId: influencerId.toString(),
+            title: n.title,
+            date: n.date || new Date().toISOString(),
+            description: n.description,
+            source: n.source || 'Unknown',
+            type: (n.article_type || 'news') as 'news' | 'drama' | 'partnership' | 'milestone',
+            severity: n.severity?.toString(),
+          }));
 
-          // Trigger reputation fetch if empty
-          if (comments.length === 0) {
-            handleFetchReputation();
-          }
+          const comments = reputationResult.comments.map(c => ({
+            id: c.author || Math.random().toString(),
+            text: c.comment,
+            author: c.author,
+            platform: c.platform as 'youtube' | 'twitter' | 'instagram' | 'tiktok',
+            sentiment: c.sentiment as 'positive' | 'negative' | 'neutral',
+            date: c.date || new Date().toISOString(),
+            influencerId: influencerId.toString(),
+          }));
 
-          // Trigger timeline fetch if empty
-          if (timeline.length === 0) {
-            handleFetchTimeline();
-          }
+          setInfluencerNews(newsItems);
+          setInfluencerComments(comments);
+          setInfluencerTimeline(timelineResult);
         }
       } catch (err) {
         console.error('Failed to load influencer:', err);

@@ -19,23 +19,12 @@ export interface ApiInfluencer {
   verified: boolean;
   trust_score: number;
   trending_score?: number;
-  avatar_url?: string;
+  avatar_url?: string;  // URL only, no binary data loaded
   platforms: Array<{
     platform: string;
     username?: string;
     followers: number;
     verified: boolean;
-    url?: string;
-  }>;
-  timeline?: Array<{
-    id: number;
-    date: string;
-    event_type: string;
-    title: string;
-    description: string;
-    platform: string;
-    views?: number;
-    likes?: number;
     url?: string;
   }>;
   products?: Array<{
@@ -56,26 +45,9 @@ export interface ApiInfluencer {
       date?: string;
     }>;
   }>;
-  connections?: Array<{
-    name: string;
-    entity_type: string;
-    type: string;
-    strength: number;
-    description: string;
-  }>;
-  news?: Array<{
-    id: number;
-    title: string;
-    description: string;
-    article_type: string;
-    date?: string;
-    source: string;
-    url?: string;
-    sentiment: string;
-    severity: number;
-  }>;
   last_analyzed?: string;
   analysis_complete: boolean;
+  // Note: timeline, connections, news, reputation loaded via separate endpoints for faster initial load
 }
 
 export interface ApiNewsArticle {
@@ -273,6 +245,22 @@ class ApiService {
       `/api/influencers/${id}/reputation/fetch`,
       { method: 'POST' }
     );
+  }
+
+  /**
+   * Get influencer name suggestions
+   */
+  async suggestInfluencers(query: string): Promise<{
+    query: string;
+    suggestions: Array<{
+      id: number;
+      name: string;
+      trust_score: number;
+      avatar_url?: string;
+      exists: boolean;
+    }>;
+  }> {
+    return await this.fetch(`/api/influencers/suggest?q=${encodeURIComponent(query)}`);
   }
 
   /**

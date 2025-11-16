@@ -335,6 +335,74 @@ async def health_check():
     return {"status": "healthy"}
 
 
+@router.get(
+    "/api/influencers/suggest",
+    response_model=None,
+    summary="Get influencer name suggestions",
+    description="""
+Suggest similar influencer names from the database based on partial input.
+Helps with typos and spelling variations.
+
+**Use case:** User types "Magl" → suggests "Magla", "Maghla"
+    """,
+    tags=["Influencers"],
+)
+async def suggest_influencers(
+    q: str = Query(..., description="Partial name to search", min_length=2)
+):
+    """Suggest influencer names based on partial input with fuzzy matching."""
+    # Search for similar names using multiple strategies
+    
+    # Strategy 1: Exact partial match (ILIKE)
+    exact_response = supabase.table("influencers").select(
+        "id, name, trust_score, avatar_url, analysis_complete"
+    ).ilike("name", f"%{q}%").eq("analysis_complete", True).order("trust_score", desc=True).limit(5).execute()
+    
+    suggestions = []
+    seen_names = set()
+    
+    # Add exact matches first
+    for inf in exact_response.data:
+        suggestions.append({
+            "id": inf["id"],
+            "name": inf["name"],
+            "trust_score": inf.get("trust_score", 0),
+            "avatar_url": inf.get("avatar_url"),
+            "exists": True,
+            "match_type": "exact"
+        })
+        seen_names.add(inf["name"].lower())
+    
+    # Strategy 2: Fuzzy match using PostgreSQL similarity (if no exact matches)
+    if len(suggestions) == 0:
+        # Use trigram similarity for fuzzy matching (handles typos like "Malga" → "Maghla")
+        fuzzy_response = supabase.rpc(
+            "search_influencers_fuzzy",
+            {"search_query": q, "match_limit": 5}
+        ).execute()
+        
+        if fuzzy_response.data:
+            for inf in fuzzy_response.data:
+                name_lower = inf["name"].lower()
+                if name_lower not in seen_names:
+                    suggestions.append({
+                        "id": inf["id"],
+                        "name": inf["name"],
+                        "trust_score": inf.get("trust_score", 0),
+                        "avatar_url": inf.get("avatar_url"),
+                        "exists": True,
+                        "match_type": "fuzzy",
+                        "similarity": inf.get("similarity", 0)
+                    })
+                    seen_names.add(name_lower)
+    
+    return {
+        "query": q,
+        "suggestions": suggestions[:8],  # Limit to top 8
+        "has_exact_match": len([s for s in suggestions if s.get("match_type") == "exact"]) > 0
+    }
+
+
 @router.post(
     "/api/influencers/analyze",
     response_model=None,  # Dynamic response based on analysis_level
@@ -668,14 +736,12 @@ the frontend will automatically trigger a basic analysis to fetch products and c
 async def get_influencer(
     influencer_id: int,
 ):
-    # Query influencer with all related data using Supabase REST API
+    # Query influencer with ONLY essential data (fast loading)
+    # Other data (timeline, news, reputation) loaded on-demand via separate endpoints
     response = supabase.table("influencers").select(
         "id, name, bio, country, verified, trust_score, trending_score, avatar_url, last_analyzed, analysis_complete, "
         "platforms(id, platform_name, username, follower_count, verified, url), "
-        "products(id, name, category, quality_score, description, review_count, sentiment_score, openfoodfacts_data), "
-        "timeline:timeline_events(id, date, event_type, title, description, platform, views, likes, url), "
-        "connections!connections_influencer_id_fkey(id, entity_name, entity_type, connection_type, strength, description, connected_influencer_id), "
-        "news:news_articles(id, title, description, article_type, date, source, url, sentiment, severity)"
+        "products(id, name, category, quality_score, description, review_count, sentiment_score, openfoodfacts_data)"
     ).eq("id", influencer_id).execute()
 
     if not response.data or len(response.data) == 0:
@@ -683,7 +749,8 @@ async def get_influencer(
 
     influencer_data = response.data[0]
 
-    # Format response
+    # Format response with essential data only
+    # Timeline, news, connections, reputation loaded via separate endpoints for speed
     return {
         "id": influencer_data["id"],
         "name": influencer_data["name"],
@@ -691,7 +758,7 @@ async def get_influencer(
         "country": influencer_data.get("country"),
         "verified": influencer_data.get("verified", False),
         "trust_score": influencer_data.get("trust_score", 0),
-        "avatar_url": influencer_data.get("avatar_url"),
+        "avatar_url": influencer_data.get("avatar_url"),  # URL only, no binary data
         "platforms": [
             {
                 "platform": p["platform_name"],
@@ -701,20 +768,6 @@ async def get_influencer(
                 "url": p.get("url")
             }
             for p in influencer_data.get("platforms", [])
-        ],
-        "timeline": [
-            {
-                "id": t["id"],
-                "date": t.get("date"),
-                "type": t.get("event_type"),
-                "title": t["title"],
-                "description": t.get("description"),
-                "platform": t.get("platform"),
-                "views": t.get("views"),
-                "likes": t.get("likes"),
-                "url": t.get("url")
-            }
-            for t in influencer_data.get("timeline", [])
         ],
         "products": [
             {
@@ -730,32 +783,13 @@ async def get_influencer(
             }
             for p in influencer_data.get("products", [])
         ],
-        "connections": [
-            {
-                "name": c.get("entity_name"),
-                "entity_type": c.get("entity_type"),
-                "type": c.get("connection_type"),
-                "strength": c.get("strength", 1),
-                "description": c.get("description")
-            }
-            for c in influencer_data.get("connections", [])
-        ],
-        "news": [
-            {
-                "id": n["id"],
-                "title": n["title"],
-                "description": n["description"],
-                "article_type": n.get("article_type"),
-                "date": n.get("date"),
-                "source": n.get("source"),
-                "url": n.get("url"),
-                "sentiment": n.get("sentiment"),
-                "severity": n.get("severity", 1)
-            }
-            for n in influencer_data.get("news", [])
-        ],
         "last_analyzed": influencer_data.get("last_analyzed"),
-        "analysis_complete": influencer_data.get("analysis_complete", False)
+        "analysis_complete": influencer_data.get("analysis_complete", False),
+        # Note: Load these via separate endpoints (faster, lazy loading):
+        # - timeline: /api/influencers/{id}/timeline
+        # - news: /api/influencers/{id}/news  
+        # - connections: /api/influencers/{id}/connections
+        # - reputation: /api/influencers/{id}/reputation
     }
 
 
@@ -1110,10 +1144,9 @@ async def start_exploration(
         influencer_data = await analyzer.analyze_influencer(request.name, analysis_level="basic")
         influencer_id = influencer_data["id"]
         
-        # Step 2: Fetch connections if not already present
-        if not influencer_data.get("connections") or len(influencer_data["connections"]) == 0:
-            connections_result = await analyzer.fetch_connections(influencer_id)
-            influencer_data["connections"] = connections_result.get("connections", [])
+        # Step 2: Fetch connections (with cache check to avoid redundant AI calls)
+        connections_result = await analyzer.fetch_connections(influencer_id, force_refresh=False)
+        influencer_data["connections"] = connections_result.get("connections", [])
         
         # Step 3: Build graph structure
         nodes = []
@@ -1135,6 +1168,10 @@ async def start_exploration(
         for conn in influencer_data.get("connections", []):
             entity_type = conn.get("entity_type", "influencer")
             entity_name = conn.get("name")
+            
+            # Skip connections with no name
+            if not entity_name:
+                continue
             
             # Create node ID based on type
             if entity_type == "influencer":
@@ -1239,16 +1276,22 @@ async def expand_node(
             influencer_data = await analyzer.analyze_influencer(influencer_name, analysis_level="basic")
             influencer_id = influencer_data["id"]
         elif node_id.startswith("influencer-"):
-            # Extract influencer ID from node_id
+            # Extract influencer ID from node_id - this influencer already exists
             influencer_id = int(node_id.replace("influencer-", ""))
-            influencer_data = await analyzer.analyze_influencer("", analysis_level="basic")  # Will use cache
+            
+            # Get influencer data from database (no need to re-analyze)
+            from src.services.supabase_client import supabase
+            influencer_response = supabase.table("influencers").select("*").eq("id", influencer_id).execute()
+            if not influencer_response.data or len(influencer_response.data) == 0:
+                raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+            
+            influencer_data = influencer_response.data[0]
         else:
             raise HTTPException(status_code=400, detail="Can only expand influencer nodes")
         
-        # Fetch connections if not already present
-        if not influencer_data.get("connections") or len(influencer_data["connections"]) == 0:
-            connections_result = await analyzer.fetch_connections(influencer_id)
-            influencer_data["connections"] = connections_result.get("connections", [])
+        # Fetch connections (with cache check to avoid redundant AI calls)
+        connections_result = await analyzer.fetch_connections(influencer_id, force_refresh=False)
+        influencer_data["connections"] = connections_result.get("connections", [])
         
         # Build new nodes and links
         new_nodes = []
@@ -1257,6 +1300,10 @@ async def expand_node(
         for conn in influencer_data.get("connections", []):
             entity_type = conn.get("entity_type", "influencer")
             entity_name = conn.get("name")
+            
+            # Skip connections with no name
+            if not entity_name:
+                continue
             
             if entity_type == "influencer":
                 conn_influencer = supabase.table("influencers").select("id, name, trust_score, avatar_url, analysis_complete").ilike("name", entity_name).execute()

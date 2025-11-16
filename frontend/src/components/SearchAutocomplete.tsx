@@ -29,68 +29,90 @@ export const SearchAutocomplete = ({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingName, setAnalyzingName] = useState('');
+  const [apiSuggestions, setApiSuggestions] = useState<Array<any>>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const filteredInfluencers = influencers.filter(inf =>
+  // Filter local influencers for mock data mode
+  const filteredInfluencers = useMockData ? influencers.filter(inf =>
     inf.name.toLowerCase().includes(query.toLowerCase()) ||
     inf.handle.toLowerCase().includes(query.toLowerCase()) ||
     inf.niche.some(n => n.toLowerCase().includes(query.toLowerCase()))
-  ).slice(0, 5);
+  ).slice(0, 5) : [];
 
+  // Fetch API suggestions in real-time (for API mode)
   useEffect(() => {
-    setIsOpen(query.length > 0 && (filteredInfluencers.length > 0 || isAnalyzing));
-    setSelectedIndex(-1);
-  }, [query, filteredInfluencers.length, isAnalyzing]);
-
-  // Auto-discovery: Analyze influencer if not found after 5 seconds of inactivity
-  useEffect(() => {
-    // Clear any existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current);
     }
 
-    // Only trigger auto-discovery when:
-    // 1. Using API mode (not mock data)
-    // 2. Query is meaningful (>= 3 characters)
-    // 3. No results found
-    // 4. Not currently analyzing
-    if (!useMockData && query.length >= 3 && filteredInfluencers.length === 0 && !isAnalyzing) {
-      debounceTimerRef.current = setTimeout(async () => {
-        setIsAnalyzing(true);
-        setAnalyzingName(query);
-
+    // Only search API if in API mode and query is meaningful
+    if (!useMockData && query.length >= 2) {
+      setLoadingSuggestions(true);
+      suggestionTimerRef.current = setTimeout(async () => {
         try {
-          console.log(`Auto-discovering influencer: ${query}`);
-          const apiInfluencer = await apiService.analyzeInfluencer(query, 'basic');
-
-          // Convert API response to frontend Influencer type
-          // This will be handled by the parent component through the callback
-          if (onInfluencerDiscovered) {
-            // Notify parent that a new influencer was discovered
-            // The parent should re-fetch the influencer list
-            console.log(`Successfully analyzed influencer: ${apiInfluencer.name}`);
-            // We'll trigger a refresh in the parent
-            window.dispatchEvent(new CustomEvent('influencer-discovered', {
-              detail: { id: apiInfluencer.id, name: apiInfluencer.name }
-            }));
-          }
+          const result = await apiService.suggestInfluencers(query);
+          setApiSuggestions(result.suggestions);
         } catch (error) {
-          console.error('Failed to analyze influencer:', error);
+          console.error('Failed to fetch suggestions:', error);
+          setApiSuggestions([]);
         } finally {
-          setIsAnalyzing(false);
-          setAnalyzingName('');
+          setLoadingSuggestions(false);
         }
-      }, 5000); // 5 seconds delay
+      }, 300); // 300ms debounce for faster response
+    } else {
+      setApiSuggestions([]);
+      setLoadingSuggestions(false);
     }
 
-    // Cleanup on unmount or query change
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+      if (suggestionTimerRef.current) {
+        clearTimeout(suggestionTimerRef.current);
       }
     };
-  }, [query, filteredInfluencers.length, useMockData, isAnalyzing, onInfluencerDiscovered]);
+  }, [query, useMockData]);
+
+  // Combined results: mock data influencers + API suggestions
+  const allResults = useMockData ? filteredInfluencers : apiSuggestions;
+  const hasResults = allResults.length > 0;
+
+  useEffect(() => {
+    setIsOpen(query.length > 0 && (hasResults || isAnalyzing || loadingSuggestions));
+    setSelectedIndex(-1);
+  }, [query, hasResults, isAnalyzing, loadingSuggestions]);
+
+  // Manual analyze function (user confirms they want to analyze)
+  const handleAnalyzeNewInfluencer = async () => {
+    if (!query || query.length < 2 || useMockData) return;
+    
+    setIsAnalyzing(true);
+    setAnalyzingName(query);
+
+    try {
+      console.log(`User confirmed: analyzing new influencer: ${query}`);
+      const apiInfluencer = await apiService.analyzeInfluencer(query, 'basic');
+
+      if (onInfluencerDiscovered) {
+        console.log(`Successfully analyzed influencer: ${apiInfluencer.name}`);
+        window.dispatchEvent(new CustomEvent('influencer-discovered', {
+          detail: { id: apiInfluencer.id, name: apiInfluencer.name }
+        }));
+      }
+      
+      // Navigate to the new influencer
+      navigate(`/influencer/${apiInfluencer.id}`);
+    } catch (error) {
+      console.error('Failed to analyze influencer:', error);
+      alert(`Failed to analyze "${query}". Please check the spelling or try another name.`);
+    } finally {
+      setIsAnalyzing(false);
+      setAnalyzingName('');
+      setQuery('');
+      setIsOpen(false);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen && e.key === 'Enter' && enableExploration && !useMockData && query.length >= 2) {
@@ -106,7 +128,7 @@ export const SearchAutocomplete = ({
       case 'ArrowDown':
         e.preventDefault();
         setSelectedIndex(prev =>
-          prev < filteredInfluencers.length - 1 ? prev + 1 : prev
+          prev < allResults.length - 1 ? prev + 1 : prev
         );
         break;
       case 'ArrowUp':
@@ -116,9 +138,9 @@ export const SearchAutocomplete = ({
       case 'Enter':
         e.preventDefault();
         if (selectedIndex >= 0) {
-          handleSelect(filteredInfluencers[selectedIndex]);
-        } else if (filteredInfluencers.length > 0) {
-          handleSelect(filteredInfluencers[0]);
+          handleSelect(allResults[selectedIndex]);
+        } else if (allResults.length > 0) {
+          handleSelect(allResults[0]);
         } else if (enableExploration && !useMockData && query.length >= 2) {
           // Si aucun résultat et exploration activée, démarrer l'exploration
           handleStartExploration();
@@ -131,10 +153,16 @@ export const SearchAutocomplete = ({
     }
   };
 
-  const handleSelect = (influencer: Influencer) => {
+  const handleSelect = (influencer: Influencer | any) => {
     setQuery(influencer.name);
     setIsOpen(false);
-    onSelect(influencer);
+    
+    // If it's an API suggestion, navigate to the profile directly
+    if (!useMockData && influencer.id && influencer.exists) {
+      navigate(`/influencer/${influencer.id}`);
+    } else if (onSelect) {
+      onSelect(influencer);
+    }
   };
 
   const handleStartExploration = () => {
@@ -180,7 +208,20 @@ export const SearchAutocomplete = ({
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {isAnalyzing ? (
+            {loadingSuggestions ? (
+              <motion.div
+                className="search-autocomplete-analyzing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <Loader2 className="search-autocomplete-analyzing-icon" size={20} />
+                <div className="search-autocomplete-analyzing-text">
+                  <div className="search-autocomplete-analyzing-subtitle">
+                    Searching...
+                  </div>
+                </div>
+              </motion.div>
+            ) : isAnalyzing ? (
               <motion.div
                 className="search-autocomplete-analyzing"
                 initial={{ opacity: 0 }}
@@ -198,33 +239,59 @@ export const SearchAutocomplete = ({
                 </div>
               </motion.div>
             ) : (
-              filteredInfluencers.map((influencer, index) => (
-                <motion.button
-                  key={influencer.id}
-                  className={`search-autocomplete-item ${selectedIndex === index ? 'selected' : ''}`}
-                  onClick={() => handleSelect(influencer)}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ backgroundColor: 'var(--state-hover)' }}
-                >
-                  <img
-                    src={influencer.avatar}
-                    alt={influencer.name}
-                    className="search-autocomplete-avatar"
-                  />
-                  <div className="search-autocomplete-info">
-                    <div className="search-autocomplete-name">{influencer.name}</div>
-                    <div className="search-autocomplete-meta">
-                      {influencer.handle} • {formatFollowers(influencer.followers)} followers
-                    </div>
+              <>
+                {/* Show "Did you mean?" header for fuzzy matches */}
+                {!useMockData && allResults.length > 0 && allResults[0].match_type === 'fuzzy' && (
+                  <div className="search-autocomplete-did-you-mean">
+                    Did you mean...?
                   </div>
-                  <div
-                    className="search-autocomplete-score"
-                    style={{
-                      background: influencer.influscoring.overall >= 85
-                        ? 'var(--accent-teal)'
-                        : influencer.influscoring.overall >= 70
+                )}
+                
+                {allResults.map((result: any, index: number) => {
+                  // Handle both mock data influencers and API suggestions
+                  const influencer = useMockData ? result : {
+                    id: result.id?.toString() || '',
+                    name: result.name,
+                    avatar: result.avatar_url || '/default-avatar.png',
+                    handle: `@${result.name}`,
+                    followers: 0,
+                    influscoring: { overall: Math.round(result.trust_score / 10) }
+                  };
+                  
+                  const isFuzzyMatch = !useMockData && result.match_type === 'fuzzy';
+                  
+                  return (
+                    <motion.button
+                      key={result.id || index}
+                      className={`search-autocomplete-item ${selectedIndex === index ? 'selected' : ''} ${isFuzzyMatch ? 'fuzzy-match' : ''}`}
+                      onClick={() => handleSelect(result)}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ backgroundColor: 'var(--state-hover)' }}
+                    >
+                      <img
+                        src={influencer.avatar}
+                        alt={influencer.name}
+                        className="search-autocomplete-avatar"
+                      />
+                      <div className="search-autocomplete-info">
+                        <div className="search-autocomplete-name">
+                          {influencer.name}
+                          {isFuzzyMatch && <span className="fuzzy-badge">Similar</span>}
+                        </div>
+                        {useMockData && (
+                          <div className="search-autocomplete-meta">
+                            {influencer.handle} • {formatFollowers(influencer.followers)} followers
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className="search-autocomplete-score"
+                        style={{
+                          background: influencer.influscoring.overall >= 85
+                            ? 'var(--accent-teal)'
+                            : influencer.influscoring.overall >= 70
                         ? 'var(--accent-blue)'
                         : 'var(--accent-yellow)'
                     }}
@@ -235,23 +302,47 @@ export const SearchAutocomplete = ({
               ))
             )}
             
-            {/* Option pour démarrer l'exploration si aucun résultat et mode exploration activé */}
-            {!isAnalyzing && filteredInfluencers.length === 0 && enableExploration && !useMockData && query.length >= 2 && (
-              <motion.button
-                className="search-autocomplete-item search-autocomplete-explore"
-                onClick={handleStartExploration}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                whileHover={{ backgroundColor: 'var(--state-hover)' }}
+            {/* Option pour analyser un nouvel influencer si aucune suggestion */}
+            {!isAnalyzing && !loadingSuggestions && allResults.length === 0 && !useMockData && query.length >= 3 && (
+              <motion.div
+                className="search-autocomplete-no-results"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
               >
-                <Network className="search-autocomplete-explore-icon" size={20} />
-                <div className="search-autocomplete-info">
-                  <div className="search-autocomplete-name">Generate exploration graph</div>
-                  <div className="search-autocomplete-meta">
-                    Explore "{query}" and their network with AI
-                  </div>
+                <div className="search-autocomplete-no-results-text">
+                  <Sparkles size={18} style={{ marginRight: '8px' }} />
+                  No influencer found matching "{query}"
                 </div>
-              </motion.button>
+                <motion.button
+                  className="search-autocomplete-item search-autocomplete-analyze"
+                  onClick={handleAnalyzeNewInfluencer}
+                  whileHover={{ backgroundColor: 'var(--state-hover)' }}
+                >
+                  <Sparkles className="search-autocomplete-analyze-icon" size={20} />
+                  <div className="search-autocomplete-info">
+                    <div className="search-autocomplete-name">Analyze "{query}" with AI</div>
+                    <div className="search-autocomplete-meta">
+                      Discover this influencer using AI-powered search
+                    </div>
+                  </div>
+                </motion.button>
+                
+                {enableExploration && (
+                  <motion.button
+                    className="search-autocomplete-item search-autocomplete-explore"
+                    onClick={handleStartExploration}
+                    whileHover={{ backgroundColor: 'var(--state-hover)' }}
+                  >
+                    <Network className="search-autocomplete-explore-icon" size={20} />
+                    <div className="search-autocomplete-info">
+                      <div className="search-autocomplete-name">Generate network graph</div>
+                      <div className="search-autocomplete-meta">
+                        Explore "{query}" and their connections
+                      </div>
+                    </div>
+                  </motion.button>
+                )}
+              </motion.div>
             )}
           </motion.div>
         )}

@@ -294,25 +294,32 @@ Return ONLY valid JSON:
             Dict with connection information
         """
         logger.info(f"   🤖 Blackbox: Finding connections (influencers, agencies, brands)...")
-        prompt = f"""Find ALL connections for '{influencer_name}' including:
-1. Other influencers they collaborate with
-2. Ad agencies representing them
-3. Brands they're sponsored by or partnered with
-4. Management companies managing them
-5. Record labels (if musician)
-6. Networks or media companies they work with
-7. Any other business entities they're connected to
+        prompt = f"""Find the TOP 8 MOST SIGNIFICANT connections for '{influencer_name}'.
 
 Platform data: {json.dumps(platforms_data, indent=2)}
 
+PRIORITY ORDER (most important first):
+1. **Primary Management/Agency** - Who manages their career? (1 max)
+2. **Frequent Collaborators** - Other influencers they work with regularly (2-3 max)
+3. **Major Brand Deals** - Big sponsorships/partnerships (1-2 max)
+4. **Creative Partners** - Studios, networks, production companies (1-2 max)
+5. **Other significant connections** - Record labels, investors, etc. (1-2 max)
+
+CRITICAL REQUIREMENTS:
+- Limit to TOP 8 connections maximum (quality over quantity)
+- Sort by strength (most significant first)
+- VERIFY that connections are REAL and CURRENT (not outdated)
+- Use actual names, not generic terms (e.g., "Gotaga" not "Gaming Partner")
+- Include only well-documented, verifiable relationships
+
 For EACH connection, provide:
-- name: Full name of the entity/person
+- name: EXACT full name of the entity/person (searchable on social media)
 - entity_type: One of: "influencer", "ad_agency", "brand", "management", "record_label", "network", "studio", "other"
 - connection_type: One of: "collaboration", "sponsorship", "managed_by", "signed_to", "partnership", "contracted_to", "owned_by"
-- strength: 1-10 (how strong/significant is this relationship?)
-- description: Brief description of the relationship
+- strength: 1-10 (10 = core relationship like manager, 8-9 = frequent collaborator, 5-7 = regular partnership, 1-4 = occasional)
+- description: Brief, specific description (e.g., "Co-founder of gaming collective" not just "Gaming partner")
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (MAXIMUM 8 connections):
 {{
     "connections": [
         {{
@@ -320,21 +327,14 @@ Return ONLY valid JSON:
             "entity_type": "management",
             "connection_type": "managed_by",
             "strength": 10,
-            "description": "Talent management company representing the influencer"
+            "description": "Primary talent management company"
         }},
         {{
             "name": "MrBeast",
             "entity_type": "influencer",
             "connection_type": "collaboration",
-            "strength": 8,
-            "description": "Frequent collaborator on videos"
-        }},
-        {{
-            "name": "GFuel",
-            "entity_type": "brand",
-            "connection_type": "sponsorship",
-            "strength": 7,
-            "description": "Long-term brand sponsorship deal"
+            "strength": 9,
+            "description": "Frequent video collaborator and business partner"
         }}
     ]
 }}"""
