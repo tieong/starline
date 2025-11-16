@@ -221,7 +221,7 @@
 .hero-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .hero-stat-card {
@@ -302,13 +302,13 @@
 .hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .social-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .social-link {
@@ -342,7 +342,7 @@
 .detail-two-column {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-xl);
+  gap: var(--space-xxl);
   margin-bottom: var(--space-xl);
 }
 
@@ -350,7 +350,7 @@
 .detail-column-right {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-xxl);
 }
 
 /* Section Styles - Following guidelines */
@@ -358,7 +358,7 @@
   background: var(--surface-card);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-none);
-  padding: var(--space-xl);
+  padding: var(--space-xxl);
   box-shadow: var(--shadow-soft);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -382,15 +382,19 @@
 }
 
 .chart-section {
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-xxl);
+}
+
+.news-section {
+  margin-bottom: var(--space-xxl);
 }
 
 .section-header {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-xxl);
+  padding-bottom: var(--space-xl);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -450,7 +454,7 @@
 .products-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .product-item {
@@ -526,7 +530,7 @@
 .news-timeline {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   position: relative;
 }
 
@@ -571,7 +575,7 @@
 
 .news-content {
   flex: 1;
-  padding: var(--space-lg);
+  padding: var(--space-xl);
   background: var(--surface-subtle);
   border: 1px solid var(--border-subtle);
   border-left: 4px solid var(--black);
@@ -587,7 +591,7 @@
 }
 
 .news-header {
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .news-title-row {
@@ -595,7 +599,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-md);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .news-title {
@@ -624,8 +628,8 @@
   font-family: var(--font-sans);
   font-size: 15px;
   color: var(--text-normal);
-  line-height: 1.6;
-  margin: 0 0 var(--space-sm) 0;
+  line-height: 1.7;
+  margin: 0 0 var(--space-md) 0;
 }
 
 .news-source {
@@ -679,6 +683,33 @@
   border-radius: var(--radius-none);
   border: 2px dashed var(--border-subtle);
   min-height: 300px;
+}
+
+.empty-state-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xxl) var(--space-xl);
+  text-align: center;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-none);
+  border: 1px solid var(--border-subtle);
+  min-height: 200px;
+}
+
+.empty-state-compact .empty-state-icon {
+  margin-bottom: var(--space-lg);
+  opacity: 0.3;
+}
+
+.empty-state-compact-text {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: var(--space-md) 0 0 0;
+  line-height: 1.6;
+  max-width: 280px;
 }
 
 .empty-state-icon {
@@ -826,15 +857,15 @@
 
 @media (max-width: 768px) {
   .influencer-detail {
-    padding: var(--space-md);
+    padding: var(--space-lg);
   }
 
   .hero-section {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-xl);
   }
 
   .hero-content {
-    padding: var(--space-lg);
+    padding: var(--space-xl);
   }
 
   .hero-name {
@@ -842,13 +873,30 @@
   }
 
   .section {
-    padding: var(--space-lg);
+    padding: var(--space-xl);
+  }
+
+  .section-header {
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
   }
 
   .section-header h2 {
     font-size: 24px;
   }
 
+  .detail-two-column {
+    gap: var(--space-xl);
+  }
+
+  .detail-column-left,
+  .detail-column-right {
+    gap: var(--space-xl);
+  }
+
+  .news-timeline {
+    gap: var(--space-lg);
+  }
 
   .news-timeline::before {
     display: none;
@@ -860,6 +908,10 @@
 
   .news-marker {
     display: none;
+  }
+
+  .news-content {
+    padding: var(--space-lg);
   }
 }
 

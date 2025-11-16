@@ -177,11 +177,21 @@ export const Home = () => {
               </div>
               <div className="home-stat-divider"></div>
               <div className="home-stat-item">
-                <span className="home-stat-value">{useMockData ? 'Mock' : 'Real-time'}</span>
+                <span className="home-stat-value">Real Time</span>
                 <span className="home-stat-label">Updated data</span>
               </div>
             </>
           )}
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          className="home-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <span className="home-footer-text">made with blackbox ai</span>
         </motion.div>
       </motion.div>
     </div>

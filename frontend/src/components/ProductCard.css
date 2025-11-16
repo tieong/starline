@@ -1,14 +1,14 @@
 .product-card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-main);
+  border-radius: 0;
   padding: 20px;
   transition: all 0.3s ease;
 }
 
 .product-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-main);
+  box-shadow: var(--shadow-subtle);
 }
 
 .product-card.expanded {
@@ -37,6 +37,7 @@
 }
 
 .product-card-title h4 {
+  font-family: var(--font-serif);
   font-size: 18px;
   font-weight: 600;
   color: var(--text-strong);
@@ -66,9 +67,9 @@
 
 /* OpenFoodFacts Section */
 .product-openfoodfacts {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-main);
+  border-radius: 0;
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -85,6 +86,7 @@
 }
 
 .openfoodfacts-header h5 {
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 600;
   color: var(--text-strong);
@@ -93,9 +95,9 @@
 
 .openfoodfacts-scores {
   display: flex;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .score-badge {
@@ -103,50 +105,50 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
-  background: var(--bg-base);
-  border-radius: 6px;
-  border: 1px solid var(--border);
 }
 
 .score-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-subtle);
   text-transform: uppercase;
   font-weight: 500;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .score-grade {
-  font-size: 18px;
+  font-family: var(--font-sans);
+  font-size: 22px;
   font-weight: 700;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .score-value {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-strong);
 }
 
 .openfoodfacts-allergens {
+  font-family: var(--font-sans);
   font-size: 13px;
   color: var(--text-body);
   padding: 8px 12px;
-  background: var(--bg-base);
-  border-radius: 6px;
-  border: 1px solid var(--accent-red);
-  border-left: 3px solid var(--accent-red);
+  background: var(--bg-main);
+  border-radius: 0;
+  border: 1px solid var(--border-main);
+  border-left: 3px solid var(--primary-red);
 }
 
 .openfoodfacts-allergens strong {
-  color: var(--accent-red);
+  color: var(--primary-red);
 }
 
 /* Quality Score */
@@ -155,8 +157,9 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-base);
-  border-radius: 6px;
+  background: var(--surface-subtle);
+  border-radius: 0;
+  border: 1px solid var(--border-subtle);
   margin-bottom: 12px;
   font-size: 14px;
 }
@@ -181,8 +184,9 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-base);
-  border-radius: 6px;
+  background: var(--surface-subtle);
+  border-radius: 0;
+  border: 1px solid var(--border-subtle);
   margin-bottom: 16px;
   font-size: 14px;
 }
@@ -212,6 +216,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: var(--font-sans);
   font-size: 15px;
   font-weight: 600;
   color: var(--text-strong);
@@ -230,9 +235,10 @@
 
 .review-item {
   padding: 12px;
-  background: var(--bg-base);
-  border-radius: 8px;
-  border-left: 3px solid var(--border);
+  background: var(--surface-subtle);
+  border-radius: 0;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-main);
   transition: border-color 0.2s ease;
 }
 
@@ -314,11 +320,12 @@
 }
 
 .product-price {
+  font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 700;
   color: var(--primary-purple);
   text-align: right;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-main);
 }

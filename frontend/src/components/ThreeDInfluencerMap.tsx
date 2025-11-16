@@ -213,6 +213,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
   const tooltipRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<THREE.Points | null>(null);
   const nodeMaterialsRef = useRef<Map<string, THREE.ShaderMaterial>>(new Map());
+  const nodeLabelsRef = useRef<HTMLDivElement[]>([]);
   
   // Memoize node connections
   const nodeConnections = useMemo(() => {
@@ -654,17 +655,6 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
         
         // Update cursor
         rendererRef.current.domElement.style.cursor = 'pointer';
-        
-        // Show brutalist tooltip
-        if (tooltipRef.current) {
-          tooltipRef.current.innerHTML = `
-            <div class="tooltip-title">${hoveredMesh.nodeData.name}</div>
-            <div class="tooltip-type">${hoveredMesh.nodeData.type.toUpperCase()}</div>
-          `;
-          tooltipRef.current.style.left = `${event.clientX - rect.left + 20}px`;
-          tooltipRef.current.style.top = `${event.clientY - rect.top - 50}px`;
-          tooltipRef.current.classList.add('visible');
-        }
 
         // Update hover uniforms with glitch effect
         if (hoveredMesh !== previousHovered) {
@@ -702,10 +692,6 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
       
       hoveredNodeRef.current = null;
       rendererRef.current.domElement.style.cursor = 'grab';
-      
-      if (tooltipRef.current) {
-        tooltipRef.current.classList.remove('visible');
-      }
     }
   }, []);
 
@@ -754,6 +740,44 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
     // Update physics
     updatePhysics(deltaTime);
 
+    // Update all node labels to follow their nodes - only show on hover
+    if (containerRef.current && rendererRef.current && cameraRef.current) {
+      const canvas = rendererRef.current.domElement;
+      const widthHalf = canvas.width / 2;
+      const heightHalf = canvas.height / 2;
+      const camera = cameraRef.current;
+      
+      nodesRef.current.forEach((node, index) => {
+        const label = nodeLabelsRef.current[index];
+        if (label && node) {
+          // Convert 3D position to 2D screen position
+          const vector = new THREE.Vector3();
+          node.getWorldPosition(vector);
+          vector.project(camera);
+          
+          const x = (vector.x * widthHalf) + widthHalf;
+          const y = -(vector.y * heightHalf) + heightHalf;
+          
+          // Position label above the node
+          label.style.left = `${x}px`;
+          label.style.top = `${y - 40}px`;
+          
+          // Check if this node is being hovered
+          const isHovered = hoveredNodeRef.current === node;
+          
+          // Show ONLY if being hovered
+          if (isHovered) {
+            label.style.opacity = '1';
+            label.style.background = 'rgba(139, 92, 246, 0.95)';
+            label.style.borderColor = '#ffffff';
+            label.style.transform = 'translateX(-50%) scale(1.1)';
+          } else {
+            label.style.opacity = '0';
+          }
+        }
+      });
+    }
+
     // Update controls
     controlsRef.current.update();
 
@@ -776,21 +800,62 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
     rendererRef.current.setSize(width, height);
   }, []);
 
-  // Initialize with tooltip
+  // Create labels for all nodes
+  const createNodeLabels = useCallback(() => {
+    if (!containerRef.current) return;
+    
+    // Clear existing labels
+    nodeLabelsRef.current.forEach(label => {
+      if (containerRef.current?.contains(label)) {
+        containerRef.current.removeChild(label);
+      }
+    });
+    nodeLabelsRef.current = [];
+    
+    // Create a label for each node
+    graphNodes.forEach((nodeData) => {
+      const label = document.createElement('div');
+      label.className = 'node-label-3d';
+      label.textContent = nodeData.name;
+      
+      // Style the label
+      label.style.position = 'absolute';
+      label.style.background = 'rgba(0, 0, 0, 0.85)';
+      label.style.color = '#ffffff';
+      label.style.padding = '4px 10px';
+      label.style.borderRadius = '3px';
+      label.style.fontSize = '12px';
+      label.style.fontFamily = 'var(--font-sans)';
+      label.style.fontWeight = '600';
+      label.style.pointerEvents = 'none';
+      label.style.userSelect = 'none';
+      label.style.whiteSpace = 'nowrap';
+      label.style.transform = 'translateX(-50%)';
+      label.style.zIndex = '1000';
+      label.style.border = '1px solid rgba(139, 92, 246, 0.5)';
+      label.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+      label.style.transition = 'opacity 0.2s ease, background 0.2s ease, transform 0.2s ease, border-color 0.2s ease';
+      label.style.opacity = '0';
+      
+      containerRef.current.appendChild(label);
+      nodeLabelsRef.current.push(label);
+    });
+  }, []);
+  
+  // Initialize labels
   useEffect(() => {
-    if (!tooltipRef.current && containerRef.current) {
-      const tooltip = document.createElement('div');
-      tooltip.className = 'three-d-tooltip-brutalist';
-      containerRef.current.appendChild(tooltip);
-      tooltipRef.current = tooltip;
-    }
+    createNodeLabels();
     
     return () => {
-      if (tooltipRef.current && containerRef.current?.contains(tooltipRef.current)) {
-        containerRef.current.removeChild(tooltipRef.current);
-      }
+      // Cleanup labels
+      nodeLabelsRef.current.forEach(label => {
+        if (containerRef.current?.contains(label)) {
+          containerRef.current.removeChild(label);
+        }
+      });
+      nodeLabelsRef.current = [];
     };
-  }, []);
+  }, [createNodeLabels]);
 
   // Initialize scene
   useEffect(() => {

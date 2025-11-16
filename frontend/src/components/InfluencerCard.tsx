@@ -24,6 +24,23 @@ export const InfluencerCard = ({ influencer, onClick, delay = 0 }: InfluencerCar
     return 'var(--accent-red)';
   };
 
+  const getScoreGradient = (score: number) => {
+    // Gradient animé selon le score - version lumineuse et colorée
+    if (score >= 85) {
+      // Excellent: vert émeraude lumineux
+      return 'linear-gradient(135deg, #34D399, #10B981, #6EE7B7, #A7F3D0)';
+    } else if (score >= 70) {
+      // Bon: bleu ciel vibrant
+      return 'linear-gradient(135deg, #60A5FA, #3B82F6, #93C5FD, #BFDBFE)';
+    } else if (score >= 50) {
+      // Moyen: jaune/orange lumineux
+      return 'linear-gradient(135deg, #FBBF24, #F59E0B, #FCD34D, #FDE68A)';
+    } else {
+      // Faible: rouge corail
+      return 'linear-gradient(135deg, #F87171, #EF4444, #FCA5A5, #FECACA)';
+    }
+  };
+
   const getTrendIcon = () => {
     switch (influencer.influscoring.trend) {
       case 'up':
@@ -48,9 +65,10 @@ export const InfluencerCard = ({ influencer, onClick, delay = 0 }: InfluencerCar
       <div className="card-header">
         <img src={influencer.avatar} alt={influencer.name} className="avatar" />
         <div
-          className="score-badge"
+          className="score-badge score-badge-animated"
           style={{
-            background: `linear-gradient(135deg, ${getScoreColor(influencer.influscoring.overall)}, ${getScoreColor(influencer.influscoring.overall)}dd)`
+            background: getScoreGradient(influencer.influscoring.overall),
+            backgroundSize: '200% 200%'
           }}
         >
           <span className="score-value">{influencer.influscoring.overall}</span>

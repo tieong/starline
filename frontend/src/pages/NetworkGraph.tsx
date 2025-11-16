@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home, Loader2 } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home, Loader2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { DataSourceToggle } from '../components/DataSourceToggle';
 import { dataService } from '../services/dataService';
 import { apiService } from '../services/api';
@@ -37,20 +37,20 @@ export const NetworkGraph = () => {
   const navigate = useNavigate();
   const { useMockData } = useDataContext();
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(id || null);
   const [centralInfluencer, setCentralInfluencer] = useState<string | null>(id || null);
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(id ? '2d' : '3d');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(!!id); // Ouvrir automatiquement si on arrive avec un ID
   
   // États pour l'exploration itérative
   const [expandingNodes, setExpandingNodes] = useState<Set<string>>(new Set());
-  const [explorationMode, setExplorationMode] = useState(false);
 
   // Fonction pour expandre un nœud (générer ses connexions)
   const handleNodeExpansion = async (node: Node) => {
@@ -99,11 +99,9 @@ export const NetworkGraph = () => {
         // Marquer le nœud source comme exploré
         const sourceNodeIndex = newNodes.findIndex(n => n.id === node.id);
         if (sourceNodeIndex !== -1) {
-          newNodes[sourceNodeIndex] = {
-            ...newNodes[sourceNodeIndex],
-            explored: true,
-            influencer_id: result.influencer_data.id
-          };
+          const updatedNode = newNodes[sourceNodeIndex] as any;
+          updatedNode.explored = true;
+          updatedNode.influencer_id = result.influencer_data.id;
         }
 
         // Ajouter les nouveaux nœuds (éviter les doublons)
@@ -236,70 +234,163 @@ export const NetworkGraph = () => {
       });
 
     svg.call(zoom);
+    
+    // Store zoom behavior reference for external controls
+    zoomBehaviorRef.current = zoom;
 
-    // Prepare data
-    const nodes: Node[] = graphNodes.map(n => ({ ...n }));
-    const links: Link[] = relationships.map(r => ({ ...r }));
+    // Handle both ID formats for central influencer
+    // Mock data uses simple IDs like 'cyprien', API data uses 'influencer-1'
+    let centralNodeId = centralInfluencer || null;
+    
+    // For API data, ensure we have the right format
+    if (centralNodeId && !graphNodes.find(n => n.id === centralNodeId)) {
+      // Try with influencer- prefix
+      const withPrefix = centralNodeId.startsWith('influencer-') 
+        ? centralNodeId 
+        : `influencer-${centralNodeId}`;
+      
+      if (graphNodes.find(n => n.id === withPrefix)) {
+        centralNodeId = withPrefix;
+      }
+    }
+
+    // Prepare data - Filter to show only central node and its direct connections
+    let nodes: Node[] = graphNodes.map(n => ({ ...n }));
+    let links: Link[] = relationships.map(r => ({ ...r }));
+
+    // If we have a central node, show level 1 and level 2 connections
+    const level1Nodes = new Set<string>();
+    const level2Nodes = new Set<string>();
+    
+    if (centralNodeId) {
+      level1Nodes.add(centralNodeId);
+
+      // Get level 1 connections (direct neighbors)
+      links.forEach(link => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+        if (sourceId === centralNodeId) {
+          level1Nodes.add(targetId);
+        }
+        if (targetId === centralNodeId) {
+          level1Nodes.add(sourceId);
+        }
+      });
+
+      // Get level 2 connections (neighbors of neighbors)
+      links.forEach(link => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+        if (level1Nodes.has(sourceId) && sourceId !== centralNodeId) {
+          level2Nodes.add(targetId);
+        }
+        if (level1Nodes.has(targetId) && targetId !== centralNodeId) {
+          level2Nodes.add(sourceId);
+        }
+      });
+
+      // Remove level 1 nodes from level 2 set
+      level1Nodes.forEach(id => level2Nodes.delete(id));
+
+      // Filter nodes to show level 1 and level 2
+      const allVisibleNodes = new Set([...level1Nodes, ...level2Nodes]);
+      nodes = nodes.filter(n => allVisibleNodes.has(n.id));
+
+      // Keep all links between visible nodes
+      links = links.filter(link => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        return allVisibleNodes.has(sourceId) && allVisibleNodes.has(targetId);
+      });
+
+      console.log('[NetworkGraph] Filtered to show level 1 and level 2 connections:', {
+        centralNode: centralNodeId,
+        level1: level1Nodes.size,
+        level2: level2Nodes.size,
+        totalNodes: nodes.length,
+        totalLinks: links.length
+      });
+    }
 
     console.log('[NetworkGraph] Prepared D3 data:', { nodes: nodes.length, links: links.length });
 
     // Color mapping - Vibrant colors with white background
-    const colorMap = {
+    const colorMap: Record<string, string> = {
       influencer: '#8B5CF6', // Purple
       agency: '#F59E0B',     // Orange
       brand: '#3B82F6',      // Blue
       event: '#10B981'       // Green
+    };
+    
+    // Helper function to get color with fallback
+    const getNodeColor = (type: string) => {
+      const color = colorMap[type?.toLowerCase()];
+      if (!color) {
+        console.warn('[NetworkGraph] Unknown node type:', type, '- defaulting to orange');
+        return '#F59E0B'; // Default to orange if type is not recognized
+      }
+      return color;
     };
 
     const linkColorMap = {
       agency: '#F59E0B',
       collaboration: '#10B981',
       friendship: '#8B5CF6',
-      brand: '#3B82F6'
+      brand: '#3B82F6',
+      influencer: '#8B5CF6'
     };
+
+    // Position central node at center initially (without anchoring)
+    if (centralNodeId) {
+      const centralNode = nodes.find(n => n.id === centralNodeId);
+      if (centralNode) {
+        centralNode.x = width / 2;
+        centralNode.y = height / 2;
+      }
+    }
 
     // Create force simulation
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links)
         .id((d: any) => d.id)
-        .distance(150)
+        .distance(200)
         .strength((d: any) => d.strength * 0.5)
       )
-      .force('charge', d3.forceManyBody().strength(-800))
+      .force('charge', d3.forceManyBody().strength(-1000))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius((d: any) => d.size + 10));
 
-    // Handle both ID formats for central influencer
-    const centralNodeId = centralInfluencer
-      ? (centralInfluencer.startsWith('influencer-')
-          ? centralInfluencer
-          : `influencer-${centralInfluencer}`)
-      : null;
-
     // Create links with colorful style (following GUIDELINES.md: high contrast, bold)
     const link = g.append('g')
+      .attr('class', 'links-group')
       .selectAll('line')
       .data(links)
       .join('line')
       .attr('stroke', (d: any) => linkColorMap[d.type as keyof typeof linkColorMap] || '#000000')
       .attr('stroke-opacity', (d: any) => {
-        if (!centralNodeId) return 0.7;
-
-        const source = typeof d.source === 'object' ? d.source.id : d.source;
-        const target = typeof d.target === 'object' ? d.target.id : d.target;
-
-        // Highlight links connected to central node
-        const isConnectedToCenter = source === centralNodeId || target === centralNodeId;
-        return isConnectedToCenter ? 0.9 : 0.4;
+        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        
+        // Links connected to central node: full opacity
+        if (sourceId === centralNodeId || targetId === centralNodeId) return 0.8;
+        
+        // Links between level 1 nodes: full opacity
+        if (level1Nodes.has(sourceId) && level1Nodes.has(targetId)) return 0.8;
+        
+        // Links involving level 2 nodes: reduced opacity
+        return 0.2;
       })
       .attr('stroke-width', (d: any) => {
-        if (!centralNodeId) return 2.5;
-
-        const source = typeof d.source === 'object' ? d.source.id : d.source;
-        const target = typeof d.target === 'object' ? d.target.id : d.target;
-
-        const isConnectedToCenter = source === centralNodeId || target === centralNodeId;
-        return isConnectedToCenter ? 3.5 : 2;
+        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        
+        // Links connected to central node: thicker
+        if (sourceId === centralNodeId || targetId === centralNodeId) return 3;
+        
+        // Other links: thinner
+        return 2;
       });
 
     // Create link labels (hidden for cleaner Obsidian look)
@@ -327,66 +418,69 @@ export const NetworkGraph = () => {
 
     console.log('[NetworkGraph] Created D3 node elements:', node.size());
 
-    // Helper function to check if node is connected to central
-    const isNodeConnected = (nodeId: string) => {
-      if (!centralInfluencer) return true;
+    // Add animated golden ring for central node
+    if (centralNodeId) {
+      node.filter((d: Node) => d.id === centralNodeId)
+        .append('circle')
+        .attr('class', 'central-node-ring')
+        .attr('r', (d: Node) => {
+          const baseSize = d.size * 0.4;
+          return baseSize * 1.5 + 8;
+        })
+        .attr('fill', 'none')
+        .attr('stroke', '#FFD700')
+        .attr('stroke-width', 3)
+        .attr('opacity', 0)
+        .style('pointer-events', 'none')
+        .transition()
+        .duration(600)
+        .delay(800)
+        .attr('opacity', 0.6);
 
-      // Handle both formats: "1" and "influencer-1"
-      const centralNodeId = centralInfluencer.startsWith('influencer-')
-        ? centralInfluencer
-        : `influencer-${centralInfluencer}`;
-
-      if (nodeId === centralNodeId) return true;
-      return links.some(l => {
-        const source = typeof l.source === 'object' ? l.source.id : l.source;
-        const target = typeof l.target === 'object' ? l.target.id : l.target;
-        return (source === centralNodeId && target === nodeId) ||
-               (target === centralNodeId && source === nodeId);
-      });
-    };
+      // Second animated ring
+      node.filter((d: Node) => d.id === centralNodeId)
+        .append('circle')
+        .attr('class', 'central-node-ring-outer')
+        .attr('r', (d: Node) => {
+          const baseSize = d.size * 0.4;
+          return baseSize * 1.5 + 15;
+        })
+        .attr('fill', 'none')
+        .attr('stroke', '#FFD700')
+        .attr('stroke-width', 2)
+        .attr('opacity', 0)
+        .style('pointer-events', 'none')
+        .transition()
+        .duration(600)
+        .delay(1000)
+        .attr('opacity', 0.3);
+    }
 
     // Node circles - Colorful with gradient shadows
-    node.append('circle')
-      .attr('r', (d: Node) => {
-        const baseSize = d.size * 0.4;
-        const isConnected = isNodeConnected(d.id);
-
-        if (d.id === centralNodeId) return baseSize * 1.5;
-        if (isConnected) return baseSize;
-        return baseSize * 0.6; // Smaller for non-connected nodes
+    const nodeCircles = node.append('circle')
+      .attr('class', (d: Node) => d.id === centralNodeId ? 'node-circle node-circle-central' : 'node-circle')
+      .attr('r', 0) // Start with radius 0
+      .attr('fill', (d: Node) => getNodeColor(d.type))
+      .attr('stroke', (d: Node) => {
+        // Contour doré pour le nœud central
+        if (d.id === centralNodeId) return '#FFD700';
+        return getNodeColor(d.type);
       })
-      .attr('fill', (d: Node) => {
-        // Nœuds non-explorés ont un remplissage semi-transparent
-        if (d.type === 'influencer' && !d.explored) {
-          return `${colorMap[d.type]}40`; // 25% opacity
-        }
-        return colorMap[d.type];
-      })
-      .attr('stroke', (d: Node) => colorMap[d.type])
       .attr('stroke-width', (d: Node) => {
-        // Nœuds non-explorés ont un contour plus épais
-        if (d.type === 'influencer' && !d.explored) return 3;
+        // Contour plus épais pour le nœud central
+        if (d.id === centralNodeId) return 5;
         return 2;
       })
-      .attr('stroke-dasharray', (d: Node) => {
-        // Nœuds non-explorés ont un contour en pointillé
-        if (d.type === 'influencer' && !d.explored) return '5,3';
-        return '0';
-      })
-      .style('cursor', (d: Node) => {
-        if (d.type === 'influencer' && !d.explored) return 'pointer';
-        return 'pointer';
-      })
+      .style('cursor', 'pointer')
       .style('filter', (d: Node) => {
-        const color = colorMap[d.type];
+        const color = getNodeColor(d.type);
+        // Glow doré pour le nœud central
+        if (d.id === centralNodeId) {
+          return `drop-shadow(0 0 15px #FFD700) drop-shadow(0 0 25px #FFD700)`;
+        }
         return `drop-shadow(0 0 ${d.id === centralNodeId ? '10px' : '6px'} ${color})`;
       })
-      .style('opacity', (d: Node) => {
-        if (!centralNodeId) return 0.95;
-        if (d.id === centralNodeId) return 1;
-        const isConnected = isNodeConnected(d.id);
-        return isConnected ? 0.85 : 0.2;
-      })
+      .style('opacity', 0) // Start invisible
       .on('click', async (event, d) => {
         event.stopPropagation();
         
@@ -400,6 +494,7 @@ export const NetworkGraph = () => {
         setCentralInfluencer(d.id);
         if (d.type === 'influencer') {
           setSelectedInfluencerId(d.id);
+          setIsPanelOpen(true); // Ouvrir automatiquement le panneau
         } else {
           setSelectedInfluencerId(null);
         }
@@ -410,13 +505,10 @@ export const NetworkGraph = () => {
           .duration(200)
           .attr('r', (d: any) => {
             const baseSize = d.size * 0.4;
-            const isConnected = isNodeConnected(d.id);
-            let currentSize = baseSize;
-            if (d.id === centralNodeId) currentSize = baseSize * 1.5;
-            else if (!isConnected) currentSize = baseSize * 0.6;
+            const currentSize = d.id === centralNodeId ? baseSize * 1.5 : baseSize;
             return currentSize * 1.2;
           })
-          .attr('stroke-width', 3);
+          .attr('stroke-width', (d: any) => d.id === centralNodeId ? 6 : 4);
       })
       .on('mouseleave', function() {
         d3.select(this)
@@ -424,18 +516,44 @@ export const NetworkGraph = () => {
           .duration(200)
           .attr('r', (d: any) => {
             const baseSize = d.size * 0.4;
-            const isConnected = isNodeConnected(d.id);
-            if (d.id === centralNodeId) return baseSize * 1.5;
-            if (isConnected) return baseSize;
-            return baseSize * 0.6;
+            return d.id === centralNodeId ? baseSize * 1.5 : baseSize;
           })
-          .attr('stroke-width', 2);
+          .attr('stroke-width', (d: any) => {
+            if (d.id === centralNodeId) return 5;
+            return 2;
+          });
+      });
+
+    // Animate node appearance
+    nodeCircles
+      .transition()
+      .duration(600)
+      .delay((d: Node, i: number) => {
+        // Central node appears first
+        if (d.id === centralNodeId) return 0;
+        // Level 1 nodes appear next with stagger
+        if (level1Nodes.has(d.id)) return 200 + i * 50;
+        // Level 2 nodes appear last
+        return 600 + i * 30;
+      })
+      .attr('r', (d: Node) => {
+        const baseSize = d.size * 0.4;
+        // Central node is larger, all others are normal size
+        return d.id === centralNodeId ? baseSize * 1.5 : baseSize;
+      })
+      .style('opacity', (d: Node) => {
+        // Central node at full opacity
+        if (d.id === centralNodeId) return 1;
+        // Level 1 nodes at high opacity
+        if (level1Nodes.has(d.id)) return 0.9;
+        // Level 2 nodes at reduced opacity
+        return 0.3;
       });
 
     // Add score badges for influencers with colors
     node.filter((d: Node) => d.type === 'influencer' && !!d.score)
       .append('circle')
-      .attr('r', 10)
+      .attr('r', 0)
       .attr('cx', (d: Node) => d.size * 0.25)
       .attr('cy', (d: Node) => -d.size * 0.25)
       .attr('fill', (d: Node) => {
@@ -450,7 +568,15 @@ export const NetworkGraph = () => {
       .style('filter', (d: Node) => {
         const color = d.score! >= 85 ? '#10B981' : d.score! >= 70 ? '#3B82F6' : d.score! >= 50 ? '#F59E0B' : '#EF4444';
         return `drop-shadow(0 0 4px ${color})`;
-      });
+      })
+      .transition()
+      .duration(400)
+      .delay((d: Node, i: number) => {
+        if (d.id === centralNodeId) return 600;
+        if (level1Nodes.has(d.id)) return 800 + i * 50;
+        return 1200 + i * 30;
+      })
+      .attr('r', 10);
 
     const scoreText = node.filter((d: Node) => d.type === 'influencer' && !!d.score)
       .append('text')
@@ -482,41 +608,31 @@ export const NetworkGraph = () => {
       .attr('stroke', '#000000')
       .attr('stroke-width', 1)
       .attr('rx', 0)
+      .style('opacity', 0)
+      .transition()
+      .duration(400)
+      .delay((d: Node, i: number) => {
+        if (d.id === centralNodeId) return 400;
+        if (level1Nodes.has(d.id)) return 600 + i * 50;
+        return 1000 + i * 30;
+      })
       .style('opacity', (d: Node) => {
-        // Always show for central node
-        if (d.id === centralInfluencer) return '1';
-
-        // Show for major nodes (influencers, brands, agencies) if connected
-        const isConnected = isNodeConnected(d.id);
-        const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
-
-        if (isMajorNode && isConnected) return '0.7';
-        return '0'; // Hidden for small nodes, shown on zoom
+        // Always show labels for central node
+        if (d.id === centralNodeId) return '1';
+        
+        // Show labels for level 1 nodes
+        if (level1Nodes.has(d.id)) {
+          const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
+          return isMajorNode ? '0.8' : '0';
+        }
+        
+        // Hide labels for level 2 nodes by default
+        return '0';
       });
-
-    // Ajouter un indicateur "+" pour les nœuds non-explorés
-    node.filter((d: Node) => d.type === 'influencer' && !d.explored)
-      .append('text')
-      .attr('class', 'node-expand-indicator')
-      .text('+')
-      .attr('y', 5)
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Inter, sans-serif')
-      .attr('font-size', 18)
-      .attr('font-weight', 'bold')
-      .attr('fill', 'white')
-      .style('pointer-events', 'none')
-      .style('opacity', 0.9);
 
     const nodeLabels = node.append('text')
       .attr('class', 'node-label')
-      .text((d: Node) => {
-        // Ajouter "🔍" pour les nœuds non-explorés
-        if (d.type === 'influencer' && !d.explored) {
-          return `${d.name} 🔍`;
-        }
-        return d.name;
-      })
+      .text((d: Node) => d.name)
       .attr('y', (d: Node) => (d.size * 0.5) + 38)
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Inter, sans-serif')
@@ -524,16 +640,26 @@ export const NetworkGraph = () => {
       .attr('font-weight', 500)
       .attr('fill', '#000000')
       .style('pointer-events', 'none')
+      .style('opacity', 0)
+      .transition()
+      .duration(400)
+      .delay((d: Node, i: number) => {
+        if (d.id === centralNodeId) return 400;
+        if (level1Nodes.has(d.id)) return 600 + i * 50;
+        return 1000 + i * 30;
+      })
       .style('opacity', (d: Node) => {
-        // Always show for central node
-        if (d.id === centralInfluencer) return '1';
-
-        // Show for major nodes (influencers, brands, agencies) if connected
-        const isConnected = isNodeConnected(d.id);
-        const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
-
-        if (isMajorNode && isConnected) return '0.7';
-        return '0'; // Hidden for small nodes, shown on zoom
+        // Always show labels for central node
+        if (d.id === centralNodeId) return '1';
+        
+        // Show labels for level 1 nodes
+        if (level1Nodes.has(d.id)) {
+          const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
+          return isMajorNode ? '0.8' : '0';
+        }
+        
+        // Hide labels for level 2 nodes by default
+        return '0';
       });
 
     // Function to update details visibility based on zoom level
@@ -544,13 +670,16 @@ export const NetworkGraph = () => {
       scoreText.style('opacity', showDetails ? '1' : '0');
 
       const computeLabelOpacity = (d: Node) => {
-        if (d.id === centralInfluencer) return 1;
+        if (d.id === centralNodeId) return 1;
 
-        const isConnected = isNodeConnected(d.id);
-        const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
+        // Level 1 nodes
+        if (level1Nodes.has(d.id)) {
+          const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
+          if (showDetails) return 0.9;
+          if (isMajorNode) return 0.8;
+        }
 
-        if (showDetails && isConnected) return 0.8;
-        if (isMajorNode && isConnected) return 0.7;
+        // Level 2 nodes - hidden
         return 0;
       };
 
@@ -572,13 +701,17 @@ export const NetworkGraph = () => {
     .on('mouseleave', function(_event, d: any) {
       const currentZoom = zoomLevel;
       const showDetails = currentZoom > 1.2;
-      const isConnected = isNodeConnected(d.id);
-      const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
 
       const targetOpacity = () => {
-        if (d.id === centralInfluencer) return 1;
-        if (showDetails && isConnected) return 0.8;
-        if (isMajorNode && isConnected) return 0.7;
+        if (d.id === centralNodeId) return 1;
+        
+        // Level 1 nodes
+        if (level1Nodes.has(d.id)) {
+          const isMajorNode = d.type === 'influencer' || d.type === 'brand' || d.type === 'agency';
+          if (showDetails) return 0.9;
+          if (isMajorNode) return 0.8;
+        }
+        
         return 0;
       };
 
@@ -634,32 +767,27 @@ export const NetworkGraph = () => {
   }, [id, centralInfluencer, viewMode, graphNodes, relationships]);
 
   const resetView = () => {
-    if (viewMode !== '2d') return;
+    if (viewMode !== '2d' || !svgRef.current || !zoomBehaviorRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().duration(750).call(
-      d3.zoom<SVGSVGElement, unknown>().transform as any,
-      d3.zoomIdentity
-    );
-    setSelectedInfluencerId(null);
-    setCentralInfluencer(null);
+    svg.transition()
+      .duration(750)
+      .call(zoomBehaviorRef.current.transform, d3.zoomIdentity);
   };
 
   const zoomIn = () => {
-    if (viewMode !== '2d') return;
+    if (viewMode !== '2d' || !svgRef.current || !zoomBehaviorRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().duration(300).call(
-      d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
-      1.3
-    );
+    svg.transition()
+      .duration(300)
+      .call(zoomBehaviorRef.current.scaleBy, 1.3);
   };
 
   const zoomOut = () => {
-    if (viewMode !== '2d') return;
+    if (viewMode !== '2d' || !svgRef.current || !zoomBehaviorRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.transition().duration(300).call(
-      d3.zoom<SVGSVGElement, unknown>().scaleBy as any,
-      0.7
-    );
+    svg.transition()
+      .duration(300)
+      .call(zoomBehaviorRef.current.scaleBy, 0.7);
   };
 
   const selectedInfluencer = selectedInfluencerId
@@ -669,7 +797,23 @@ export const NetworkGraph = () => {
   const handleThreeDSelection = (targetId: string) => {
     setCentralInfluencer(targetId);
     setSelectedInfluencerId(targetId);
+    setIsPanelOpen(true); // Ouvrir automatiquement le panneau
     setViewMode('2d');
+  };
+
+  const togglePanel = () => {
+    if (!selectedInfluencerId && !isPanelOpen) {
+      // Si aucun influenceur n'est sélectionné, sélectionner le central
+      if (centralInfluencer) {
+        const centralNode = graphNodes.find(n => n.id === centralInfluencer);
+        if (centralNode && centralNode.type === 'influencer') {
+          setSelectedInfluencerId(centralInfluencer);
+          setIsPanelOpen(true);
+        }
+      }
+    } else {
+      setIsPanelOpen(!isPanelOpen);
+    }
   };
 
   return (
@@ -720,6 +864,14 @@ export const NetworkGraph = () => {
         </div>
 
         <div className="graph-controls">
+          <button 
+            onClick={togglePanel} 
+            title={isPanelOpen ? "Close panel" : "Open panel"}
+            className={isPanelOpen ? 'active' : ''}
+            disabled={viewMode !== '2d'}
+          >
+            {isPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}
+          </button>
           <button onClick={zoomIn} title="Zoom in" disabled={viewMode !== '2d'}>
             <ZoomIn size={20} />
           </button>
@@ -746,10 +898,10 @@ export const NetworkGraph = () => {
 
         {viewMode === '2d' && (
           <AnimatePresence>
-            {selectedInfluencer && (
+            {selectedInfluencer && isPanelOpen && (
               <InfluencerInfoPanel
                 influencer={selectedInfluencer}
-                onClose={() => setSelectedInfluencerId(null)}
+                onClose={() => setIsPanelOpen(false)}
                 onViewProfile={() => navigate(`/influencer/${selectedInfluencer.id}`)}
               />
             )}

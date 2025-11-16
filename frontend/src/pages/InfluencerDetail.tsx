@@ -25,6 +25,7 @@ import { Tag } from '../components/Tag';
 import { ScoreGauge } from '../components/ScoreGauge';
 import { InfluencerComparison } from '../components/InfluencerComparison';
 import { NetworkConnections } from '../components/NetworkConnections';
+import { NetworkGraphPreview } from '../components/NetworkGraphPreview';
 import { SocialComments } from '../components/SocialComments';
 import { PlatformPresence } from '../components/PlatformPresence';
 import { ProductCard } from '../components/ProductCard';
@@ -428,30 +429,28 @@ export const InfluencerDetail = () => {
       <div className="detail-two-column">
         {/* Left Column */}
         <div className="detail-column-left">
-          {/* Network Connections */}
-          {influencer.networkConnections && influencer.networkConnections.length > 0 && (
-            <motion.section
-              className="section network-section"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <div className="section-header">
-                <Network className="section-icon" size={28} />
-                <div className="section-header-text">
-                  <h2>Network Connections</h2>
-                  <p className="section-subtitle">Click on influencer nodes to navigate</p>
-                </div>
+          {/* Network Graph Preview */}
+          <motion.section
+            className="section network-section"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <div className="section-header">
+              <Network className="section-icon" size={28} />
+              <div className="section-header-text">
+                <h2>Network Preview</h2>
+                <p className="section-subtitle">Interactive connection graph</p>
               </div>
-              <NetworkConnections connections={influencer.networkConnections} />
-            </motion.section>
-          )}
+            </div>
+            <NetworkGraphPreview influencerId={influencer.id} />
+          </motion.section>
         </div>
 
         {/* Right Column */}
         <div className="detail-column-right">
           {/* Products Section */}
-          {(influencer?.productsWithReviews && influencer.productsWithReviews.length > 0 || influencerProducts.length > 0) && (
+          {(influencer?.productsWithReviews && influencer.productsWithReviews.length > 0) || influencerProducts.length > 0 ? (
             <motion.section
               className="section products-section"
               initial={{ opacity: 0, y: 20 }}
@@ -476,6 +475,25 @@ export const InfluencerDetail = () => {
                     expanded={true}
                   />
                 ))}
+              </div>
+            </motion.section>
+          ) : (
+            <motion.section
+              className="section products-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div className="section-header">
+                <Package className="section-icon" size={28} />
+                <div className="section-header-text">
+                  <h2>Products & Sponsorships</h2>
+                  <p className="section-subtitle">No products available</p>
+                </div>
+              </div>
+              <div className="empty-state-compact">
+                <Package className="empty-state-icon" size={36} />
+                <p className="empty-state-compact-text">No products or sponsorships found</p>
               </div>
             </motion.section>
           )}

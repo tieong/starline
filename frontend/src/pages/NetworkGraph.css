@@ -152,6 +152,17 @@
   box-shadow: var(--shadow-card);
 }
 
+.graph-controls button.active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+.graph-controls button.active:hover {
+  background: var(--gray-800);
+  border-color: var(--gray-800);
+}
+
 .graph-controls button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -377,6 +388,45 @@
   box-shadow: 0 0 6px currentColor;
 }
 
+/* Golden glow animation for central node */
+@keyframes golden-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    stroke-width: 3;
+  }
+  50% {
+    opacity: 0.9;
+    stroke-width: 4;
+  }
+}
+
+@keyframes golden-pulse-outer {
+  0%, 100% {
+    opacity: 0.3;
+    stroke-width: 2;
+    r: attr(r);
+  }
+  50% {
+    opacity: 0.6;
+    stroke-width: 3;
+  }
+}
+
+/* Apply animation to central node rings */
+.central-node-ring {
+  animation: golden-pulse 2s ease-in-out infinite;
+}
+
+.central-node-ring-outer {
+  animation: golden-pulse-outer 2s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+/* Main node circle for central node */
+.node-circle-central {
+  filter: drop-shadow(0 0 15px #FFD700) drop-shadow(0 0 25px #FFD700);
+}
+
 @media (max-width: 768px) {
   .graph-header {
     flex-direction: column;
@@ -397,5 +447,16 @@
   .graph-legend {
     left: var(--space-md);
     bottom: var(--space-md);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node-circle-central {
+    animation: none;
+  }
+  
+  .central-node-ring,
+  .central-node-ring-outer {
+    animation: none;
   }
 }

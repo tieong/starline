@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { X, Users, TrendingUp, ExternalLink, Eye, Heart } from 'lucide-react';
+import { X, Users, TrendingUp, ExternalLink, Eye, Heart, CheckCircle, BarChart3, Search, Building2 } from 'lucide-react';
 import { Influencer } from '../types';
 import { Tag } from './Tag';
 import { ScoreGauge } from './ScoreGauge';
@@ -26,6 +26,23 @@ export const InfluencerInfoPanel = ({
     return num.toLocaleString('fr-FR');
   };
 
+  const getScoreGradient = (score: number) => {
+    // Gradient animé selon le score - version lumineuse et colorée
+    if (score >= 85) {
+      // Excellent: vert émeraude lumineux
+      return 'linear-gradient(135deg, #34D399, #10B981, #6EE7B7, #A7F3D0)';
+    } else if (score >= 70) {
+      // Bon: bleu ciel vibrant
+      return 'linear-gradient(135deg, #60A5FA, #3B82F6, #93C5FD, #BFDBFE)';
+    } else if (score >= 50) {
+      // Moyen: jaune/orange lumineux
+      return 'linear-gradient(135deg, #FBBF24, #F59E0B, #FCD34D, #FDE68A)';
+    } else {
+      // Faible: rouge corail
+      return 'linear-gradient(135deg, #F87171, #EF4444, #FCA5A5, #FECACA)';
+    }
+  };
+
   return (
     <motion.div
       className="influencer-info-panel"
@@ -49,7 +66,7 @@ export const InfluencerInfoPanel = ({
           <p className="panel-handle">{influencer.handle}</p>
           {influencer.agency && (
             <div className="panel-agency">
-              <span>🏢</span>
+              <Building2 size={16} />
               <span>{influencer.agency}</span>
             </div>
           )}
@@ -111,27 +128,51 @@ export const InfluencerInfoPanel = ({
         <div className="panel-section">
           <h4 className="panel-section-title">InfluScoring</h4>
           <div className="panel-overall-score">
-            <div className="panel-score-circle">
+            <div 
+              className="panel-score-circle panel-score-circle-animated"
+              style={{
+                background: getScoreGradient(influencer.influscoring.overall),
+                backgroundSize: '200% 200%'
+              }}
+            >
               <span className="panel-score-number">{influencer.influscoring.overall}</span>
             </div>
             <span className="panel-score-label">Overall score</span>
           </div>
           <div className="panel-scores">
-            <ScoreGauge
-              label="✅ Reliability"
-              value={influencer.influscoring.reliability}
-              showValue={false}
-            />
-            <ScoreGauge
-              label="📊 Authenticity"
-              value={influencer.influscoring.authenticity}
-              showValue={false}
-            />
-            <ScoreGauge
-              label="🔍 Reputation"
-              value={influencer.influscoring.reputation}
-              showValue={false}
-            />
+            <div className="panel-score-item">
+              <div className="panel-score-label-wrapper">
+                <CheckCircle size={16} />
+                <span>Reliability</span>
+              </div>
+              <ScoreGauge
+                label=""
+                value={influencer.influscoring.reliability}
+                showValue={true}
+              />
+            </div>
+            <div className="panel-score-item">
+              <div className="panel-score-label-wrapper">
+                <BarChart3 size={16} />
+                <span>Authenticity</span>
+              </div>
+              <ScoreGauge
+                label=""
+                value={influencer.influscoring.authenticity}
+                showValue={true}
+              />
+            </div>
+            <div className="panel-score-item">
+              <div className="panel-score-label-wrapper">
+                <Search size={16} />
+                <span>Reputation</span>
+              </div>
+              <ScoreGauge
+                label=""
+                value={influencer.influscoring.reputation}
+                showValue={true}
+              />
+            </div>
           </div>
         </div>
 

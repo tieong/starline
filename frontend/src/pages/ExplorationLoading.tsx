@@ -103,11 +103,21 @@ export const ExplorationLoading = () => {
     const g = svg.append('g');
 
     // Couleurs
-    const colorMap = {
+    const colorMap: Record<string, string> = {
       influencer: '#8B5CF6',
       agency: '#F59E0B',
       brand: '#3B82F6',
       event: '#10B981'
+    };
+
+    // Helper function to get color with fallback
+    const getNodeColor = (type: string) => {
+      const color = colorMap[type?.toLowerCase()];
+      if (!color) {
+        console.warn('[ExplorationLoading] Unknown node type:', type, '- defaulting to orange');
+        return '#F59E0B'; // Default to orange if type is not recognized
+      }
+      return color;
     };
 
     // Créer la simulation
@@ -140,11 +150,11 @@ export const ExplorationLoading = () => {
 
     node.append('circle')
       .attr('r', (d: Node) => d.size * 0.4)
-      .attr('fill', (d: Node) => colorMap[d.type])
+      .attr('fill', (d: Node) => getNodeColor(d.type))
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
       .style('filter', (d: Node) => {
-        const color = colorMap[d.type];
+        const color = getNodeColor(d.type);
         return `drop-shadow(0 0 8px ${color})`;
       })
       .style('opacity', 0)

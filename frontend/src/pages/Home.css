@@ -473,3 +473,57 @@
   }
 
 }
+
+/* Footer */
+.home-footer {
+  margin-top: var(--space-xxl);
+  text-align: center;
+  position: relative;
+}
+
+.home-footer-text {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, 
+    var(--primary-purple), 
+    var(--primary-blue), 
+    var(--primary-green), 
+    var(--primary-yellow)
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-flow 4s ease-in-out infinite;
+  position: relative;
+  display: inline-block;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-none);
+}
+
+/* Add subtle glow effect */
+.home-footer-text::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 150%;
+  background: radial-gradient(ellipse, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  z-index: -1;
+  border-radius: var(--radius-md);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes gradient-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}

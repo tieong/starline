@@ -6,10 +6,10 @@ export const influencers: Influencer[] = [
     name: 'Cyprien',
     handle: '@MonsieurDream',
     avatar: '/src/data/imgs/cyprien.jpeg',
-    followers: 14500000,
+    followers: 14700000,
     engagementRate: 8.5,
-    niche: ['Comédie', 'Sketches', 'Gaming'],
-    bio: 'Créateur de contenu humoristique depuis 2007. Pionnier du YouTube français.',
+    niche: ['Comedy', 'Sketches', 'Gaming'],
+    bio: 'Humorous content creator since 2007. Pioneer of French YouTube.',
     agency: 'Webedia',
     influscoring: {
       overall: 92,
@@ -23,8 +23,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 2500000,
       avgLikes: 185000,
-      postingFrequency: '2-3 vidéos/mois',
-      topCountries: ['France', 'Belgique', 'Suisse', 'Canada'],
+      postingFrequency: '2-3 videos/month',
+      topCountries: ['France', 'Belgium', 'Switzerland', 'Canada'],
       audienceAge: [
         { range: '13-17', percentage: 15 },
         { range: '18-24', percentage: 45 },
@@ -54,7 +54,8 @@ export const influencers: Influencer[] = [
       { date: '2024-01', followers: 14410000 },
       { date: '2024-02', followers: 14440000 },
       { date: '2024-03', followers: 14470000 },
-      { date: '2024-04', followers: 14500000 }
+      { date: '2024-04', followers: 14500000 },
+      { date: '2025-01', followers: 14700000 }
     ]
   },
   {
@@ -62,10 +63,10 @@ export const influencers: Influencer[] = [
     name: 'Squeezie',
     handle: '@SqueezieFR',
     avatar: '/src/data/imgs/squeezie.png',
-    followers: 18200000,
+    followers: 19000000,
     engagementRate: 9.2,
-    niche: ['Gaming', 'Divertissement', 'Musique'],
-    bio: 'Plus gros YouTubeur français. Gaming, challenges, et maintenant rappeur !',
+    niche: ['Gaming', 'Entertainment', 'Music'],
+    bio: 'Biggest French YouTuber. Gaming, challenges, and now rapper!',
     agency: 'Webedia',
     influscoring: {
       overall: 96,
@@ -79,8 +80,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 4200000,
       avgLikes: 320000,
-      postingFrequency: '3-4 vidéos/mois',
-      topCountries: ['France', 'Belgique', 'Suisse', 'Québec'],
+      postingFrequency: '3-4 videos/month',
+      topCountries: ['France', 'Belgium', 'Switzerland', 'Quebec'],
       audienceAge: [
         { range: '13-17', percentage: 35 },
         { range: '18-24', percentage: 40 },
@@ -111,7 +112,8 @@ export const influencers: Influencer[] = [
       { date: '2024-01', followers: 17850000 },
       { date: '2024-02', followers: 18000000 },
       { date: '2024-03', followers: 18100000 },
-      { date: '2024-04', followers: 18200000 }
+      { date: '2024-04', followers: 18200000 },
+      { date: '2025-01', followers: 19000000 }
     ]
   },
   {
@@ -119,10 +121,10 @@ export const influencers: Influencer[] = [
     name: 'EnjoyPhoenix',
     handle: '@EnjoyPhoenix',
     avatar: '/src/data/imgs/enjoyphoenix.jpeg',
-    followers: 3800000,
+    followers: 3900000,
     engagementRate: 6.8,
-    niche: ['Beauté', 'Lifestyle', 'Bien-être'],
-    bio: 'Pionnière de la beauté sur YouTube FR. Entrepreneure et auteure.',
+    niche: ['Beauty', 'Lifestyle', 'Wellness'],
+    bio: 'Pioneer of beauty on French YouTube. Entrepreneur and author.',
     agency: 'Webedia Creators',
     influscoring: {
       overall: 85,
@@ -136,8 +138,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 450000,
       avgLikes: 35000,
-      postingFrequency: '1-2 vidéos/mois',
-      topCountries: ['France', 'Belgique', 'Suisse', 'Maroc'],
+      postingFrequency: '1-2 videos/month',
+      topCountries: ['France', 'Belgium', 'Switzerland', 'Morocco'],
       audienceAge: [
         { range: '13-17', percentage: 20 },
         { range: '18-24', percentage: 50 },
@@ -175,10 +177,10 @@ export const influencers: Influencer[] = [
     name: 'Norman Thavaud',
     handle: '@NormanFaitDesVideos',
     avatar: '/src/data/imgs/norman.jpg',
-    followers: 12100000,
+    followers: 12000000,
     engagementRate: 5.2,
-    niche: ['Comédie', 'Sketches', 'Vlogs'],
-    bio: 'Créateur de sketches cultes sur YouTube depuis 2011.',
+    niche: ['Comedy', 'Sketches', 'Vlogs'],
+    bio: 'Creator of iconic sketches on YouTube since 2011.',
     influscoring: {
       overall: 42,
       reliability: 35,
@@ -191,8 +193,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 850000,
       avgLikes: 45000,
-      postingFrequency: 'Inactif',
-      topCountries: ['France', 'Belgique', 'Suisse'],
+      postingFrequency: 'Inactive',
+      topCountries: ['France', 'Belgium', 'Switzerland'],
       audienceAge: [
         { range: '13-17', percentage: 10 },
         { range: '18-24', percentage: 35 },
@@ -228,10 +230,10 @@ export const influencers: Influencer[] = [
     name: 'McFly & Carlito',
     handle: '@McFlyCarlito',
     avatar: '/src/data/imgs/mcfly.jpeg',
-    followers: 7300000,
+    followers: 7800000,
     engagementRate: 11.5,
-    niche: ['Divertissement', 'Challenges', 'Interviews'],
-    bio: 'Duo explosif de YouTube FR. Connus pour leurs challenges délirants.',
+    niche: ['Entertainment', 'Challenges', 'Interviews'],
+    bio: 'Explosive French YouTube duo. Known for their crazy challenges.',
     agency: 'Webedia',
     influscoring: {
       overall: 94,
@@ -245,8 +247,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 3100000,
       avgLikes: 280000,
-      postingFrequency: '2 vidéos/semaine',
-      topCountries: ['France', 'Belgique', 'Suisse', 'Canada'],
+      postingFrequency: '2 videos/week',
+      topCountries: ['France', 'Belgium', 'Switzerland', 'Canada'],
       audienceAge: [
         { range: '13-17', percentage: 25 },
         { range: '18-24', percentage: 40 },
@@ -284,10 +286,10 @@ export const influencers: Influencer[] = [
     name: 'Natoo',
     handle: '@NatooOfficiel',
     avatar: '/src/data/imgs/natoo.jpg',
-    followers: 5200000,
+    followers: 5300000,
     engagementRate: 7.1,
-    niche: ['Comédie', 'Lifestyle', 'Vlogs'],
-    bio: 'Comédienne et créatrice de contenu. Des sketches qui marquent.',
+    niche: ['Comedy', 'Lifestyle', 'Vlogs'],
+    bio: 'Comedian and content creator. Sketches that leave a mark.',
     influscoring: {
       overall: 88,
       reliability: 90,
@@ -300,8 +302,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 920000,
       avgLikes: 68000,
-      postingFrequency: '1 vidéo/mois',
-      topCountries: ['France', 'Belgique', 'Maroc', 'Algérie'],
+      postingFrequency: '1 video/month',
+      topCountries: ['France', 'Belgium', 'Morocco', 'Algeria'],
       audienceAge: [
         { range: '13-17', percentage: 18 },
         { range: '18-24', percentage: 48 },
@@ -339,7 +341,7 @@ export const influencers: Influencer[] = [
     name: 'MrBeast',
     handle: '@MrBeast',
     avatar: '/src/data/imgs/mrbeast.jpg',
-    followers: 279000000,
+    followers: 415000000,
     engagementRate: 12.4,
     niche: ['Challenges', 'Philanthropie', 'Divertissement'],
     bio: 'American YouTuber, media personality, and businessman known for elaborate challenges and philanthropy.',
@@ -356,8 +358,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 85000000,
       avgLikes: 6200000,
-      postingFrequency: '2 vidéos/mois',
-      topCountries: ['États-Unis', 'Brésil', 'Inde', 'Mexique'],
+      postingFrequency: '2 videos/month',
+      topCountries: ['United States', 'Brazil', 'India', 'Mexico'],
       audienceAge: [
         { range: '13-17', percentage: 25 },
         { range: '18-24', percentage: 45 },
@@ -383,7 +385,8 @@ export const influencers: Influencer[] = [
       { date: '2024-08', followers: 245000000 },
       { date: '2024-09', followers: 260000000 },
       { date: '2024-10', followers: 270000000 },
-      { date: '2024-11', followers: 279000000 }
+      { date: '2024-11', followers: 279000000 },
+      { date: '2025-08', followers: 415000000 }
     ],
     networkConnections: [
       { id: 'night-media', name: 'Night Media', type: 'agency', color: '#F59E0B' },
@@ -393,10 +396,10 @@ export const influencers: Influencer[] = [
       { id: 'team-trees', name: 'Team Trees / Team Seas', type: 'brand', color: '#10B981' }
     ],
     platformPresence: [
-      { platform: 'Youtube', handle: '@MrBeast', followers: 230000000 },
-      { platform: 'TikTok', handle: '@mrbeast', followers: 119300000 },
-      { platform: 'Instagram', handle: '@mrbeast', followers: 59000000 },
-      { platform: 'Twitter', handle: '@MrBeast', followers: 27000000 }
+      { platform: 'Youtube', handle: '@MrBeast', followers: 415000000 },
+      { platform: 'TikTok', handle: '@mrbeast', followers: 160000000 },
+      { platform: 'Instagram', handle: '@mrbeast', followers: 90000000 },
+      { platform: 'Twitter', handle: '@MrBeast', followers: 35000000 }
     ]
   },
   {
@@ -421,8 +424,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 22000000,
       avgLikes: 2000000,
-      postingFrequency: '6 vidéos/semaine',
-      topCountries: ['États-Unis', 'Mexique', 'Brésil', 'France'],
+      postingFrequency: '6 videos/week',
+      topCountries: ['United States', 'Mexico', 'Brazil', 'France'],
       audienceAge: [
         { range: '13-17', percentage: 40 },
         { range: '18-24', percentage: 38 },
@@ -445,8 +448,8 @@ export const influencers: Influencer[] = [
     avatar: '/src/data/imgs/khaby.jpeg',
     followers: 162000000,
     engagementRate: 7.6,
-    niche: ['Humour', 'TikTok Hacks', 'Skits'],
-    bio: 'Créateur italo-sénégalais devenu célèbre pour ses réactions silencieuses.',
+    niche: ['Humor', 'TikTok Hacks', 'Skits'],
+    bio: 'Italian-Senegalese creator who became famous for his silent reactions.',
     agency: 'Iron Corporation',
     influscoring: {
       overall: 92,
@@ -460,8 +463,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 28000000,
       avgLikes: 2400000,
-      postingFrequency: '4 vidéos/semaine',
-      topCountries: ['Italie', 'États-Unis', 'France', 'Brésil'],
+      postingFrequency: '4 videos/week',
+      topCountries: ['Italy', 'United States', 'France', 'Brazil'],
       audienceAge: [
         { range: '13-17', percentage: 35 },
         { range: '18-24', percentage: 42 },
@@ -498,8 +501,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 4500000,
       avgLikes: 380000,
-      postingFrequency: '1 vidéo/semaine',
-      topCountries: ['États-Unis', 'Suède', 'Royaume-Uni', 'Allemagne'],
+      postingFrequency: '1 video/week',
+      topCountries: ['United States', 'Sweden', 'United Kingdom', 'Germany'],
       audienceAge: [
         { range: '13-17', percentage: 20 },
         { range: '18-24', percentage: 40 },
@@ -519,7 +522,7 @@ export const influencers: Influencer[] = [
     name: 'CarryMinati',
     handle: '@CarryMinati',
     avatar: '/src/data/imgs/carry.jpg',
-    followers: 40000000,
+    followers: 42000000,
     engagementRate: 10.8,
     niche: ['Roast', 'Gaming', 'Comedy'],
     bio: 'YouTubeur indien connu pour ses roasts et streams énergiques.',
@@ -536,8 +539,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 15000000,
       avgLikes: 1300000,
-      postingFrequency: '1 vidéo/mois',
-      topCountries: ['Inde', 'Pakistan', 'Émirats arabes unis', 'Bangladesh'],
+      postingFrequency: '1 video/month',
+      topCountries: ['India', 'Pakistan', 'United Arab Emirates', 'Bangladesh'],
       audienceAge: [
         { range: '13-17', percentage: 30 },
         { range: '18-24', percentage: 50 },
@@ -557,10 +560,10 @@ export const influencers: Influencer[] = [
     name: 'Ibai Llanos',
     handle: '@IbaiLlanos',
     avatar: '/src/data/imgs/ibai.jpeg',
-    followers: 19000000,
+    followers: 22000000,
     engagementRate: 9.5,
-    niche: ['Streaming', 'Esport', 'Événements'],
-    bio: 'Streamer espagnol, animateur d’événements sportifs digitaux.',
+    niche: ['Streaming', 'Esports', 'Events'],
+    bio: 'Spanish streamer, host of digital sports events.',
     agency: 'Kosmos Studios',
     influscoring: {
       overall: 91,
@@ -574,8 +577,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 8000000,
       avgLikes: 620000,
-      postingFrequency: 'Streams quotidiens',
-      topCountries: ['Espagne', 'Mexique', 'Argentine', 'Colombie'],
+      postingFrequency: 'Daily streams',
+      topCountries: ['Spain', 'Mexico', 'Argentina', 'Colombia'],
       audienceAge: [
         { range: '13-17', percentage: 18 },
         { range: '18-24', percentage: 46 },
@@ -595,7 +598,7 @@ export const influencers: Influencer[] = [
     name: 'Inoxtag',
     handle: '@Inoxtag',
     avatar: 'https://netradio.fr/wp-content/uploads/2023/09/Inoxtag-Plus-de-Pubs-pour-des-Projets-Fous-.jpg',
-    followers: 8500000,
+    followers: 9500000,
     engagementRate: 11.2,
     niche: ['Gaming', 'Adventure', 'Challenges'],
     bio: 'Inoxtag (Inès Benazzouz) is a French social media influencer known for gaming, adventure vlogs, and spectacular challenges, inspiring millions with his authenticity and creativity.',
@@ -612,8 +615,8 @@ export const influencers: Influencer[] = [
     stats: {
       avgViews: 5800000,
       avgLikes: 450000,
-      postingFrequency: '2 vidéos/mois',
-      topCountries: ['France', 'Belgique', 'Suisse', 'Canada'],
+      postingFrequency: '2 videos/month',
+      topCountries: ['France', 'Belgium', 'Switzerland', 'Canada'],
       audienceAge: [
         { range: '13-17', percentage: 42 },
         { range: '18-24', percentage: 38 },
@@ -633,7 +636,8 @@ export const influencers: Influencer[] = [
       { date: '2023-12', followers: 6300000 },
       { date: '2024-01', followers: 6500000 },
       { date: '2024-06', followers: 7800000 },
-      { date: '2024-09', followers: 8500000 }
+      { date: '2024-09', followers: 8500000 },
+      { date: '2025-06', followers: 9500000 }
     ],
     networkConnections: [
       { id: 'webedia', name: 'Webedia', type: 'agency', color: '#F59E0B' },
@@ -642,9 +646,9 @@ export const influencers: Influencer[] = [
       { id: 'milfshakes', name: 'MILFSHAKES', type: 'brand', color: '#3B82F6' }
     ],
     platformPresence: [
-      { platform: 'Youtube', handle: '@Inoxtag', followers: 8500000 },
-      { platform: 'Instagram', handle: '@inoxtag', followers: 3200000 },
-      { platform: 'Twitter', handle: '@Inoxtag', followers: 450000 }
+      { platform: 'Youtube', handle: '@Inoxtag', followers: 9500000 },
+      { platform: 'Instagram', handle: '@inoxtag', followers: 4000000 },
+      { platform: 'Twitter', handle: '@Inoxtag', followers: 600000 }
     ]
   }
 ];
@@ -654,7 +658,7 @@ export const products: Product[] = [
     id: 'p1',
     name: 'Palette Sunset Dream',
     brand: 'EnjoyPhoenix Beauty',
-    category: 'Maquillage',
+    category: 'Makeup',
     image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400',
     price: 29.99,
     promoCode: 'PHOENIX20',
@@ -664,7 +668,7 @@ export const products: Product[] = [
   },
   {
     id: 'p2',
-    name: 'Casque Gaming RGB X7',
+    name: 'RGB X7 Gaming Headset',
     brand: 'Squeezie x Razer',
     category: 'Gaming',
     image: 'https://images.unsplash.com/photo-1599669454699-248893623440?w=400',
@@ -676,9 +680,9 @@ export const products: Product[] = [
   },
   {
     id: 'p3',
-    name: 'Livre "Les Chroniques de Cyprien"',
+    name: 'Book "The Chronicles of Cyprien"',
     brand: 'Éditions Kana',
-    category: 'Livre',
+    category: 'Book',
     image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400',
     price: 19.99,
     influencerId: 'cyprien',
@@ -687,9 +691,9 @@ export const products: Product[] = [
   },
   {
     id: 'p4',
-    name: 'Collection Streetwear "MC"',
+    name: 'Streetwear Collection "MC"',
     brand: 'McFly & Carlito',
-    category: 'Mode',
+    category: 'Fashion',
     image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400',
     price: 45.00,
     promoCode: 'MC2024',
@@ -699,9 +703,9 @@ export const products: Product[] = [
   },
   {
     id: 'p5',
-    name: 'Sérum Anti-Imperfections',
+    name: 'Anti-Blemish Serum',
     brand: 'EnjoyPhoenix x Typology',
-    category: 'Soin',
+    category: 'Skincare',
     image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400',
     price: 34.90,
     influencerId: 'enjoyphoenix',
@@ -782,56 +786,56 @@ export const newsItems: NewsItem[] = [
   {
     id: 'n1',
     influencerId: 'squeezie',
-    title: 'Squeezie annonce un nouvel album rap pour mai 2025',
+    title: 'Squeezie announces new rap album for May 2025',
     type: 'news',
     date: '2024-11-10',
-    description: 'Le YouTubeur confirme travailler sur un deuxième album après le succès de "Oxyz".',
+    description: 'The YouTuber confirms he is working on a second album after the success of "Oxyz".',
     source: 'Twitter'
   },
   {
     id: 'n2',
     influencerId: 'norman',
-    title: 'Affaire Norman : enquête toujours en cours',
+    title: 'Norman Case: Investigation still ongoing',
     type: 'drama',
     date: '2024-10-15',
-    description: 'Les accusations portées contre Norman font toujours l\'objet d\'une enquête judiciaire.',
+    description: 'Accusations against Norman are still under judicial investigation.',
     severity: 'high',
-    source: 'Médias'
+    source: 'Media'
   },
   {
     id: 'n3',
     influencerId: 'mcfly-carlito',
-    title: 'Partenariat avec Amazon Prime pour une série originale',
+    title: 'Partnership with Amazon Prime for original series',
     type: 'partnership',
     date: '2024-11-01',
-    description: 'McFly & Carlito développent une série de divertissement exclusive pour Prime Video.',
+    description: 'McFly & Carlito are developing an exclusive entertainment series for Prime Video.',
     source: 'Prime Video'
   },
   {
     id: 'n4',
     influencerId: 'cyprien',
-    title: 'Cyprien dépasse les 15 ans de carrière sur YouTube',
+    title: 'Cyprien surpasses 15 years of YouTube career',
     type: 'milestone',
     date: '2024-10-28',
-    description: 'Le créateur célèbre 15 ans de vidéos avec un best-of nostalgique.',
+    description: 'The creator celebrates 15 years of videos with a nostalgic best-of.',
     source: 'YouTube'
   },
   {
     id: 'n5',
     influencerId: 'enjoyphoenix',
-    title: 'Lancement de sa propre marque de cosmétiques naturels',
+    title: 'Launch of her own natural cosmetics brand',
     type: 'partnership',
     date: '2024-09-12',
-    description: 'Marie Lopez lance "Phoenix Beauty", sa marque de cosmétiques bio et vegan.',
+    description: 'Marie Lopez launches "Phoenix Beauty", her organic and vegan cosmetics brand.',
     source: 'Instagram'
   },
   {
     id: 'n6',
     influencerId: 'natoo',
-    title: 'Nouvelle collaboration avec Netflix France',
+    title: 'New collaboration with Netflix France',
     type: 'partnership',
     date: '2024-08-20',
-    description: 'Natoo rejoint le casting d\'une comédie Netflix prévue pour 2025.',
+    description: 'Natoo joins the cast of a Netflix comedy scheduled for 2025.',
     source: 'Netflix'
   },
   {
@@ -850,6 +854,15 @@ export const newsItems: NewsItem[] = [
     type: 'milestone',
     date: '2024-06-02',
     description: 'Surpassed T-Series to become the most subscribed channel on YouTube, reaching 267 million subscribers.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n31',
+    influencerId: 'mrbeast',
+    title: 'First YouTuber to Reach 400 Million Subscribers',
+    type: 'milestone',
+    date: '2025-08-01',
+    description: 'MrBeast becomes the first creator to surpass 400 million subscribers on YouTube, reaching around 415 million and extending his lead as the biggest channel on the platform.',
     source: 'YouTube'
   },
   {
@@ -945,65 +958,65 @@ export const newsItems: NewsItem[] = [
   {
     id: 'n19',
     influencerId: 'cyprien',
-    title: 'Lancement de la chaîne YouTube',
+    title: 'YouTube channel launch',
     type: 'milestone',
     date: '2007-05-12',
-    description: 'Cyprien a lancé sa chaîne YouTube, devenant l\'un des pionniers du YouTube français avec des sketches humoristiques.',
+    description: 'Cyprien launched his YouTube channel, becoming one of the pioneers of French YouTube with humorous sketches.',
     source: 'YouTube'
   },
   {
     id: 'n20',
     influencerId: 'cyprien',
-    title: 'Atteint 10 millions d\'abonnés',
+    title: 'Reaches 10 million subscribers',
     type: 'milestone',
     date: '2015-09-15',
-    description: 'Premier YouTubeur français à atteindre les 10 millions d\'abonnés, marquant une étape historique pour le YouTube francophone.',
+    description: 'First French YouTuber to reach 10 million subscribers, marking a historic milestone for French-speaking YouTube.',
     source: 'YouTube'
   },
   {
     id: 'n21',
     influencerId: 'squeezie',
-    title: 'Sortie de l\'album "Oxyz"',
+    title: 'Release of album "Oxyz"',
     type: 'news',
     date: '2024-01-19',
-    description: 'Squeezie sort son premier album de rap "Oxyz", qui rencontre un immense succès critique et commercial.',
+    description: 'Squeezie releases his first rap album "Oxyz", which meets immense critical and commercial success.',
     source: 'Spotify'
   },
   {
     id: 'n22',
     influencerId: 'squeezie',
-    title: 'Record de viewers sur Twitch',
+    title: 'Twitch viewer record',
     type: 'milestone',
     date: '2020-10-10',
-    description: 'Bat le record français de spectateurs simultanés sur Twitch avec plus de 400 000 viewers lors d\'un événement gaming.',
+    description: 'Breaks French record for concurrent viewers on Twitch with over 400,000 viewers during a gaming event.',
     source: 'Twitch'
   },
   {
     id: 'n23',
     influencerId: 'norman',
-    title: 'Vidéo virale "Les Mamans"',
+    title: 'Viral video "Les Mamans"',
     type: 'milestone',
     date: '2011-03-02',
-    description: 'La vidéo "Les Mamans" devient virale et propulse Norman au rang de star du YouTube français.',
+    description: 'The video "Les Mamans" goes viral and propels Norman to French YouTube stardom.',
     source: 'YouTube'
   },
   {
     id: 'n24',
     influencerId: 'natoo',
-    title: 'Lancement de sa marque de mode',
+    title: 'Launch of her fashion brand',
     type: 'partnership',
     date: '2023-06-15',
-    description: 'Natoo lance sa propre ligne de vêtements éco-responsables en collaboration avec une marque française.',
+    description: 'Natoo launches her own eco-responsible clothing line in collaboration with a French brand.',
     source: 'Instagram'
   },
   {
     id: 'n25',
     influencerId: 'natoo',
-    title: 'Premier rôle au cinéma',
+    title: 'First leading role in cinema',
     type: 'news',
     date: '2022-11-08',
-    description: 'Natoo décroche son premier rôle principal dans une comédie française qui sort en salles.',
-    source: 'Cinéma'
+    description: 'Natoo lands her first leading role in a French comedy released in theaters.',
+    source: 'Cinema'
   },
   {
     id: 'n26',
@@ -1048,7 +1061,7 @@ export const newsItems: NewsItem[] = [
     title: 'La Velada del Año III',
     type: 'news',
     date: '2023-07-01',
-    description: 'Ibai organise La Velada del Año III, un événement de boxe qui bat tous les records d\'audience sur Twitch avec plus de 3 millions de spectateurs.',
+    description: 'Ibai organizes La Velada del Año III, a boxing event that breaks all viewership records on Twitch with over 3 million viewers.',
     source: 'Twitch'
   }
 ];
@@ -1065,15 +1078,15 @@ const scaleFollowersToSize = (followers: number) => {
 };
 
 export const relationships: Relationship[] = [
-  { source: 'cyprien', target: 'squeezie', type: 'friendship', strength: 0.9, label: 'Amis proches' },
+  { source: 'cyprien', target: 'squeezie', type: 'friendship', strength: 0.9, label: 'Close friends' },
   { source: 'cyprien', target: 'Webedia', type: 'agency', strength: 1.0 },
   { source: 'squeezie', target: 'Webedia', type: 'agency', strength: 1.0 },
   { source: 'enjoyphoenix', target: 'Webedia', type: 'agency', strength: 1.0 },
   { source: 'mcfly-carlito', target: 'Webedia', type: 'agency', strength: 1.0 },
-  { source: 'squeezie', target: 'mcfly-carlito', type: 'collaboration', strength: 0.85, label: 'Vidéos communes' },
+  { source: 'squeezie', target: 'mcfly-carlito', type: 'collaboration', strength: 0.85, label: 'Common videos' },
   { source: 'cyprien', target: 'mcfly-carlito', type: 'friendship', strength: 0.7 },
-  { source: 'natoo', target: 'enjoyphoenix', type: 'friendship', strength: 0.8, label: 'Soutien mutuel' },
-  { source: 'norman', target: 'cyprien', type: 'friendship', strength: 0.3, label: 'Anciens collaborateurs' },
+  { source: 'natoo', target: 'enjoyphoenix', type: 'friendship', strength: 0.8, label: 'Mutual support' },
+  { source: 'norman', target: 'cyprien', type: 'friendship', strength: 0.3, label: 'Former collaborators' },
   { source: 'enjoyphoenix', target: 'Typology', type: 'brand', strength: 0.9 },
   { source: 'squeezie', target: 'Razer', type: 'brand', strength: 0.85 },
   { source: 'mcfly-carlito', target: 'Prime Video', type: 'brand', strength: 0.95 },
@@ -1085,7 +1098,7 @@ export const relationships: Relationship[] = [
   { source: 'pewdiepie', target: 'YouTube Global', type: 'brand', strength: 0.95 },
   { source: 'carryminati', target: 'YouTube Global', type: 'brand', strength: 0.92 },
   { source: 'ibai', target: 'Twitch Global', type: 'brand', strength: 0.9 },
-  { source: 'ibai', target: 'squeezie', type: 'collaboration', strength: 0.4, label: 'Événements gaming' },
+  { source: 'ibai', target: 'squeezie', type: 'collaboration', strength: 0.4, label: 'Gaming events' },
   { source: 'charlidamelio', target: 'TikTok Global', type: 'brand', strength: 1.0 },
   { source: 'khabylame', target: 'TikTok Global', type: 'brand', strength: 1.0 },
   { source: 'charlidamelio', target: 'khabylame', type: 'friendship', strength: 0.5, label: 'TikTok Awards' },
@@ -1239,7 +1252,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'PierreGaming',
     date: '2024-10-28',
-    content: 'Squeezie est juste incroyable ! Ses vidéos sont toujours de qualité et divertissantes. Continue comme ça !',
+    content: 'Squeezie is just amazing! His videos are always quality and entertaining. Keep it up!',
     sentiment: 'positive'
   },
   {
@@ -1248,7 +1261,7 @@ export const socialComments: SocialComment[] = [
     platform: 'Twitter',
     author: 'MarieB92',
     date: '2024-10-25',
-    content: 'Fan depuis le début, tes vidéos m\'ont accompagné pendant toute ma jeunesse. Merci pour tout !',
+    content: 'Fan since the beginning, your videos accompanied me throughout my youth. Thank you for everything!',
     sentiment: 'positive'
   },
   {
@@ -1257,7 +1270,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'JulienP',
     date: '2024-10-20',
-    content: 'Cyprien est une légende du YouTube français. Ses sketches sont toujours hilarants et pertinents !',
+    content: 'Cyprien is a French YouTube legend. His sketches are always hilarious and relevant!',
     sentiment: 'positive'
   },
   {
@@ -1266,7 +1279,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'LucasM',
     date: '2024-09-15',
-    content: 'Le documentaire Kaizen est incroyable ! J\'ai pleuré plusieurs fois. Merci Inox pour cette aventure inspirante !',
+    content: 'The Kaizen documentary is incredible! I cried several times. Thank you Inox for this inspiring adventure!',
     sentiment: 'positive'
   },
   {
@@ -1275,7 +1288,7 @@ export const socialComments: SocialComment[] = [
     platform: 'Instagram',
     author: 'ChloeD',
     date: '2024-09-16',
-    content: 'Tu es une véritable source d\'inspiration pour toute une génération. Continue comme ça !',
+    content: 'You are a real source of inspiration for an entire generation. Keep it up!',
     sentiment: 'positive'
   },
   {
@@ -1284,7 +1297,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'SophieL',
     date: '2024-08-12',
-    content: 'Natoo, tes vidéos sont tellement drôles ! Tu arrives toujours à me faire rire même dans les moments difficiles.',
+    content: 'Natoo, your videos are so funny! You always manage to make me laugh even in difficult times.',
     sentiment: 'positive'
   },
   {
@@ -1293,7 +1306,7 @@ export const socialComments: SocialComment[] = [
     platform: 'Instagram',
     author: 'CamilleR',
     date: '2024-07-18',
-    content: 'Tes conseils beauté sont toujours au top ! Merci pour ta bienveillance et ton authenticité.',
+    content: 'Your beauty tips are always top-notch! Thank you for your kindness and authenticity.',
     sentiment: 'positive'
   },
   {
@@ -1302,7 +1315,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'ThomasB',
     date: '2024-06-22',
-    content: 'McFly et Carlito, vous êtes les meilleurs ! Vos vidéos sont toujours de qualité et on sent la bonne ambiance.',
+    content: 'McFly and Carlito, you are the best! Your videos are always quality and we feel the good vibes.',
     sentiment: 'positive'
   },
   {
@@ -1356,7 +1369,7 @@ export const socialComments: SocialComment[] = [
     platform: 'YouTube',
     author: 'AnthoV',
     date: '2024-01-05',
-    content: 'Même après toutes ces années, tes vidéos restent cultes. Un vrai pionnier !',
+    content: 'Even after all these years, your videos remain iconic. A true pioneer!',
     sentiment: 'positive'
   }
 ];

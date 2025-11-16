@@ -358,8 +358,9 @@ class DataService {
   /**
    * Get graph nodes and relationships
    * If influencerId is provided, builds graph centered around that influencer
+   * @param skipFetch - If true, only return existing connections without fetching new ones
    */
-  async getGraphData(useMock: boolean, influencerId?: number | string): Promise<{
+  async getGraphData(useMock: boolean, influencerId?: number | string, skipFetch: boolean = false): Promise<{
     nodes: GraphNode[];
     relationships: Relationship[];
   }> {
@@ -405,8 +406,8 @@ class DataService {
         try {
           let connections = await apiService.getInfluencerConnections(infId);
 
-          // If connections are empty, trigger a fetch
-          if (connections.length === 0) {
+          // If connections are empty, trigger a fetch (unless skipFetch is true)
+          if (connections.length === 0 && !skipFetch) {
             console.log(`No connections found for influencer ${infId}, triggering fetch...`);
             try {
               await apiService.fetchConnections(infId);
@@ -482,38 +483,16 @@ class DataService {
         try {
           const centralInfluencer = await apiService.getInfluencer(numericId);
 
-          // Process central influencer with 2nd level connections
-          const connectedInfluencerIds = await processInfluencerConnections(
+          // Process central influencer - ONLY direct connections (no 2nd level)
+          await processInfluencerConnections(
             centralInfluencer.id,
             centralInfluencer.name,
             centralInfluencer.avatar_url,
             centralInfluencer.trust_score,
-            true // Fetch connected influencers
+            false // Don't fetch connected influencers - only direct connections
           );
 
-          // Fetch connections for connected influencers (2nd level)
-          console.log('Fetching connections for connected influencers:', connectedInfluencerIds);
-          for (const connectedInflId of connectedInfluencerIds.slice(0, 5)) {
-            // Skip invalid IDs
-            if (isNaN(connectedInflId) || connectedInflId <= 0) {
-              console.warn('Skipping invalid influencer ID:', connectedInflId);
-              continue;
-            }
-
-            try {
-              // Fetch influencer data to get proper name and info
-              const connectedInf = await apiService.getInfluencer(connectedInflId);
-              await processInfluencerConnections(
-                connectedInf.id,
-                connectedInf.name,
-                connectedInf.avatar_url,
-                connectedInf.trust_score,
-                false // Don't fetch 3rd level
-              );
-            } catch (error) {
-              console.error(`Failed to fetch influencer ${connectedInflId}:`, error);
-            }
-          }
+          console.log(`[DataService] Loaded direct connections only for influencer ${centralInfluencer.name}`);
         } catch (error) {
           console.error('Failed to fetch detailed network for central influencer:', error);
         }

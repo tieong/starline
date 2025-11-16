@@ -20,10 +20,8 @@ export const ScoreGauge = ({
 
   const getColor = () => {
     if (color) return color;
-    if (value >= 85) return 'var(--accent-teal)';
-    if (value >= 70) return 'var(--accent-blue)';
-    if (value >= 50) return 'var(--accent-yellow)';
-    return 'var(--accent-red)';
+    // Style brutal : toujours noir
+    return 'var(--black)';
   };
 
   return (
