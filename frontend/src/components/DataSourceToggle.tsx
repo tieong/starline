@@ -10,7 +10,12 @@ import { useDataContext } from '../context/DataContext';
 import './DataSourceToggle.css';
 
 export function DataSourceToggle() {
-  const { useMockData, toggleDataSource, apiConnectionStatus } = useDataContext();
+  const { useMockData, toggleDataSource, apiConnectionStatus, showToggle } = useDataContext();
+
+  // Hide toggle if controlled via environment variable
+  if (!showToggle) {
+    return null;
+  }
 
   // Determine indicator status
   const getIndicatorStatus = () => {

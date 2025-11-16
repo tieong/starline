@@ -13,6 +13,7 @@ interface DataContextType {
   isLoading: boolean;
   error: string | null;
   apiConnectionStatus: 'connected' | 'disconnected' | 'unknown';
+  showToggle: boolean; // Whether to show the data source toggle in UI
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -20,8 +21,15 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const STORAGE_KEY = 'starline_use_mock_data';
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  // Initialize from localStorage, default to true (mock data)
+  // Check if mock data is forced via environment variable
+  const forceMockData = import.meta.env.VITE_FORCE_MOCK_DATA === 'true';
+  const showToggle = !forceMockData; // Hide toggle if forced via env var
+
+  // Initialize from localStorage or env var, default to true (mock data)
   const [useMockData, setUseMockData] = useState<boolean>(() => {
+    if (forceMockData) {
+      return true; // Always use mock data if env var is set
+    }
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored !== null ? stored === 'true' : true;
   });
@@ -71,16 +79,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [useMockData]);
 
   const toggleDataSource = () => {
+    // Don't allow toggling if mock data is forced via env var
+    if (forceMockData) {
+      return;
+    }
+
     // Trigger page transition animation
     setIsTransitioning(true);
     document.body.classList.add('page-transitioning');
-    
+
     // Toggle after a brief delay for animation
     setTimeout(() => {
       setUseMockData((prev) => !prev);
       setError(null);
     }, 150);
-    
+
     // Remove transition class after animation completes
     setTimeout(() => {
       setIsTransitioning(false);
@@ -96,6 +109,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         isLoading: isTransitioning,
         error,
         apiConnectionStatus,
+        showToggle,
       }}
     >
       {children}
