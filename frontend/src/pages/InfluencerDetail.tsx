@@ -99,7 +99,7 @@ export const InfluencerDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const influencerId = parseInt(id);
+        const influencerId = useMockData ? id : parseInt(id);
         const influencerData = await dataService.getInfluencer(useMockData, influencerId);
 
         if (!influencerData) {
@@ -165,8 +165,8 @@ export const InfluencerDetail = () => {
   if (error || !influencer) {
     return (
       <div className="not-found">
-        <h2>{error || 'Influenceur non trouvé'}</h2>
-        <button onClick={() => navigate('/')}>Retour à l'accueil</button>
+        <h2>{error || 'Influencer not found'}</h2>
+        <button onClick={() => navigate('/')}>Back to home</button>
       </div>
     );
   }
@@ -217,7 +217,7 @@ export const InfluencerDetail = () => {
         animate={{ opacity: 1, x: 0 }}
       >
         <ArrowLeft size={20} />
-        <span>Retour</span>
+        <span>Back</span>
       </motion.button>
 
       {/* Hero Section */}
@@ -247,7 +247,7 @@ export const InfluencerDetail = () => {
               </div>
               {influencer.agency && (
                 <div className="hero-agency-badge">
-                  <span className="agency-label">Agence</span>
+                  <span className="agency-label">Agency</span>
                   <span className="agency-name">{influencer.agency}</span>
                 </div>
               )}
@@ -260,7 +260,7 @@ export const InfluencerDetail = () => {
                 <Users size={20} className="stat-icon" />
                 <div className="stat-content">
                   <div className="hero-stat-value">{formatFollowers(influencer.followers)}</div>
-                  <div className="hero-stat-label">Abonnés</div>
+                  <div className="hero-stat-label">Followers</div>
                 </div>
               </div>
               <div className="hero-stat-card">
@@ -274,14 +274,14 @@ export const InfluencerDetail = () => {
                 <TrendIcon size={20} className="stat-icon" />
                 <div className="stat-content">
                   <div className="hero-stat-value">{formatFollowers(influencer.stats.avgViews)}</div>
-                  <div className="hero-stat-label">Vues moy.</div>
+                  <div className="hero-stat-label">Avg views</div>
                 </div>
               </div>
               <div className="hero-stat-card">
                 <Package size={20} className="stat-icon" />
                 <div className="stat-content">
                   <div className="hero-stat-value">{influencer.stats.postingFrequency}</div>
-                  <div className="hero-stat-label">Fréquence</div>
+                  <div className="hero-stat-label">Frequency</div>
                 </div>
               </div>
             </div>
@@ -337,10 +337,10 @@ export const InfluencerDetail = () => {
         <div className="section-header">
           <Newspaper className="section-icon" size={28} />
           <div className="section-header-text">
-            <h2>Actualités & Timeline</h2>
+            <h2>News & Timeline</h2>
             {(influencerNews.length > 0 || influencerTimeline.length > 0) && (
               <p className="section-subtitle">
-                {influencerNews.length + influencerTimeline.length} événement{influencerNews.length + influencerTimeline.length > 1 ? 's' : ''} récent{influencerNews.length + influencerTimeline.length > 1 ? 's' : ''}
+                {influencerNews.length + influencerTimeline.length} recent event{influencerNews.length + influencerTimeline.length > 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -348,24 +348,24 @@ export const InfluencerDetail = () => {
         {(fetchingNews || fetchingTimeline) ? (
           <div className="empty-state">
             <Loader2 className="empty-state-icon spinning" size={48} />
-            <h3 className="empty-state-title">Analyse en cours...</h3>
+            <h3 className="empty-state-title">Analysis in progress...</h3>
             <p className="empty-state-description">
-              Recherche d'actualités et d'événements récents
+              Searching for recent news and events
             </p>
           </div>
         ) : (influencerNews.length === 0 && influencerTimeline.length === 0) ? (
           <div className="empty-state">
             <Newspaper className="empty-state-icon" size={48} />
-            <h3 className="empty-state-title">Aucune actualité disponible</h3>
+            <h3 className="empty-state-title">No news available</h3>
             <p className="empty-state-description">
               {useMockData
-                ? "Aucune actualité n'est disponible dans les données de démonstration"
-                : "Recherchez les dernières actualités et événements de cet influenceur"}
+                ? "No news is available in the demo data"
+                : "Fetch the latest news and events for this influencer"}
             </p>
             {!useMockData && (
               <button className="analyze-button" onClick={handleFetchNews}>
                 <Sparkles size={20} />
-                <span>Rechercher des actualités</span>
+                <span>Fetch news</span>
               </button>
             )}
           </div>
@@ -405,7 +405,7 @@ export const InfluencerDetail = () => {
                         </div>
                       </div>
                       <span className="news-date">
-                        {new Date(item.date).toLocaleDateString('fr-FR', {
+                        {new Date(item.date).toLocaleDateString('en-US', {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric'
@@ -457,13 +457,13 @@ export const InfluencerDetail = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <div className="section-header">
-                <Package className="section-icon" size={28} />
-                <div className="section-header-text">
-                  <h2>Products & Sponsorships</h2>
-                  <p className="section-subtitle">{influencerProducts.length} produit{influencerProducts.length > 1 ? 's' : ''}</p>
+                <div className="section-header">
+                  <Package className="section-icon" size={28} />
+                  <div className="section-header-text">
+                    <h2>Products & Sponsorships</h2>
+                    <p className="section-subtitle">{influencerProducts.length} product{influencerProducts.length > 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-              </div>
               <div className="products-list">
                 {influencerProducts.slice(0, 3).map((product, index) => (
                   <motion.div
@@ -510,24 +510,24 @@ export const InfluencerDetail = () => {
             {fetchingReputation ? (
               <div className="empty-state">
                 <Loader2 className="empty-state-icon spinning" size={48} />
-                <h3 className="empty-state-title">Analyse en cours...</h3>
+                <h3 className="empty-state-title">Analysis in progress...</h3>
                 <p className="empty-state-description">
-                  Collecte des commentaires sur les réseaux sociaux
+                  Gathering comments from social media
                 </p>
               </div>
             ) : influencerComments.length === 0 ? (
               <div className="empty-state">
                 <MessageCircle className="empty-state-icon" size={48} />
-                <h3 className="empty-state-title">Aucun commentaire disponible</h3>
+                <h3 className="empty-state-title">No comments available</h3>
                 <p className="empty-state-description">
                   {useMockData
-                    ? "Aucun commentaire n'est disponible dans les données de démonstration"
-                    : "Analysez la réputation de cet influenceur sur les réseaux sociaux"}
+                    ? "No comments are available in the demo data"
+                    : "Analyze this influencer's reputation on social media"}
                 </p>
                 {!useMockData && (
                   <button className="analyze-button" onClick={handleFetchReputation}>
                     <Sparkles size={20} />
-                    <span>Analyser la réputation</span>
+                    <span>Analyze reputation</span>
                   </button>
                 )}
               </div>
@@ -550,7 +550,7 @@ export const InfluencerDetail = () => {
             <Globe className="section-icon" size={28} />
             <div className="section-header-text">
               <h2>Platform Presence</h2>
-              <p className="section-subtitle">{influencer.platformPresence.length} plateformes</p>
+              <p className="section-subtitle">{influencer.platformPresence.length} platforms</p>
             </div>
           </div>
           <PlatformPresence platforms={influencer.platformPresence} />

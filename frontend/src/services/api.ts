@@ -5,7 +5,11 @@
  * Provides methods to fetch influencers, products, news, etc.
  */
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+// In production (Docker), use empty string to use same origin (nginx proxy)
+// In development, use VITE_API_URL or default to localhost:8000
+const API_BASE_URL = import.meta.env.PROD 
+  ? '' 
+  : ((import.meta as any).env?.VITE_API_URL || 'http://localhost:8000');
 
 export interface ApiInfluencer {
   id: number;

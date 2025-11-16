@@ -86,11 +86,12 @@ export const PlatformPresence = ({ platforms }: PlatformPresenceProps) => {
           </div>
           <div className="platform-stats">
             <span className="platform-followers">{formatFollowers(platform.followers)}</span>
-            <span className="platform-label">Abonnés</span>
+            <span className="platform-label">Followers</span>
           </div>
         </motion.div>
       ))}
     </div>
   );
 };
+
 

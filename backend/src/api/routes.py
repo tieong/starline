@@ -2,13 +2,12 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
 from src.agents.analyzer import InfluencerAnalyzer
-from src.models.database import Connection, Influencer, NewsArticle, Product, get_db
+from src.services.supabase_client import supabase
 
 router = APIRouter()
 
@@ -364,11 +363,10 @@ async def analyze_influencer(
         "basic",
         description="Analysis depth: 'platforms_only', 'basic', or 'full'",
         enum=["platforms_only", "basic", "full"]
-    ),
-    db: Session = Depends(get_db)
+    )
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.analyze_influencer(request.name, analysis_level=analysis_level)
         return result
     except Exception as e:
@@ -405,34 +403,31 @@ For new influencer analysis, use the `/api/influencers/analyze` endpoint.
     tags=["Influencers"],
 )
 async def search_influencers(
-    q: str = Query(..., description="Search query (influencer name)", example="MrBeast"),
-    db: Session = Depends(get_db)
+    q: str = Query(..., description="Search query (influencer name)", example="MrBeast")
 ):
-    # Only return influencers with completed analysis
-    # Avoid partial matches for very short queries
-    influencers = db.query(Influencer).filter(
-        Influencer.name.ilike(f"%{q}%"),
-        Influencer.analysis_complete == True  # Only show completed analyses
-    ).limit(10).all()
+    # Only return influencers with completed analysis using Supabase
+    response = supabase.table("influencers").select(
+        "id, name, bio, country, trust_score, avatar_url, platforms(platform_name, follower_count)"
+    ).ilike("name", f"%{q}%").eq("analysis_complete", True).limit(10).execute()
 
     return {
         "results": [
             {
-                "id": inf.id,
-                "name": inf.name,
-                "bio": inf.bio,
-                "country": inf.country,
-                "trust_score": inf.trust_score,
-                "avatar_url": inf.avatar_url,
+                "id": inf["id"],
+                "name": inf["name"],
+                "bio": inf["bio"],
+                "country": inf["country"],
+                "trust_score": inf["trust_score"],
+                "avatar_url": inf["avatar_url"],
                 "platforms": [
                     {
-                        "platform": p.platform_name,
-                        "followers": p.follower_count
+                        "platform": p.get("platform_name"),
+                        "followers": p.get("follower_count")
                     }
-                    for p in inf.platforms
+                    for p in inf.get("platforms", [])
                 ]
             }
-            for inf in influencers
+            for inf in response.data
         ]
     }
 
@@ -451,34 +446,31 @@ Get trending influencers sorted by trending score.
     tags=["Influencers"],
 )
 async def get_trending(
-    limit: int = Query(10, description="Maximum number of trending influencers to return", ge=1, le=100),
-    db: Session = Depends(get_db)
+    limit: int = Query(10, description="Maximum number of trending influencers to return", ge=1, le=100)
 ):
-    influencers = db.query(Influencer).filter(
-        Influencer.trending_score > 0
-    ).order_by(
-        Influencer.trending_score.desc()
-    ).limit(limit).all()
+    response = supabase.table("influencers").select(
+        "id, name, bio, country, trust_score, trending_score, avatar_url, platforms(platform_name, follower_count)"
+    ).gt("trending_score", 0).order("trending_score", desc=True).limit(limit).execute()
 
     return {
         "trending": [
             {
-                "id": inf.id,
-                "name": inf.name,
-                "bio": inf.bio,
-                "country": inf.country,
-                "trust_score": inf.trust_score,
-                "trending_score": inf.trending_score,
-                "avatar_url": inf.avatar_url,
+                "id": inf["id"],
+                "name": inf["name"],
+                "bio": inf["bio"],
+                "country": inf["country"],
+                "trust_score": inf["trust_score"],
+                "trending_score": inf["trending_score"],
+                "avatar_url": inf["avatar_url"],
                 "platforms": [
                     {
-                        "platform": p.platform_name,
-                        "followers": p.follower_count
+                        "platform": p.get("platform_name"),
+                        "followers": p.get("follower_count")
                     }
-                    for p in inf.platforms
+                    for p in inf.get("platforms", [])
                 ]
             }
-            for inf in influencers
+            for inf in response.data
         ]
     }
 
@@ -518,8 +510,7 @@ When viewing individual profiles, the frontend automatically fetches products an
 async def get_top_influencers(
     country: str = Query(None, description="Country filter (ISO code or full name)", example="FR"),
     limit: int = Query(5, description="Number of influencers to return", ge=1, le=50),
-    auto_discover: bool = Query(True, description="Auto-discover new influencers if database is insufficient"),
-    db: Session = Depends(get_db)
+    auto_discover: bool = Query(False, description="Auto-discover new influencers if database is insufficient"),
 ):
     # Enforce max limit of 50
     if limit > 50:
@@ -527,207 +518,86 @@ async def get_top_influencers(
     if limit < 1:
         limit = 1
 
-    # Build query
-    query = db.query(Influencer).filter(
-        Influencer.analysis_complete == True  # Only completed analyses
-    )
+    # Map country codes to full names
+    country_mapping = {
+        "FR": "France",
+        "US": "United States",
+        "USA": "United States",
+        "UK": "United Kingdom",
+        "GB": "United Kingdom",
+        "CA": "Canada",
+        "DE": "Germany",
+        "ES": "Spain",
+        "IT": "Italy",
+        "JP": "Japan",
+        "BR": "Brazil",
+        "MX": "Mexico",
+        "IN": "India",
+        "AU": "Australia",
+        "NL": "Netherlands",
+        "SE": "Sweden",
+        "NO": "Norway",
+        "DK": "Denmark",
+        "FI": "Finland",
+    }
+
+    # Build Supabase query
+    query = supabase.table("influencers").select(
+        "id, name, bio, country, verified, trust_score, trending_score, avatar_url, "
+        "platforms(platform_name, username, follower_count, verified, url)"
+    ).eq("analysis_complete", True)
 
     # Filter by country if provided
     if country:
-        # Map country codes to full names (database stores full country names)
-        country_mapping = {
-            "FR": "France",
-            "US": "United States",
-            "USA": "United States",
-            "UK": "United Kingdom",
-            "GB": "United Kingdom",
-            "CA": "Canada",
-            "DE": "Germany",
-            "ES": "Spain",
-            "IT": "Italy",
-            "JP": "Japan",
-            "BR": "Brazil",
-            "MX": "Mexico",
-            "IN": "India",
-            "AU": "Australia",
-            "NL": "Netherlands",
-            "SE": "Sweden",
-            "NO": "Norway",
-            "DK": "Denmark",
-            "FI": "Finland",
-        }
-
-        # Use mapping if available, otherwise use the value as-is (for full names like "France")
         country_filter = country_mapping.get(country.upper(), country)
-        query = query.filter(Influencer.country.ilike(f"%{country_filter}%"))
+        query = query.ilike("country", f"%{country_filter}%")
 
-    # Get all matching influencers (we'll sort by follower count in Python)
-    influencers = query.all()
+    # Execute query
+    response = query.execute()
+    influencers_data = response.data
 
     # Calculate total followers for each influencer and sort
     influencers_with_followers = []
-    for inf in influencers:
-        total_followers = sum(p.follower_count or 0 for p in inf.platforms)
+    for inf in influencers_data:
+        platforms = inf.get("platforms", [])
+        total_followers = sum(p.get("follower_count") or 0 for p in platforms)
         influencers_with_followers.append((inf, total_followers))
 
     # Sort by total followers (descending)
     influencers_with_followers.sort(key=lambda x: x[1], reverse=True)
 
     # Take top N
-    influencers = [inf for inf, _ in influencers_with_followers[:limit]]
+    top_influencers = influencers_with_followers[:limit]
 
-    # If we have enough results, return them
-    if len(influencers) >= limit or not auto_discover:
-        return {
-            "country": country or "global",
-            "limit": limit,
-            "count": len(influencers),
-            "auto_discovered": False,
-            "influencers": [
-                {
-                    "id": inf.id,
-                    "name": inf.name,
-                    "bio": inf.bio,
-                    "country": inf.country,
-                    "trust_score": inf.trust_score,
-                    "trending_score": inf.trending_score,
-                    "verified": inf.verified,
-                    "avatar_url": inf.avatar_url,
-                    "platforms": [
-                        {
-                            "platform": p.platform_name,
-                            "username": p.username,
-                            "followers": p.follower_count,
-                            "verified": p.verified,
-                            "url": p.url
-                        }
-                        for p in inf.platforms
-                    ],
-                    "total_followers": sum(p.follower_count or 0 for p in inf.platforms)
-                }
-                for inf in influencers
-            ]
-        }
-
-    # Auto-discover and analyze new influencers
-    import asyncio
-    import logging
-    from src.config.settings import settings
-    from src.services.perplexity_client import perplexity_client
-    from src.services.blackbox_client import blackbox_client
-
-    logger = logging.getLogger(__name__)
-
-    # Select AI provider based on settings
-    if settings.ai_provider == "perplexity":
-        ai_client = perplexity_client
-        provider_name = "Perplexity"
-    else:
-        ai_client = blackbox_client
-        provider_name = "Blackbox"
-
-    # Calculate how many we need to discover
-    needed = limit - len(influencers)
-
-    logger.info(f"Need {needed} influencers, discovering exactly {needed} (no buffer) using {provider_name}...")
-
-    # Discover top influencers using AI - request exactly what we need
-    def discover():
-        return ai_client.discover_top_influencers(country, needed)
-
-    discovered_data = await asyncio.to_thread(discover)
-    discovered_influencers = discovered_data.get("influencers", [])
-
-    logger.info(f"{provider_name} returned {len(discovered_influencers)} influencers")
-
-    # Analyze each discovered influencer (no retries - fail fast)
-    analyzer = InfluencerAnalyzer(db)
-    newly_analyzed = []
-
-    for inf_data in discovered_influencers:
-        try:
-            # Check if already exists
-            existing = db.query(Influencer).filter(
-                Influencer.name.ilike(inf_data["name"])
-            ).first()
-
-            if existing and existing.analysis_complete:
-                newly_analyzed.append(existing)
-                logger.info(f"✓ {inf_data['name']} already analyzed ({len(newly_analyzed)}/{needed})")
-                continue
-
-            # Analyze the influencer (single attempt, fail fast)
-            # Use "platforms_only" for top lists - only get platforms and photos, no products
-            logger.info(f"Analyzing {inf_data['name']} ({len(newly_analyzed) + 1}/{needed})...")
-            result = await analyzer.analyze_influencer(inf_data["name"], analysis_level="platforms_only")
-
-            # Fetch the analyzed influencer from database
-            inf = db.query(Influencer).filter(
-                Influencer.name.ilike(inf_data["name"])
-            ).first()
-
-            if inf and inf.analysis_complete:
-                newly_analyzed.append(inf)
-                logger.info(f"✓ Successfully analyzed {inf_data['name']} ({len(newly_analyzed)}/{needed})")
-            else:
-                logger.error(f"✗ Analysis incomplete for {inf_data['name']}")
-
-        except Exception as e:
-            # Log and continue to next influencer - no retries
-            logger.error(f"✗ Failed to analyze {inf_data.get('name')}: {str(e)}")
-            # Don't break - continue to try other influencers
-
-    # Combine existing and newly analyzed influencers
-    all_influencers = list(influencers) + newly_analyzed
-
-    # Calculate total followers and sort
-    influencers_with_followers_combined = []
-    for inf in all_influencers:
-        total_followers = sum(p.follower_count or 0 for p in inf.platforms)
-        influencers_with_followers_combined.append((inf, total_followers))
-
-    # Sort by total followers (descending)
-    influencers_with_followers_combined.sort(key=lambda x: x[1], reverse=True)
-
-    # Take top N
-    all_influencers = [inf for inf, _ in influencers_with_followers_combined[:limit]]
-
-    # Log error if we couldn't get the full amount (no retries/buffer - we want to see failures)
-    if len(all_influencers) < limit:
-        failed_count = limit - len(all_influencers)
-        logger.error(f"❌ Only got {len(all_influencers)}/{limit} influencers - {failed_count} analyses FAILED")
-        logger.error(f"Check logs above to see which influencers failed and why")
-
+    # Format response
     return {
         "country": country or "global",
         "limit": limit,
-        "count": len(all_influencers),
-        "auto_discovered": len(newly_analyzed) > 0,
-        "newly_analyzed_count": len(newly_analyzed),
-        "requested": limit,
+        "count": len(top_influencers),
+        "auto_discovered": False,
         "influencers": [
             {
-                "id": inf.id,
-                "name": inf.name,
-                "bio": inf.bio,
-                "country": inf.country,
-                "trust_score": inf.trust_score,
-                "trending_score": inf.trending_score,
-                "verified": inf.verified,
-                "avatar_url": inf.avatar_url,
+                "id": inf["id"],
+                "name": inf["name"],
+                "bio": inf.get("bio"),
+                "country": inf.get("country"),
+                "trust_score": inf.get("trust_score", 0),
+                "trending_score": inf.get("trending_score", 0),
+                "verified": inf.get("verified", False),
+                "avatar_url": inf.get("avatar_url"),
                 "platforms": [
                     {
-                        "platform": p.platform_name,
-                        "username": p.username,
-                        "followers": p.follower_count,
-                        "verified": p.verified,
-                        "url": p.url
+                        "platform": p["platform_name"],
+                        "username": p.get("username"),
+                        "followers": p.get("follower_count", 0),
+                        "verified": p.get("verified", False),
+                        "url": p.get("url")
                     }
-                    for p in inf.platforms
+                    for p in inf.get("platforms", [])
                 ],
-                "total_followers": sum(p.follower_count or 0 for p in inf.platforms)
+                "total_followers": total_followers
             }
-            for inf in all_influencers
+            for inf, total_followers in top_influencers
         ]
     }
 
@@ -797,23 +667,101 @@ the frontend will automatically trigger a basic analysis to fetch products and c
 )
 async def get_influencer(
     influencer_id: int,
-    db: Session = Depends(get_db)
 ):
-    influencer = db.query(Influencer).filter(
-        Influencer.id == influencer_id
-    ).first()
+    # Query influencer with all related data using Supabase REST API
+    response = supabase.table("influencers").select(
+        "id, name, bio, country, verified, trust_score, trending_score, avatar_url, last_analyzed, analysis_complete, "
+        "platforms(id, platform_name, username, follower_count, verified, url), "
+        "products(id, name, category, quality_score, description, review_count, sentiment_score, openfoodfacts_data), "
+        "timeline:timeline_events(id, date, event_type, title, description, platform, views, likes, url), "
+        "connections!connections_influencer_id_fkey(id, entity_name, entity_type, connection_type, strength, description, connected_influencer_id), "
+        "news:news_articles(id, title, description, article_type, date, source, url, sentiment, severity)"
+    ).eq("id", influencer_id).execute()
 
-    if not influencer:
+    if not response.data or len(response.data) == 0:
         raise HTTPException(status_code=404, detail="Influencer not found")
 
-    analyzer = InfluencerAnalyzer(db)
-    return analyzer._build_response(influencer)
+    influencer_data = response.data[0]
+
+    # Format response
+    return {
+        "id": influencer_data["id"],
+        "name": influencer_data["name"],
+        "bio": influencer_data.get("bio"),
+        "country": influencer_data.get("country"),
+        "verified": influencer_data.get("verified", False),
+        "trust_score": influencer_data.get("trust_score", 0),
+        "avatar_url": influencer_data.get("avatar_url"),
+        "platforms": [
+            {
+                "platform": p["platform_name"],
+                "username": p.get("username"),
+                "followers": p.get("follower_count", 0),
+                "verified": p.get("verified", False),
+                "url": p.get("url")
+            }
+            for p in influencer_data.get("platforms", [])
+        ],
+        "timeline": [
+            {
+                "id": t["id"],
+                "date": t.get("date"),
+                "type": t.get("event_type"),
+                "title": t["title"],
+                "description": t.get("description"),
+                "platform": t.get("platform"),
+                "views": t.get("views"),
+                "likes": t.get("likes"),
+                "url": t.get("url")
+            }
+            for t in influencer_data.get("timeline", [])
+        ],
+        "products": [
+            {
+                "id": p["id"],
+                "name": p["name"],
+                "category": p.get("category"),
+                "quality_score": p.get("quality_score"),
+                "description": p.get("description"),
+                "review_count": p.get("review_count", 0),
+                "sentiment_score": p.get("sentiment_score"),
+                "openfoodfacts_data": p.get("openfoodfacts_data"),
+                "reviews": []  # Reviews loaded separately
+            }
+            for p in influencer_data.get("products", [])
+        ],
+        "connections": [
+            {
+                "name": c.get("entity_name"),
+                "entity_type": c.get("entity_type"),
+                "type": c.get("connection_type"),
+                "strength": c.get("strength", 1),
+                "description": c.get("description")
+            }
+            for c in influencer_data.get("connections", [])
+        ],
+        "news": [
+            {
+                "id": n["id"],
+                "title": n["title"],
+                "description": n["description"],
+                "article_type": n.get("article_type"),
+                "date": n.get("date"),
+                "source": n.get("source"),
+                "url": n.get("url"),
+                "sentiment": n.get("sentiment"),
+                "severity": n.get("severity", 1)
+            }
+            for n in influencer_data.get("news", [])
+        ],
+        "last_analyzed": influencer_data.get("last_analyzed"),
+        "analysis_complete": influencer_data.get("analysis_complete", False)
+    }
 
 
 @router.get("/api/influencers/{influencer_id}/avatar")
 async def get_influencer_avatar(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     """
     Get influencer's avatar image.
@@ -821,20 +769,23 @@ async def get_influencer_avatar(
     Returns the stored avatar image data with appropriate content type.
     If no image is stored, returns 404.
     """
-    influencer = db.query(Influencer).filter(
-        Influencer.id == influencer_id
-    ).first()
-
-    if not influencer:
+    response = supabase.table("influencers").select("avatar_data, avatar_content_type").eq("id", influencer_id).execute()
+    
+    if not response.data or len(response.data) == 0:
         raise HTTPException(status_code=404, detail="Influencer not found")
 
-    if not influencer.avatar_data:
+    influencer = response.data[0]
+
+    if not influencer.get("avatar_data"):
         raise HTTPException(status_code=404, detail="No avatar image stored for this influencer")
 
     # Return image data with appropriate content type
+    import base64
+    avatar_data = base64.b64decode(influencer["avatar_data"]) if isinstance(influencer["avatar_data"], str) else influencer["avatar_data"]
+    
     return Response(
-        content=influencer.avatar_data,
-        media_type=influencer.avatar_content_type or "image/jpeg",
+        content=avatar_data,
+        media_type=influencer.get("avatar_content_type") or "image/jpeg",
         headers={
             "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
             "Content-Disposition": f'inline; filename="{influencer_id}_avatar.jpg"'
@@ -844,43 +795,39 @@ async def get_influencer_avatar(
 @router.get("/api/influencers/{influencer_id}/news")
 async def get_influencer_news(
     influencer_id: int,
-    limit: int = 20,
-    db: Session = Depends(get_db)
+    limit: int = 20
 ):
     """Get news and drama for a specific influencer."""
     # Check if influencer exists
-    influencer = db.query(Influencer).filter(
-        Influencer.id == influencer_id
-    ).first()
+    influencer_response = supabase.table("influencers").select("id, name").eq("id", influencer_id).execute()
 
-    if not influencer:
+    if not influencer_response.data or len(influencer_response.data) == 0:
         raise HTTPException(status_code=404, detail="Influencer not found")
 
-    articles = db.query(NewsArticle).filter(
-        NewsArticle.influencer_id == influencer_id
-    ).order_by(
-        NewsArticle.date.desc().nullslast(),
-        NewsArticle.severity.desc()
-    ).limit(limit).all()
+    influencer = influencer_response.data[0]
+
+    articles_response = supabase.table("news_articles").select("*").eq(
+        "influencer_id", influencer_id
+    ).order("date", desc=True).order("severity", desc=True).limit(limit).execute()
 
     return {
         "influencer": {
-            "id": influencer.id,
-            "name": influencer.name,
+            "id": influencer["id"],
+            "name": influencer["name"],
         },
         "news": [
             {
-                "id": article.id,
-                "title": article.title,
-                "description": article.description,
-                "article_type": article.article_type,
-                "date": article.date.isoformat() if article.date else None,
-                "source": article.source,
-                "url": article.url,
-                "sentiment": article.sentiment,
-                "severity": article.severity,
+                "id": article["id"],
+                "title": article["title"],
+                "description": article["description"],
+                "article_type": article["article_type"],
+                "date": article.get("date"),
+                "source": article["source"],
+                "url": article["url"],
+                "sentiment": article["sentiment"],
+                "severity": article["severity"],
             }
-            for article in articles
+            for article in articles_response.data
         ]
     }
 
@@ -903,11 +850,10 @@ Fetch timeline events on-demand for an influencer using AI analysis.
     tags=["On-Demand Analysis"],
 )
 async def fetch_timeline(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_timeline(influencer_id)
         return result
     except ValueError as e:
@@ -934,11 +880,10 @@ Fetch product reviews on-demand using AI-powered web search.
     tags=["On-Demand Analysis"],
 )
 async def fetch_product_reviews(
-    product_id: int,
-    db: Session = Depends(get_db)
+    product_id: int
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_product_reviews(product_id)
         return result
     except ValueError as e:
@@ -966,11 +911,10 @@ Fast operation (external API call, no AI tokens used).
     tags=["On-Demand Analysis"],
 )
 async def fetch_openfoodfacts_data(
-    product_id: int,
-    db: Session = Depends(get_db)
+    product_id: int
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_openfoodfacts_data(product_id)
         return result
     except ValueError as e:
@@ -1008,11 +952,10 @@ Fetch network map/connections on-demand using AI analysis.
     tags=["On-Demand Analysis"],
 )
 async def fetch_connections(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_connections(influencer_id)
         return result
     except ValueError as e:
@@ -1052,11 +995,10 @@ Fetch news and drama articles on-demand using AI analysis.
     tags=["On-Demand Analysis"],
 )
 async def fetch_news(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_news(influencer_id)
         return result
     except ValueError as e:
@@ -1080,28 +1022,30 @@ async def fetch_news(
     tags=["Data Retrieval"],
 )
 async def get_reputation(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     """Get cached influencer reputation data."""
-    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
-    if not influencer:
+    influencer_response = supabase.table("influencers").select("id, overall_sentiment").eq("id", influencer_id).execute()
+    if not influencer_response.data or len(influencer_response.data) == 0:
         raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    influencer = influencer_response.data[0]
+    comments_response = supabase.table("reputation_comments").select("*").eq("influencer_id", influencer_id).execute()
 
     return {
         "influencer_id": influencer_id,
-        "overall_sentiment": influencer.overall_sentiment or "neutral",
+        "overall_sentiment": influencer.get("overall_sentiment") or "neutral",
         "comments": [
             {
-                "id": c.id,
-                "author": c.author,
-                "comment": c.comment,
-                "platform": c.platform,
-                "sentiment": c.sentiment,
-                "url": c.url,
-                "date": c.date.isoformat() if c.date else None,
+                "id": c.get("id"),
+                "author": c.get("author"),
+                "comment": c.get("comment"),
+                "platform": c.get("platform"),
+                "sentiment": c.get("sentiment"),
+                "url": c.get("url"),
+                "date": c.get("date"),
             }
-            for c in influencer.reputation_comments
+            for c in comments_response.data
         ]
     }
 
@@ -1123,12 +1067,11 @@ async def get_reputation(
     tags=["On-Demand Analysis"],
 )
 async def fetch_reputation(
-    influencer_id: int,
-    db: Session = Depends(get_db)
+    influencer_id: int
 ):
     """Fetch and analyze influencer reputation via AI."""
     try:
-        analyzer = InfluencerAnalyzer(db)
+        analyzer = InfluencerAnalyzer()
         result = await analyzer.fetch_reputation(influencer_id)
         return result
     except ValueError as e:
@@ -1145,27 +1088,29 @@ async def fetch_reputation(
     description="Retrieve timeline events for an influencer",
     tags=["Data Retrieval"],
 )
-async def get_timeline(influencer_id: int, db: Session = Depends(get_db)):
+async def get_timeline(influencer_id: int):
     """Get timeline events for an influencer."""
-    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
-    if not influencer:
+    influencer_response = supabase.table("influencers").select("id").eq("id", influencer_id).execute()
+    if not influencer_response.data or len(influencer_response.data) == 0:
         raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    timeline_response = supabase.table("timeline_events").select("*").eq("influencer_id", influencer_id).execute()
 
     return {
         "influencer_id": influencer_id,
         "timeline": [
             {
-                "id": t.id,
-                "date": t.date.isoformat() if t.date else None,
-                "event_type": t.event_type,
-                "title": t.title,
-                "description": t.description,
-                "platform": t.platform,
-                "views": t.views,
-                "likes": t.likes,
-                "url": t.url,
+                "id": t.get("id"),
+                "date": t.get("date"),
+                "event_type": t.get("event_type"),
+                "title": t.get("title"),
+                "description": t.get("description"),
+                "platform": t.get("platform"),
+                "views": t.get("views"),
+                "likes": t.get("likes"),
+                "url": t.get("url"),
             }
-            for t in influencer.timeline
+            for t in timeline_response.data
         ]
     }
 
@@ -1176,24 +1121,26 @@ async def get_timeline(influencer_id: int, db: Session = Depends(get_db)):
     description="Retrieve network connections for an influencer",
     tags=["Data Retrieval"],
 )
-async def get_connections(influencer_id: int, db: Session = Depends(get_db)):
+async def get_connections(influencer_id: int):
     """Get network connections for an influencer."""
-    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
-    if not influencer:
+    influencer_response = supabase.table("influencers").select("id").eq("id", influencer_id).execute()
+    if not influencer_response.data or len(influencer_response.data) == 0:
         raise HTTPException(status_code=404, detail=f"Influencer with ID {influencer_id} not found")
+
+    connections_response = supabase.table("connections").select("*").eq("influencer_id", influencer_id).execute()
 
     return {
         "influencer_id": influencer_id,
         "connections": [
             {
-                "name": c.entity_name,
-                "entity_type": c.entity_type,
-                "connection_type": c.connection_type,
-                "strength": c.strength,
-                "description": c.description,
-                "connected_influencer_id": c.connected_influencer_id,
+                "name": c.get("entity_name"),
+                "entity_type": c.get("entity_type"),
+                "connection_type": c.get("connection_type"),
+                "strength": c.get("strength"),
+                "description": c.get("description"),
+                "connected_influencer_id": c.get("connected_influencer_id"),
             }
-            for c in influencer.connections
+            for c in connections_response.data
         ]
     }
 
@@ -1204,26 +1151,29 @@ async def get_connections(influencer_id: int, db: Session = Depends(get_db)):
     description="Retrieve user reviews for a product",
     tags=["Data Retrieval"],
 )
-async def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
+async def get_product_reviews(product_id: int):
     """Get reviews for a product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
+    product_response = supabase.table("products").select("id, name").eq("id", product_id).execute()
+    if not product_response.data or len(product_response.data) == 0:
         raise HTTPException(status_code=404, detail=f"Product with ID {product_id} not found")
+
+    product = product_response.data[0]
+    reviews_response = supabase.table("product_reviews").select("*").eq("product_id", product_id).execute()
 
     return {
         "product_id": product_id,
-        "product_name": product.name,
+        "product_name": product.get("name"),
         "reviews": [
             {
-                "id": r.id,
-                "author": r.author,
-                "comment": r.comment,
-                "platform": r.platform,
-                "sentiment": r.sentiment,
-                "url": r.url,
-                "date": r.date.isoformat() if r.date else None,
+                "id": r.get("id"),
+                "author": r.get("author"),
+                "comment": r.get("comment"),
+                "platform": r.get("platform"),
+                "sentiment": r.get("sentiment"),
+                "url": r.get("url"),
+                "date": r.get("date"),
             }
-            for r in product.reviews
+            for r in reviews_response.data
         ]
     }
 
@@ -1234,23 +1184,25 @@ async def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
     description="Retrieve OpenFoodFacts nutritional data for a product",
     tags=["Data Retrieval"],
 )
-async def get_openfoodfacts(product_id: int, db: Session = Depends(get_db)):
+async def get_openfoodfacts(product_id: int):
     """Get OpenFoodFacts data for a product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
+    product_response = supabase.table("products").select("id, name, category, openfoodfacts_data").eq("id", product_id).execute()
+    if not product_response.data or len(product_response.data) == 0:
         raise HTTPException(status_code=404, detail=f"Product with ID {product_id} not found")
 
+    product = product_response.data[0]
+    
     import json
     openfoodfacts_data = None
-    if product.openfoodfacts_data:
+    if product.get("openfoodfacts_data"):
         try:
-            openfoodfacts_data = json.loads(product.openfoodfacts_data)
+            openfoodfacts_data = json.loads(product["openfoodfacts_data"]) if isinstance(product["openfoodfacts_data"], str) else product["openfoodfacts_data"]
         except:
             openfoodfacts_data = None
 
     return {
         "product_id": product_id,
-        "product_name": product.name,
-        "category": product.category,
+        "product_name": product.get("name"),
+        "category": product.get("category"),
         "openfoodfacts_data": openfoodfacts_data
     }

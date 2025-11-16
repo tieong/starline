@@ -8,7 +8,7 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-export const SearchBar = ({ value, onChange, placeholder = "Rechercher un influenceur..." }: SearchBarProps) => {
+export const SearchBar = ({ value, onChange, placeholder = "Search for an influencer..." }: SearchBarProps) => {
   return (
     <motion.div
       className="search-bar"

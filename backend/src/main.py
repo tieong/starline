@@ -28,9 +28,18 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
+# Allow all origins in debug mode, specific origins in production
+allowed_origins = ["*"] if settings.debug else [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:80",
+    "http://frontend",
+    "http://frontend:80",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Frontend URLs
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,9 +52,13 @@ app.include_router(router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup."""
-    init_db()
+    # Skip PostgreSQL init - using Supabase REST API instead
+    # Tables are already created in Supabase via migrations
+    # init_db()
     print(f"✅ {settings.app_name} v{settings.app_version} started")
     print(f"📚 API Documentation: http://localhost:8000/docs")
+    print(f"🔗 Supabase URL: {settings.supabase_url}")
+    print(f"🌐 CORS: {'All origins allowed (DEBUG MODE)' if settings.debug else 'Restricted origins'}")
 
 
 if __name__ == "__main__":

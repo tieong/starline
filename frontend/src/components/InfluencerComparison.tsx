@@ -83,7 +83,7 @@ export const InfluencerComparison = ({
             whileTap={{ scale: 0.98 }}
           >
             <Plus size={20} />
-            <span>Ajouter un influenceur pour comparer</span>
+            <span>Add an influencer to compare</span>
           </motion.button>
         </div>
       )}
@@ -105,12 +105,12 @@ export const InfluencerComparison = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="selector-header">
-                <h3 className="selector-title">Choisir un influenceur</h3>
+                <h3 className="selector-title">Choose an influencer</h3>
                 <div className="selector-search">
                   <Search size={18} />
                   <input
                     type="text"
-                    placeholder="Rechercher par nom..."
+                    placeholder="Search by name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
@@ -161,7 +161,7 @@ export const InfluencerComparison = ({
                   ))
                 ) : (
                   <div className="selector-empty">
-                    <p>Aucun influenceur trouvé</p>
+                    <p>No influencer found</p>
                   </div>
                 )}
               </div>
@@ -171,7 +171,7 @@ export const InfluencerComparison = ({
                   className="selector-cancel"
                   onClick={() => setShowSelector(false)}
                 >
-                  Annuler
+                  Cancel
                 </button>
               </div>
             </motion.div>
@@ -181,4 +181,5 @@ export const InfluencerComparison = ({
     </div>
   );
 };
+
 

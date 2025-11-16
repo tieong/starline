@@ -18,7 +18,7 @@ export const SubscriberChart = ({ data }: SubscriberChartProps) => {
 
   const formatDate = (dateStr: string) => {
     const [year, month] = dateStr.split('-');
-    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
 
@@ -53,13 +53,13 @@ export const SubscriberChart = ({ data }: SubscriberChartProps) => {
     <div className="subscriber-chart">
       <div className="chart-header">
         <div className="chart-title-group">
-          <h3 className="chart-title">Progression des abonnés</h3>
-          <p className="chart-subtitle">{data.length} derniers mois</p>
+          <h3 className="chart-title">Subscriber growth</h3>
+          <p className="chart-subtitle">Last {data.length} months</p>
         </div>
         <div className="chart-stats-group">
           <div className="chart-stat">
             <span className="chart-stat-value">{formatFollowers(totalGrowth)}</span>
-            <span className="chart-stat-label">Croissance</span>
+            <span className="chart-stat-label">Growth</span>
           </div>
           <div className="chart-stat">
             <span className="chart-stat-value" style={{ 
@@ -67,7 +67,7 @@ export const SubscriberChart = ({ data }: SubscriberChartProps) => {
             }}>
               {totalGrowth > 0 ? '+' : ''}{percentGrowth}%
             </span>
-            <span className="chart-stat-label">Variation</span>
+            <span className="chart-stat-label">Change</span>
           </div>
         </div>
       </div>

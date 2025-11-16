@@ -10,33 +10,54 @@ import { useDataContext } from '../context/DataContext';
 import './DataSourceToggle.css';
 
 export function DataSourceToggle() {
-  const { useMockData, toggleDataSource } = useDataContext();
+  const { useMockData, toggleDataSource, apiConnectionStatus } = useDataContext();
+
+  // Determine indicator status
+  const getIndicatorStatus = () => {
+    if (useMockData) return 'mock';
+    return apiConnectionStatus === 'connected' ? 'api-connected' : 'api-disconnected';
+  };
+
+  const getIndicatorText = () => {
+    if (useMockData) return 'Using Mock Data';
+    if (apiConnectionStatus === 'connected') return 'Using Real API';
+    if (apiConnectionStatus === 'disconnected') return 'API Disconnected';
+    return 'Checking API...';
+  };
 
   return (
     <div className="data-source-toggle">
-      <button
-        className={`toggle-button ${useMockData ? 'mock-active' : 'api-active'}`}
+      <button 
+        className="toggle-container"
         onClick={toggleDataSource}
-        title={useMockData ? 'Switch to Real API Data' : 'Switch to Mock Data'}
+        aria-label={useMockData ? 'Switch to Real API Data' : 'Switch to Mock Data'}
       >
         <motion.div
           className="toggle-slider"
-          animate={{ x: useMockData ? 0 : 28 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          initial={false}
+          animate={{ 
+            x: useMockData ? 0 : '100%'
+          }}
+          transition={{ 
+            type: 'spring', 
+            stiffness: 400, 
+            damping: 30,
+            mass: 0.8
+          }}
         />
-        <div className="toggle-option">
-          <Database size={16} />
+        <span className={`toggle-option ${useMockData ? 'active' : ''}`}>
+          <Database size={14} />
           <span className="toggle-label">Mock</span>
-        </div>
-        <div className="toggle-option">
-          <CloudCog size={16} />
+        </span>
+        <span className={`toggle-option ${!useMockData ? 'active' : ''}`}>
+          <CloudCog size={14} />
           <span className="toggle-label">API</span>
-        </div>
+        </span>
       </button>
       <div className="data-source-indicator">
-        <span className={`indicator-dot ${useMockData ? 'mock' : 'api'}`} />
+        <span className={`indicator-dot ${getIndicatorStatus()}`} />
         <span className="indicator-text">
-          {useMockData ? 'Using Mock Data' : 'Using Real API'}
+          {getIndicatorText()}
         </span>
       </div>
     </div>

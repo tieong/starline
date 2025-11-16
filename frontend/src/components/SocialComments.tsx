@@ -15,7 +15,7 @@ export const SocialComments = ({ comments }: SocialCommentsProps) => {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    const month = date.toLocaleDateString('fr-FR', { month: 'short' });
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
     const day = date.getDate();
     const year = date.getFullYear();
     return `${month} ${day}, ${year}`;
@@ -69,4 +69,5 @@ export const SocialComments = ({ comments }: SocialCommentsProps) => {
     </div>
   );
 };
+
 

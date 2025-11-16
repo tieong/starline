@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__get_anon_key",
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(uv run python:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

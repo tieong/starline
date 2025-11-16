@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # Database Settings
     database_url: str = ""
 
+    # Supabase Settings
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+
     # AI Provider Settings
     ai_provider: str = "perplexity"  # Options: "blackbox" or "perplexity"
 

@@ -874,10 +874,10 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
           <span className="overlay-label">NETWORK</span>
           <span className="overlay-version">V.3.0</span>
         </div>
-        <h3 className="overlay-title">Cartographie Relationnelle</h3>
+        <h3 className="overlay-title">Relational Mapping</h3>
         <p className="overlay-description">
-          Système de visualisation tridimensionnelle des connexions entre entités. 
-          Navigation spatiale intuitive.
+          Three-dimensional visualization of relationships between entities.
+          Intuitive spatial navigation.
         </p>
         <div className="overlay-controls">
           <div className="control-item">

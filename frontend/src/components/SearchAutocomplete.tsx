@@ -17,7 +17,7 @@ export const SearchAutocomplete = ({
   influencers,
   onSelect,
   onInfluencerDiscovered,
-  placeholder = "Rechercher un influenceur..."
+  placeholder = "Search for an influencer..."
 }: SearchAutocompleteProps) => {
   const { useMockData } = useDataContext();
   const [query, setQuery] = useState('');
@@ -169,10 +169,10 @@ export const SearchAutocomplete = ({
                 <div className="search-autocomplete-analyzing-text">
                   <div className="search-autocomplete-analyzing-title">
                     <Sparkles size={16} style={{ marginRight: '6px' }} />
-                    Découverte en cours...
+                    Discovering...
                   </div>
                   <div className="search-autocomplete-analyzing-subtitle">
-                    Analyse de "{analyzingName}" avec l'IA
+                    Analyzing "{analyzingName}" with AI
                   </div>
                 </div>
               </motion.div>
@@ -195,7 +195,7 @@ export const SearchAutocomplete = ({
                   <div className="search-autocomplete-info">
                     <div className="search-autocomplete-name">{influencer.name}</div>
                     <div className="search-autocomplete-meta">
-                      {influencer.handle} • {formatFollowers(influencer.followers)} abonnés
+                      {influencer.handle} • {formatFollowers(influencer.followers)} followers
                     </div>
                   </div>
                   <div

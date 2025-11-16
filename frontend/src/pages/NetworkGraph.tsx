@@ -541,40 +541,40 @@ export const NetworkGraph = () => {
         <div className="graph-header-left">
           <button className="back-button" onClick={() => navigate('/')}>
             <Home size={20} />
-            <span>Accueil</span>
+            <span>Home</span>
           </button>
           <button className="back-button" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
-            <span>Retour</span>
+            <span>Back</span>
           </button>
         </div>
 
         <div className="graph-header-center">
-          <h1>Réseau d'Influence</h1>
+          <h1>Influence Network</h1>
           <div className="graph-view-toggle">
             <button
               className={viewMode === '3d' ? 'active' : ''}
               onClick={() => setViewMode('3d')}
             >
-              Vue globale 3D
+              3D overview
             </button>
             <button
               className={viewMode === '2d' ? 'active' : ''}
               onClick={() => setViewMode('2d')}
             >
-              Réseau 2D
+              2D network
             </button>
           </div>
         </div>
 
         <div className="graph-controls">
-          <button onClick={zoomIn} title="Zoom avant" disabled={viewMode !== '2d'}>
+          <button onClick={zoomIn} title="Zoom in" disabled={viewMode !== '2d'}>
             <ZoomIn size={20} />
           </button>
-          <button onClick={zoomOut} title="Zoom arrière" disabled={viewMode !== '2d'}>
+          <button onClick={zoomOut} title="Zoom out" disabled={viewMode !== '2d'}>
             <ZoomOut size={20} />
           </button>
-          <button onClick={resetView} title="Réinitialiser" disabled={viewMode !== '2d'}>
+          <button onClick={resetView} title="Reset view" disabled={viewMode !== '2d'}>
             <Maximize2 size={20} />
           </button>
         </div>
@@ -612,23 +612,23 @@ export const NetworkGraph = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h3>Légende</h3>
+          <h3>Legend</h3>
           <div className="legend-items">
             <div className="legend-item">
               <div className="legend-color" style={{ background: '#8B5CF6' }}></div>
-              <span>Influenceur</span>
+              <span>Influencer</span>
             </div>
             <div className="legend-item">
               <div className="legend-color" style={{ background: '#F59E0B' }}></div>
-              <span>Agence</span>
+              <span>Agency</span>
             </div>
             <div className="legend-item">
               <div className="legend-color" style={{ background: '#3B82F6' }}></div>
-              <span>Marque</span>
+              <span>Brand</span>
             </div>
             <div className="legend-item">
               <div className="legend-color" style={{ background: '#10B981' }}></div>
-              <span>Événement</span>
+              <span>Event</span>
             </div>
           </div>
         </motion.div>

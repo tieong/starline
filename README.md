@@ -11,10 +11,13 @@ Starline is a web application designed to help consumers make informed decisions
 
 Additional documentation is available in the [`docs/`](docs/) directory:
 
+- **[Quick Start Guide](QUICKSTART.md)** - ⭐ **Start here!** Complete setup guide for development and production
+- **[CORS Setup Guide](CORS_SETUP.md)** - ✅ **CORS issues fixed!** Details on the CORS configuration
 - **[Docker Quick Start Guide](docs/DOCKER_QUICKSTART.md)** - Get started with Docker in minutes
 - **[CI/CD Documentation](docs/CICD.md)** - Detailed guide on automated builds and deployments
 - **[Development Guide](docs/CLAUDE.md)** - Project context and development guidelines
 - **[Commands Reference](docs/COMMANDS.md)** - Custom commands and utilities
+- **[Supabase Setup](SUPABASE_SETUP.md)** - Database configuration guide
 
 ## Features
 
@@ -79,11 +82,15 @@ Each influencer has a dedicated page featuring:
 
 ## Getting Started
 
+⭐ **New!** Check out the [QUICKSTART.md](QUICKSTART.md) guide for a complete setup walkthrough!
+
 ### Prerequisites
 - Node.js 18.x or higher
 - npm or yarn
+- Python 3.13+ (for backend)
+- Supabase account (for database)
 
-### Installation
+### Quick Start (Development)
 
 1. Clone the repository:
 ```bash
@@ -91,21 +98,45 @@ git clone https://github.com/tieong/starline.git
 cd starline
 ```
 
-2. Install frontend dependencies:
+2. Setup Backend:
 ```bash
-cd frontend
-npm install
+cd backend
+cp env.template .env
+# Edit .env with your API keys
+uv sync
+uv run python -m src.main
 ```
 
-3. Start the development server:
+3. Setup Frontend:
 ```bash
+cd frontend
+cp env.template .env
+npm install
 npm run dev
 ```
 
-4. Open your browser and navigate to:
+4. Open your browser:
 ```
-http://localhost:5173
+Frontend: http://localhost:5173
+Backend API: http://localhost:8000/docs
 ```
+
+### Testing CORS Configuration
+
+✅ **CORS issues have been fixed!** Run the test script to verify:
+
+**Windows (PowerShell):**
+```powershell
+.\test-cors.ps1
+```
+
+**Linux/Mac:**
+```bash
+chmod +x test-cors.sh
+./test-cors.sh
+```
+
+See [CORS_SETUP.md](CORS_SETUP.md) for details on the CORS configuration.
 
 ## Docker Deployment
 

@@ -1,116 +1,143 @@
+/* Data Source Toggle - Starline Guidelines Compliant */
+
 .data-source-toggle {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
-.toggle-button {
+.toggle-container {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--color-mono-800);
-  border: 2px solid var(--color-mono-700);
-  border-radius: 20px;
-  padding: 4px;
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--white);
+  border: 1px solid var(--border-main);
+  padding: 0;
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 140px;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.toggle-button:hover {
-  border-color: var(--color-mono-600);
-  transform: scale(1.02);
+.toggle-container:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
-.toggle-button.mock-active {
-  border-color: var(--color-purple-500);
+.toggle-container:active {
+  transform: translateY(0);
 }
 
-.toggle-button.api-active {
-  border-color: var(--color-green-500);
-}
-
+/* Slider animé qui glisse derrière */
 .toggle-slider {
   position: absolute;
-  left: 4px;
-  width: 64px;
-  height: 28px;
-  background: linear-gradient(135deg, var(--color-purple-500), var(--color-blue-500));
-  border-radius: 14px;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  background: var(--black);
   z-index: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  will-change: transform;
+  box-shadow: var(--shadow-subtle);
 }
 
-.toggle-button.api-active .toggle-slider {
-  background: linear-gradient(135deg, var(--color-green-500), var(--color-blue-500));
-}
-
+/* Options du toggle */
 .toggle-option {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border-radius: 14px;
-  color: var(--color-mono-400);
-  transition: all 0.3s ease;
-  flex: 1;
   justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  flex: 1;
+  min-width: 80px;
+  transition: all 0.3s ease;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.toggle-button.mock-active .toggle-option:first-of-type,
-.toggle-button.api-active .toggle-option:last-of-type {
-  color: white;
+.toggle-option.active {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.toggle-option svg {
+  flex-shrink: 0;
 }
 
 .toggle-label {
-  font-size: 12px;
-  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: inherit;
+  white-space: nowrap;
 }
 
+/* Indicateur de statut */
 .data-source-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: var(--color-mono-800);
-  border: 1px solid var(--color-mono-700);
-  border-radius: 12px;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
 }
 
 .indicator-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  animation: pulse 2s infinite;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .indicator-dot.mock {
-  background: var(--color-purple-500);
-  box-shadow: 0 0 8px var(--color-purple-500);
+  background: var(--primary-purple);
+  box-shadow: 0 0 6px var(--primary-purple);
 }
 
-.indicator-dot.api {
-  background: var(--color-green-500);
-  box-shadow: 0 0 8px var(--color-green-500);
+.indicator-dot.api-connected {
+  background: var(--primary-green);
+  box-shadow: 0 0 6px var(--primary-green);
+}
+
+.indicator-dot.api-disconnected {
+  background: var(--primary-red);
+  box-shadow: 0 0 8px var(--primary-red);
+  animation: pulseError 1s ease-in-out infinite;
 }
 
 .indicator-text {
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-mono-300);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulseError {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 8px var(--primary-red);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.3);
+    box-shadow: 0 0 12px var(--primary-red);
   }
 }
 
@@ -119,21 +146,32 @@
   .data-source-toggle {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--space-sm);
   }
 
   .toggle-label {
     display: none;
   }
 
-  .toggle-button {
-    min-width: 80px;
-  }
-
-  .toggle-slider {
-    width: 32px;
-  }
-
   .toggle-option {
-    padding: 6px;
+    min-width: 44px;
+    padding: var(--space-sm);
+  }
+
+  .data-source-indicator {
+    align-self: stretch;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .toggle-slider,
+  .toggle-container,
+  .toggle-option {
+    transition: none !important;
+  }
+  
+  .indicator-dot {
+    animation: none !important;
   }
 }

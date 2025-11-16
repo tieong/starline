@@ -35,7 +35,7 @@ export const InfluencerInfoPanel = ({
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
     >
       <div className="panel-header">
-        <h2>Profil Influenceur</h2>
+        <h2>Influencer Profile</h2>
         <button onClick={onClose} className="close-button">
           <X size={20} />
         </button>
@@ -62,13 +62,13 @@ export const InfluencerInfoPanel = ({
 
         {/* Main Stats */}
         <div className="panel-section">
-          <h4 className="panel-section-title">Statistiques principales</h4>
+          <h4 className="panel-section-title">Key stats</h4>
           <div className="panel-stats-grid">
             <div className="panel-stat">
               <Users size={20} />
               <div>
                 <div className="panel-stat-value">{formatFollowers(influencer.followers)}</div>
-                <div className="panel-stat-label">Abonnés</div>
+                <div className="panel-stat-label">Followers</div>
               </div>
             </div>
             <div className="panel-stat">
@@ -82,14 +82,14 @@ export const InfluencerInfoPanel = ({
               <Eye size={20} />
               <div>
                 <div className="panel-stat-value">{formatNumber(influencer.stats.avgViews)}</div>
-                <div className="panel-stat-label">Vues moyennes</div>
+                <div className="panel-stat-label">Avg views</div>
               </div>
             </div>
             <div className="panel-stat">
               <Heart size={20} />
               <div>
                 <div className="panel-stat-value">{formatNumber(influencer.stats.avgLikes)}</div>
-                <div className="panel-stat-label">Likes moyens</div>
+                <div className="panel-stat-label">Avg likes</div>
               </div>
             </div>
           </div>
@@ -114,21 +114,21 @@ export const InfluencerInfoPanel = ({
             <div className="panel-score-circle">
               <span className="panel-score-number">{influencer.influscoring.overall}</span>
             </div>
-            <span className="panel-score-label">Score Global</span>
+            <span className="panel-score-label">Overall score</span>
           </div>
           <div className="panel-scores">
             <ScoreGauge
-              label="✅ Fiabilité"
+              label="✅ Reliability"
               value={influencer.influscoring.reliability}
               showValue={false}
             />
             <ScoreGauge
-              label="📊 Authenticité"
+              label="📊 Authenticity"
               value={influencer.influscoring.authenticity}
               showValue={false}
             />
             <ScoreGauge
-              label="🔍 Réputation"
+              label="🔍 Reputation"
               value={influencer.influscoring.reputation}
               showValue={false}
             />
@@ -138,7 +138,7 @@ export const InfluencerInfoPanel = ({
         {/* Social Links */}
         {Object.keys(influencer.socialLinks).length > 0 && (
           <div className="panel-section">
-            <h4 className="panel-section-title">Réseaux sociaux</h4>
+            <h4 className="panel-section-title">Social networks</h4>
             <div className="panel-social-links">
               {Object.entries(influencer.socialLinks).map(([platform, username]) => (
                 <a
@@ -158,7 +158,7 @@ export const InfluencerInfoPanel = ({
 
         {/* CTA Button */}
         <button className="panel-cta-button" onClick={onViewProfile}>
-          Voir le profil complet
+          View full profile
         </button>
       </div>
     </motion.div>

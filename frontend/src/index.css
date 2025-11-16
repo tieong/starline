@@ -117,6 +117,32 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: opacity 0.3s ease;
+}
+
+/* Page transition animation when switching data sources */
+body.page-transitioning {
+  animation: pageTransition 0.6s ease-in-out;
+}
+
+@keyframes pageTransition {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 #root {

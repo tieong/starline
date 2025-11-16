@@ -31,7 +31,7 @@ export const ComparisonChart = ({
 
   const formatDate = (dateStr: string) => {
     const [year, month] = dateStr.split('-');
-    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
 
@@ -119,17 +119,17 @@ export const ComparisonChart = ({
       <div className="comparison-header">
         <div className="comparison-title-group">
           <h3 className="comparison-title">
-            Comparaison de progression
+            Growth comparison
           </h3>
           <p className="comparison-subtitle">
-            Performance relative sur {influencer1.data.length} mois
+            Relative performance over {influencer1.data.length} months
           </p>
         </div>
         {influencer2 && onRemoveComparison && (
           <button
             className="remove-comparison-btn"
             onClick={onRemoveComparison}
-            title="Retirer la comparaison"
+            title="Remove comparison"
           >
             <X size={18} />
           </button>
@@ -220,7 +220,7 @@ export const ComparisonChart = ({
                   style={{ fontSize: '12px', fontFamily: 'var(--font-sans)' }}
                   tick={{ fill: 'var(--text-muted)' }}
                   label={{ 
-                    value: 'CROISSANCE %', 
+                    value: 'GROWTH %', 
                     angle: -90, 
                     position: 'insideLeft',
                     style: { 
@@ -268,7 +268,7 @@ export const ComparisonChart = ({
       {influencer2 && (
         <div className="comparison-performance-summary">
           <div className="performance-card">
-            <span className="performance-label">Meilleure performance</span>
+            <span className="performance-label">Best performance</span>
             <span
               className="performance-value"
               style={{ color: growth1 > growth2! ? influencer1.color : influencer2.color }}
@@ -277,7 +277,7 @@ export const ComparisonChart = ({
             </span>
           </div>
           <div className="performance-card">
-            <span className="performance-label">Différence</span>
+            <span className="performance-label">Difference</span>
             <span className="performance-value">
               {Math.abs(growth1 - growth2!).toFixed(1)} points
             </span>

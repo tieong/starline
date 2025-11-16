@@ -3,9 +3,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict
-
-from sqlalchemy.orm import Session
+from typing import Any, Dict, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -30,14 +28,15 @@ from src.services.blackbox_client import blackbox_client
 from src.services.perplexity_client import perplexity_client
 from src.services.profile_fetcher import profile_fetcher
 from src.services.image_search import image_search_service
+from src.services.supabase_db import supabase_db
 
 
 class InfluencerAnalyzer:
     """Orchestrates real-time influencer analysis."""
 
-    def __init__(self, db: Session):
-        """Initialize analyzer with database session."""
-        self.db = db
+    def __init__(self, db=None):
+        """Initialize analyzer (db parameter kept for backward compatibility but not used)."""
+        self.db = supabase_db  # Use Supabase wrapper instead of SQLAlchemy
 
         # Select AI provider based on settings
         if settings.ai_provider == "perplexity":
@@ -114,49 +113,44 @@ class InfluencerAnalyzer:
         logger.info(f"🔍 Starting {analysis_level} analysis for: {influencer_name}")
 
         # Check if influencer exists in cache
-        influencer = self.db.query(Influencer).filter(
-            Influencer.name.ilike(f"%{influencer_name}%")
-        ).first()
+        influencer = self.db.get_influencer_by_name(influencer_name)
 
         # If cached, not expired, AND analysis was complete, return cached data
         if (influencer and
-            influencer.cache_expires and
-            influencer.cache_expires > datetime.utcnow() and
-            influencer.analysis_complete):
+            influencer.get("cache_expires") and
+            datetime.fromisoformat(influencer["cache_expires"].replace('Z', '+00:00')) > datetime.utcnow() and
+            influencer.get("analysis_complete")):
             logger.info(f"✅ Returning cached data for: {influencer_name}")
             return self._build_response(influencer)
 
         # If cached but analysis was incomplete, we'll retry the analysis
-        if influencer and not influencer.analysis_complete:
+        if influencer and not influencer.get("analysis_complete"):
             logger.info(f"⚠️  Found incomplete analysis for '{influencer_name}', retrying...")
             # Reset the analyzing flag so we can retry
-            influencer.is_analyzing = False
-            self.db.commit()
+            self.db.update_influencer(influencer["id"], {"is_analyzing": False})
 
         # If analysis is in progress, return status
-        if influencer and influencer.is_analyzing and influencer.analysis_complete:
+        if influencer and influencer.get("is_analyzing") and influencer.get("analysis_complete"):
             logger.info(f"⏳ Analysis already in progress for: {influencer_name}")
             return {
                 "status": "analyzing",
                 "message": "Analysis in progress, please wait...",
-                "influencer_id": influencer.id
+                "influencer_id": influencer["id"]
             }
 
         # Create or update influencer record
         if not influencer:
-            influencer = Influencer(
-                name=influencer_name,
-                is_analyzing=True,
-                last_analyzed=datetime.utcnow(),
-                cache_expires=datetime.utcnow() + timedelta(days=1),  # Cache for 24 hours
-            )
-            self.db.add(influencer)
-            self.db.flush()  # Flush to get the auto-generated ID
-            self.db.commit()
+            influencer = self.db.create_influencer({
+                "name": influencer_name,
+                "is_analyzing": True,
+                "last_analyzed": datetime.utcnow().isoformat(),
+                "cache_expires": (datetime.utcnow() + timedelta(days=1)).isoformat(),  # Cache for 24 hours
+            })
         else:
-            influencer.is_analyzing = True
-            influencer.last_analyzed = datetime.utcnow()
-            self.db.commit()
+            influencer = self.db.update_influencer(influencer["id"], {
+                "is_analyzing": True,
+                "last_analyzed": datetime.utcnow().isoformat()
+            })
 
         try:
             # Run all analysis tasks in parallel
@@ -204,13 +198,12 @@ class InfluencerAnalyzer:
                 # If all variations failed, give up
                 if not platforms_data or not platforms_data.get("platforms") or len(platforms_data.get("platforms", [])) == 0:
                     logger.error(f"❌ No platforms found for '{influencer_name}' even after trying {len(variations)} name variations")
-                    influencer.is_analyzing = False
-                    self.db.commit()
+                    self.db.update_influencer(influencer["id"], {"is_analyzing": False})
 
                     # Clean up the influencer record if it was just created
-                    if not influencer.analysis_complete:
-                        self.db.delete(influencer)
-                        self.db.commit()
+                    if not influencer.get("analysis_complete"):
+                        from src.services.supabase_client import supabase
+                        supabase.table("influencers").delete().eq("id", influencer["id"]).execute()
 
                     tried_names = ", ".join(variations)
                     raise Exception(f"Influencer '{influencer_name}' not found. Tried variations: {tried_names}")
@@ -219,22 +212,25 @@ class InfluencerAnalyzer:
             if platforms_data.get("platforms"):
                 logger.info(f"💾 Saving platform data...")
                 await self._save_platforms(influencer, platforms_data)
-                influencer.bio = platforms_data.get("bio", "")
-                influencer.country = platforms_data.get("country")
-                if influencer.country:
-                    logger.info(f"   🌍 Country detected: {influencer.country}")
+                bio = platforms_data.get("bio", "")
+                country = platforms_data.get("country")
+                update_data = {"bio": bio}
+                if country:
+                    update_data["country"] = country
+                    logger.info(f"   🌍 Country detected: {country}")
+                influencer = self.db.update_influencer(influencer["id"], update_data)
 
                 # Validate minimum follower threshold (10k+)
-                total_followers = sum(p.follower_count for p in influencer.platforms)
+                from src.services.supabase_client import supabase
+                platforms_response = supabase.table("platforms").select("follower_count").eq("influencer_id", influencer["id"]).execute()
+                total_followers = sum(p.get("follower_count", 0) for p in platforms_response.data)
                 if total_followers < 10000:
                     logger.warning(f"⚠️  Influencer '{influencer_name}' has only {total_followers:,} followers (below 10k threshold)")
-                    influencer.is_analyzing = False
-                    self.db.commit()
+                    self.db.update_influencer(influencer["id"], {"is_analyzing": False})
 
                     # Clean up the influencer record
-                    if not influencer.analysis_complete:
-                        self.db.delete(influencer)
-                        self.db.commit()
+                    if not influencer.get("analysis_complete"):
+                        supabase.table("influencers").delete().eq("id", influencer["id"]).execute()
 
                     raise Exception(f"Influencer '{influencer_name}' does not meet the minimum follower threshold (10,000+ required, found {total_followers:,}). This prevents volatility and ensures established presence.")
 
@@ -804,28 +800,30 @@ class InfluencerAnalyzer:
         Returns:
             Dict with timeline events
         """
-        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        influencer = self.db.get_influencer_by_id(influencer_id)
         if not influencer:
             raise ValueError(f"Influencer with ID {influencer_id} not found")
 
         # Get platform data
+        from src.services.supabase_client import supabase
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer_id).execute()
         platforms_data = {
             "platforms": [
                 {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "url": p.url
+                    "platform": p.get("platform_name"),
+                    "username": p.get("username"),
+                    "followers": p.get("follower_count"),
+                    "url": p.get("url")
                 }
-                for p in influencer.platforms
+                for p in platforms_response.data
             ]
         }
 
         # Fetch timeline from AI
-        logger.info(f"🔍 Fetching timeline for: {influencer.name}")
+        logger.info(f"🔍 Fetching timeline for: {influencer['name']}")
         timeline_data = await self._run_in_thread(
             self.ai_client.analyze_breakthrough_moment,
-            influencer.name,
+            influencer["name"],
             platforms_data
         )
 
@@ -834,21 +832,24 @@ class InfluencerAnalyzer:
             await self._save_timeline(influencer, timeline_data)
             logger.info(f"   ✓ Saved timeline events")
 
+        # Get timeline events from database
+        timeline_response = supabase.table("timeline_events").select("*").eq("influencer_id", influencer_id).execute()
+        
         return {
             "influencer_id": influencer_id,
             "timeline": [
                 {
-                    "id": t.id,
-                    "date": t.date.isoformat() if t.date else None,
-                    "event_type": t.event_type,
-                    "title": t.title,
-                    "description": t.description,
-                    "platform": t.platform,
-                    "views": t.views,
-                    "likes": t.likes,
-                    "url": t.url,
+                    "id": t.get("id"),
+                    "date": t.get("date"),
+                    "event_type": t.get("event_type"),
+                    "title": t.get("title"),
+                    "description": t.get("description"),
+                    "platform": t.get("platform"),
+                    "views": t.get("views"),
+                    "likes": t.get("likes"),
+                    "url": t.get("url"),
                 }
-                for t in sorted(influencer.timeline, key=lambda x: x.date or datetime.min, reverse=True)
+                for t in sorted(timeline_response.data, key=lambda x: x.get("date") or "", reverse=True)
             ]
         }
 
@@ -1080,28 +1081,30 @@ class InfluencerAnalyzer:
         Returns:
             Dict with news articles
         """
-        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        influencer = self.db.get_influencer_by_id(influencer_id)
         if not influencer:
             raise ValueError(f"Influencer with ID {influencer_id} not found")
 
         # Get platform data
+        from src.services.supabase_client import supabase
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer_id).execute()
         platforms_data = {
             "platforms": [
                 {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "url": p.url
+                    "platform": p.get("platform_name"),
+                    "username": p.get("username"),
+                    "followers": p.get("follower_count"),
+                    "url": p.get("url")
                 }
-                for p in influencer.platforms
+                for p in platforms_response.data
             ]
         }
 
         # Fetch news from AI
-        logger.info(f"🔍 Fetching news and drama for: {influencer.name}")
+        logger.info(f"🔍 Fetching news and drama for: {influencer['name']}")
         news_data = await self._run_in_thread(
             self.ai_client.analyze_news_drama,
-            influencer.name,
+            influencer["name"],
             platforms_data
         )
 
@@ -1110,21 +1113,24 @@ class InfluencerAnalyzer:
             await self._save_news(influencer, news_data)
             logger.info(f"   ✓ Saved news articles")
 
+        # Get news articles from database
+        news_response = supabase.table("news_articles").select("*").eq("influencer_id", influencer_id).execute()
+        
         return {
             "influencer_id": influencer_id,
             "news": [
                 {
-                    "id": n.id,
-                    "title": n.title,
-                    "description": n.description,
-                    "article_type": n.article_type,
-                    "date": n.date.isoformat() if n.date else None,
-                    "source": n.source,
-                    "url": n.url,
-                    "sentiment": n.sentiment,
-                    "severity": n.severity,
+                    "id": n.get("id"),
+                    "title": n.get("title"),
+                    "description": n.get("description"),
+                    "article_type": n.get("article_type"),
+                    "date": n.get("date"),
+                    "source": n.get("source"),
+                    "url": n.get("url"),
+                    "sentiment": n.get("sentiment"),
+                    "severity": n.get("severity"),
                 }
-                for n in sorted(influencer.news_articles, key=lambda x: x.date or datetime.min, reverse=True)
+                for n in sorted(news_response.data, key=lambda x: x.get("date") or "", reverse=True)
             ]
         }
 
@@ -1138,28 +1144,30 @@ class InfluencerAnalyzer:
         Returns:
             Dict with overall sentiment and comments
         """
-        influencer = self.db.query(Influencer).filter(Influencer.id == influencer_id).first()
+        influencer = self.db.get_influencer_by_id(influencer_id)
         if not influencer:
             raise ValueError(f"Influencer with ID {influencer_id} not found")
 
         # Get platform data
+        from src.services.supabase_client import supabase
+        platforms_response = supabase.table("platforms").select("*").eq("influencer_id", influencer_id).execute()
         platforms_data = {
             "platforms": [
                 {
-                    "platform": p.platform_name,
-                    "username": p.username,
-                    "followers": p.follower_count,
-                    "url": p.url
+                    "platform": p.get("platform_name"),
+                    "username": p.get("username"),
+                    "followers": p.get("follower_count"),
+                    "url": p.get("url")
                 }
-                for p in influencer.platforms
+                for p in platforms_response.data
             ]
         }
 
         # Fetch reputation from AI
-        logger.info(f"🔍 Fetching reputation for: {influencer.name}")
+        logger.info(f"🔍 Fetching reputation for: {influencer['name']}")
         reputation_data = await self._run_in_thread(
             self.ai_client.analyze_reputation,
-            influencer.name,
+            influencer["name"],
             platforms_data
         )
 
@@ -1168,20 +1176,23 @@ class InfluencerAnalyzer:
             await self._save_reputation(influencer, reputation_data)
             logger.info(f"   ✓ Saved reputation comments")
 
+        # Get reputation comments from database
+        comments_response = supabase.table("reputation_comments").select("*").eq("influencer_id", influencer_id).execute()
+
         return {
             "influencer_id": influencer_id,
             "overall_sentiment": reputation_data.get("overall_sentiment", "neutral"),
             "comments": [
                 {
-                    "id": c.id,
-                    "author": c.author,
-                    "comment": c.comment,
-                    "platform": c.platform,
-                    "sentiment": c.sentiment,
-                    "url": c.url,
-                    "date": c.date.isoformat() if c.date else None,
+                    "id": c.get("id"),
+                    "author": c.get("author"),
+                    "comment": c.get("comment"),
+                    "platform": c.get("platform"),
+                    "sentiment": c.get("sentiment"),
+                    "url": c.get("url"),
+                    "date": c.get("date"),
                 }
-                for c in influencer.reputation_comments
+                for c in comments_response.data
             ]
         }
 

@@ -1,6 +1,8 @@
 """Database models and session management."""
 from datetime import datetime
 from typing import Optional
+import socket
+from urllib.parse import urlparse, urlunparse
 
 from sqlalchemy import (
     Boolean,
@@ -19,17 +21,46 @@ from sqlalchemy.orm import relationship, sessionmaker
 
 from src.config.settings import settings
 
-# Create database engine with connection pooling for concurrent requests
-engine = create_engine(
-    settings.database_url,
-    echo=False,
-    pool_size=10,  # Number of connections to keep open
-    max_overflow=20,  # Additional connections when pool is full
-    pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=3600,  # Recycle connections after 1 hour
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
+def force_ipv4_url(url: str) -> str:
+    """Force IPv4 resolution for database URL (WSL2 IPv6 fix)."""
+    if not url:
+        return url
+
+    parsed = urlparse(url)
+    if parsed.hostname:
+        try:
+            # Resolve hostname to IPv4 only
+            ipv4_addr = socket.getaddrinfo(
+                parsed.hostname,
+                None,
+                socket.AF_INET,  # Force IPv4
+                socket.SOCK_STREAM
+            )[0][4][0]
+
+            # Replace hostname with IPv4 address
+            netloc = parsed.netloc.replace(parsed.hostname, ipv4_addr)
+            new_parsed = parsed._replace(netloc=netloc)
+            return urlunparse(new_parsed)
+        except (socket.gaierror, IndexError):
+            # If resolution fails, return original URL
+            pass
+
+    return url
+
+
+# NOTE: PostgreSQL direct connection disabled - using Supabase REST API instead
+# This avoids IPv4/IPv6 connectivity issues in WSL2
+# Use src.services.supabase_client for database operations
+
+# Create dummy objects for compatibility - will not connect to database
+# These are only used for ORM model definitions
+from sqlalchemy.orm import declarative_base as _declarative_base
+Base = _declarative_base()
+
+# Dummy engine and session - do not use for actual database operations
+engine = None
+SessionLocal = None
 
 
 class Influencer(Base):
@@ -240,14 +271,18 @@ class Review(Base):
 
 
 def get_db():
-    """Get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Get database session - DEPRECATED: Use Supabase REST API instead."""
+    # This function is kept for backward compatibility
+    # Routes should use supabase_client instead
+    raise NotImplementedError(
+        "PostgreSQL direct connection is disabled. "
+        "Use 'from src.services.supabase_client import supabase' instead"
+    )
+    yield
 
 
 def init_db():
-    """Initialize database tables."""
-    Base.metadata.create_all(bind=engine)
+    """Initialize database tables - DISABLED: Tables created via Supabase migrations."""
+    # Tables are already created in Supabase via SQL migrations
+    # This function does nothing to avoid connection issues
+    pass

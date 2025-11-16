@@ -77,11 +77,11 @@ export const AllInfluencers = () => {
   const averageEngagementRate = (
     datasetForInsights.reduce((sum, inf) => sum + inf.engagementRate, 0) / datasetSize
   ).toFixed(2);
-  const totalFollowersDisplayed = new Intl.NumberFormat('fr-FR', {
+  const totalFollowersDisplayed = new Intl.NumberFormat('en-US', {
     notation: 'compact',
     maximumFractionDigits: 1
   }).format(datasetForInsights.reduce((sum, inf) => sum + inf.followers, 0));
-  const activeFilterLabel = selectedNiche ?? 'Toutes les niches';
+  const activeFilterLabel = selectedNiche ?? 'All niches';
 
   return (
     <div className="all-influencers">
@@ -98,7 +98,7 @@ export const AllInfluencers = () => {
         whileHover={{ x: -5 }}
       >
         <ArrowLeft size={20} />
-        <span>Retour</span>
+        <span>Back</span>
       </motion.button>
 
       <motion.header
@@ -108,9 +108,9 @@ export const AllInfluencers = () => {
         transition={{ duration: 0.6 }}
       >
         <span className="header-eyebrow">Base Starline</span>
-        <h1>Tous les Influenceurs</h1>
+        <h1>All Influencers</h1>
         <p className="subtitle">
-          Explorez et comparez tous les influenceurs de notre base
+          Explore and compare every influencer in our dataset
         </p>
       </motion.header>
 
@@ -122,11 +122,11 @@ export const AllInfluencers = () => {
       >
         <div className="stat-item">
           <span className="stat-value">{filteredInfluencers.length}</span>
-          <span className="stat-label">Influenceurs</span>
+          <span className="stat-label">Influencers</span>
         </div>
         <div className="stat-item">
           <span className="stat-value">{averageScore}</span>
-          <span className="stat-label">Score moyen</span>
+          <span className="stat-label">Average score</span>
         </div>
         <div className="stat-item">
           <span className="stat-value">{averageEngagementRate}%</span>
@@ -143,13 +143,13 @@ export const AllInfluencers = () => {
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Rechercher un influenceur..."
+          placeholder="Search for an influencer..."
         />
 
         <div className="filters">
           <div className="filter-header">
             <Filter size={16} />
-            <span>Filtrer par niche</span>
+            <span>Filter by niche</span>
           </div>
           <div className="filter-tags">
             <Tag
@@ -160,7 +160,7 @@ export const AllInfluencers = () => {
                 onClick={() => setSelectedNiche(null)}
                 className="filter-button"
               >
-                Tous
+                All
               </button>
             </Tag>
             {allNiches.map(niche => (
@@ -194,7 +194,7 @@ export const AllInfluencers = () => {
             <h2 style={{ color: 'var(--color-red-500)' }}>{error}</h2>
           ) : (
             <h2>
-              {filteredInfluencers.length} influenceur{filteredInfluencers.length > 1 ? 's' : ''} trouvé{filteredInfluencers.length > 1 ? 's' : ''}
+              {filteredInfluencers.length} influencer{filteredInfluencers.length > 1 ? 's' : ''} found
             </h2>
           )}
         </motion.div>
@@ -218,7 +218,7 @@ export const AllInfluencers = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <p>Aucun influenceur trouvé pour cette recherche</p>
+                <p>No influencers match this search</p>
               </motion.div>
             )}
           </>

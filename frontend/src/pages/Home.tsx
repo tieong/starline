@@ -104,11 +104,11 @@ export const Home = () => {
         {/* Tagline */}
         <motion.p
           className="tagline-minimal"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          Explorez l'univers des influenceurs et leurs connexions
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+          Explore the universe of influencers and their connections
         </motion.p>
 
         {/* Search */}
@@ -121,7 +121,7 @@ export const Home = () => {
           <SearchAutocomplete
             influencers={influencers}
             onSelect={handleSelectInfluencer}
-            placeholder="Rechercher un influenceur..."
+            placeholder="Search for an influencer..."
           />
         </motion.div>
 
@@ -134,15 +134,15 @@ export const Home = () => {
         >
           <button className="action-button" onClick={handleAllInfluencers}>
             <Users size={18} />
-            <span>Tous les influenceurs</span>
+            <span>All influencers</span>
           </button>
           <button className="action-button" onClick={handleRandomInfluencer}>
             <Map size={18} />
-            <span>Réseau aléatoire</span>
+            <span>Random network</span>
           </button>
           <button className="action-button" onClick={() => navigate('/graph')}>
             <BarChart3 size={18} />
-            <span>Vue d'ensemble</span>
+            <span>Overview</span>
           </button>
         </motion.div>
 
@@ -165,19 +165,19 @@ export const Home = () => {
             <>
               <div className="home-stat-item">
                 <span className="home-stat-value">{influencers.length}</span>
-                <span className="home-stat-label">Influenceurs</span>
+                <span className="home-stat-label">Influencers</span>
               </div>
               <div className="home-stat-divider"></div>
               <div className="home-stat-item">
                 <span className="home-stat-value">
                   {Math.round(influencers.reduce((sum, inf) => sum + inf.followers, 0) / 1000000)}M+
                 </span>
-                <span className="home-stat-label">Abonnés totaux</span>
+                <span className="home-stat-label">Total followers</span>
               </div>
               <div className="home-stat-divider"></div>
               <div className="home-stat-item">
-                <span className="home-stat-value">{useMockData ? 'Mock' : 'Temps réel'}</span>
-                <span className="home-stat-label">Données actualisées</span>
+                <span className="home-stat-value">{useMockData ? 'Mock' : 'Real-time'}</span>
+                <span className="home-stat-label">Updated data</span>
               </div>
             </>
           )}
