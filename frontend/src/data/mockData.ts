@@ -342,8 +342,8 @@ export const influencers: Influencer[] = [
     followers: 279000000,
     engagementRate: 12.4,
     niche: ['Challenges', 'Philanthropie', 'Divertissement'],
-    bio: 'Créateur américain connu pour ses défis monumentaux et sa philanthropie.',
-    agency: 'MrBeast Studios',
+    bio: 'American YouTuber, media personality, and businessman known for elaborate challenges and philanthropy.',
+    agency: 'Night Media',
     influscoring: {
       overall: 98,
       reliability: 95,
@@ -386,11 +386,11 @@ export const influencers: Influencer[] = [
       { date: '2024-11', followers: 279000000 }
     ],
     networkConnections: [
-      { id: 'squeezie', name: 'Squeezie', type: 'influencer', color: '#8B5CF6' },
-      { id: 'pewdiepie', name: 'PewDiePie', type: 'influencer', color: '#8B5CF6' },
-      { id: 'ibai', name: 'Ibai', type: 'influencer', color: '#10B981' },
-      { id: 'YouTube Global', name: 'YouTube Global', type: 'brand', color: '#3B82F6' },
-      { id: 'Webedia', name: 'Webedia', type: 'agency', color: '#F59E0B' }
+      { id: 'night-media', name: 'Night Media', type: 'agency', color: '#F59E0B' },
+      { id: 'ksi', name: 'KSI', type: 'influencer', color: '#8B5CF6' },
+      { id: 'feastables', name: 'Feastables', type: 'brand', color: '#3B82F6' },
+      { id: 'amazon-prime', name: 'Amazon Prime', type: 'brand', color: '#3B82F6' },
+      { id: 'team-trees', name: 'Team Trees / Team Seas', type: 'brand', color: '#10B981' }
     ],
     platformPresence: [
       { platform: 'Youtube', handle: '@MrBeast', followers: 230000000 },
@@ -589,6 +589,63 @@ export const influencers: Influencer[] = [
       youtube: 'ibai',
       twitter: 'IbaiLlanos'
     }
+  },
+  {
+    id: 'inoxtag',
+    name: 'Inoxtag',
+    handle: '@Inoxtag',
+    avatar: 'https://netradio.fr/wp-content/uploads/2023/09/Inoxtag-Plus-de-Pubs-pour-des-Projets-Fous-.jpg',
+    followers: 8500000,
+    engagementRate: 11.2,
+    niche: ['Gaming', 'Adventure', 'Challenges'],
+    bio: 'Inoxtag (Inès Benazzouz) is a French social media influencer known for gaming, adventure vlogs, and spectacular challenges, inspiring millions with his authenticity and creativity.',
+    agency: 'Webedia',
+    influscoring: {
+      overall: 94,
+      reliability: 96,
+      controversies: 8,
+      authenticity: 95,
+      reputation: 93,
+      professionalism: 92,
+      trend: 'up'
+    },
+    stats: {
+      avgViews: 5800000,
+      avgLikes: 450000,
+      postingFrequency: '2 vidéos/mois',
+      topCountries: ['France', 'Belgique', 'Suisse', 'Canada'],
+      audienceAge: [
+        { range: '13-17', percentage: 42 },
+        { range: '18-24', percentage: 38 },
+        { range: '25-34', percentage: 15 },
+        { range: '35+', percentage: 5 }
+      ],
+      audienceGender: { male: 68, female: 30, other: 2 }
+    },
+    socialLinks: {
+      youtube: 'Inoxtag',
+      instagram: 'inoxtag',
+      twitter: 'Inoxtag'
+    },
+    subscriberGrowth: [
+      { date: '2023-01', followers: 4200000 },
+      { date: '2023-06', followers: 5100000 },
+      { date: '2023-12', followers: 6300000 },
+      { date: '2024-01', followers: 6500000 },
+      { date: '2024-06', followers: 7800000 },
+      { date: '2024-09', followers: 8500000 }
+    ],
+    networkConnections: [
+      { id: 'webedia', name: 'Webedia', type: 'agency', color: '#F59E0B' },
+      { id: 'nil-ojeda', name: 'Nil Ojeda', type: 'influencer', color: '#8B5CF6' },
+      { id: 'socialveins', name: 'Socialveins', type: 'agency', color: '#F59E0B' },
+      { id: 'milfshakes', name: 'MILFSHAKES', type: 'brand', color: '#3B82F6' }
+    ],
+    platformPresence: [
+      { platform: 'Youtube', handle: '@Inoxtag', followers: 8500000 },
+      { platform: 'Instagram', handle: '@inoxtag', followers: 3200000 },
+      { platform: 'Twitter', handle: '@Inoxtag', followers: 450000 }
+    ]
   }
 ];
 
@@ -650,6 +707,74 @@ export const products: Product[] = [
     influencerId: 'enjoyphoenix',
     launchDate: '2023-09-20',
     status: 'ended'
+  },
+  {
+    id: 'p6',
+    name: 'Feastables',
+    brand: 'Feastables',
+    category: 'food',
+    image: 'https://images.openfoodfacts.org/images/products/123/000/016/8045/front_en.34.400.jpg',
+    price: 2.99,
+    influencerId: 'mrbeast',
+    launchDate: '2022-01-29',
+    status: 'active',
+    openfoodfacts_data: {
+      type: 'food',
+      product_name: 'Feastables - Milk Chocolate',
+      brands: 'Feastables, MrBeast',
+      barcode: '1230000168045',
+      nutriscore: 'e',
+      nova_group: 4,
+      ecoscore: 'e',
+      quality_score: 40,
+      is_healthy: false,
+      nutriments: {
+        energy_kcal: 554,
+        fat: 34.4,
+        saturated_fat: 20.7,
+        sugars: 42.7,
+        salt: 0.19,
+        fiber: 2.2,
+        proteins: 7.4
+      },
+      ingredients_text: 'Zucker, _Vollmilchpulver_, Kakaobutter, Kakaomasse, Emulgator (Sojalecithine), Vanilleextrakt. Kakao: 32%',
+      allergens: ['en:milk', 'en:soybeans'],
+      image_url: 'https://images.openfoodfacts.org/images/products/123/000/016/8045/front_en.34.400.jpg',
+      url: 'https://world.openfoodfacts.org/product/1230000168045'
+    }
+  },
+  {
+    id: 'p7',
+    name: 'MrBeast Official Merch',
+    brand: 'MrBeast',
+    category: 'merch',
+    image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400',
+    price: 29.99,
+    influencerId: 'mrbeast',
+    launchDate: '2019-06-01',
+    status: 'active'
+  },
+  {
+    id: 'p8',
+    name: 'Instinct (Manga)',
+    brand: 'Inoxtag',
+    category: 'publishing',
+    image: 'https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400',
+    price: 15.99,
+    influencerId: 'inoxtag',
+    launchDate: '2023-10-15',
+    status: 'active'
+  },
+  {
+    id: 'p9',
+    name: 'Inoxtag x Air Up',
+    brand: 'Air Up',
+    category: 'food',
+    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400',
+    price: 34.99,
+    influencerId: 'inoxtag',
+    launchDate: '2024-01-20',
+    status: 'active'
   }
 ];
 
@@ -708,6 +833,223 @@ export const newsItems: NewsItem[] = [
     date: '2024-08-20',
     description: 'Natoo rejoint le casting d\'une comédie Netflix prévue pour 2025.',
     source: 'Netflix'
+  },
+  {
+    id: 'n7',
+    influencerId: 'mrbeast',
+    title: 'First YouTuber to Reach 300 Million Subscribers',
+    type: 'milestone',
+    date: '2024-07-10',
+    description: 'Achieved a historic milestone by becoming the first individual YouTuber to surpass 300 million subscribers.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n8',
+    influencerId: 'mrbeast',
+    title: 'Most Subscribed YouTube Channel',
+    type: 'milestone',
+    date: '2024-06-02',
+    description: 'Surpassed T-Series to become the most subscribed channel on YouTube, reaching 267 million subscribers.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n9',
+    influencerId: 'mrbeast',
+    title: '$456,000 Squid Game In Real Life!',
+    type: 'news',
+    date: '2021-11-24',
+    description: 'Uploaded a recreation of \'Squid Game\' with a $456,000 prize, which became one of the most-watched YouTube videos of 2021, earning over 130 million views in a week.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n10',
+    influencerId: 'mrbeast',
+    title: 'Giving Away $10,000 to a Homeless Man',
+    type: 'news',
+    date: '2017-06-11',
+    description: 'Secured his first major brand deal and gave away the entire $10,000 sponsorship in a philanthropic stunt, pioneering his signature large-scale giveaway format.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n11',
+    influencerId: 'mrbeast',
+    title: 'I Counted To 100,000!',
+    type: 'milestone',
+    date: '2017-01-08',
+    description: 'Uploaded the viral video counting to 100,000, which propelled MrBeast into the YouTube spotlight and established his reputation for endurance-based stunts.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n12',
+    influencerId: 'mrbeast',
+    title: 'First YouTube Video (Let\'s Play Minecraft)',
+    type: 'milestone',
+    date: '2012-02-19',
+    description: 'MrBeast launched his YouTube channel \'MrBeast6000\' at age 13, posting gaming videos and commentary, laying the foundation for his future career.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n13',
+    influencerId: 'inoxtag',
+    title: 'Release of \'Kaizen\' Everest Documentary',
+    type: 'news',
+    date: '2024-09-14',
+    description: 'Premiered the \'Kaizen\' documentary in cinemas and on YouTube, breaking records with over 11 million views in 24 hours and surpassing 45 million views, marking the peak of his influence and inspiring millions.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n14',
+    influencerId: 'inoxtag',
+    title: 'Announced Everest Climb Challenge',
+    type: 'news',
+    date: '2024-02-15',
+    description: 'Inoxtag announced his plan to climb Mount Everest within a year, generating massive buzz and anticipation across all social platforms.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n15',
+    influencerId: 'inoxtag',
+    title: 'Reached 5 Million YouTube Subscribers',
+    type: 'milestone',
+    date: '2021-07-01',
+    description: 'Hit the major milestone of 5 million subscribers, solidifying his status as a top French YouTuber.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n16',
+    influencerId: 'inoxtag',
+    title: 'Joined Croûton eSports Team',
+    type: 'partnership',
+    date: '2019-03-10',
+    description: 'Inoxtag co-founded the Croûton eSports team, collaborating with other major French creators and expanding his reach beyond solo content.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n17',
+    influencerId: 'inoxtag',
+    title: 'First Viral Gaming Videos',
+    type: 'milestone',
+    date: '2017-01-15',
+    description: 'His comedic and energetic gaming videos went viral, marking his breakthrough and leading to rapid subscriber growth.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n18',
+    influencerId: 'inoxtag',
+    title: 'YouTube Channel Launch',
+    type: 'milestone',
+    date: '2015-06-20',
+    description: 'Inoxtag launched his YouTube channel, initially focusing on gaming content and building a young, engaged audience.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n19',
+    influencerId: 'cyprien',
+    title: 'Lancement de la chaîne YouTube',
+    type: 'milestone',
+    date: '2007-05-12',
+    description: 'Cyprien a lancé sa chaîne YouTube, devenant l\'un des pionniers du YouTube français avec des sketches humoristiques.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n20',
+    influencerId: 'cyprien',
+    title: 'Atteint 10 millions d\'abonnés',
+    type: 'milestone',
+    date: '2015-09-15',
+    description: 'Premier YouTubeur français à atteindre les 10 millions d\'abonnés, marquant une étape historique pour le YouTube francophone.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n21',
+    influencerId: 'squeezie',
+    title: 'Sortie de l\'album "Oxyz"',
+    type: 'news',
+    date: '2024-01-19',
+    description: 'Squeezie sort son premier album de rap "Oxyz", qui rencontre un immense succès critique et commercial.',
+    source: 'Spotify'
+  },
+  {
+    id: 'n22',
+    influencerId: 'squeezie',
+    title: 'Record de viewers sur Twitch',
+    type: 'milestone',
+    date: '2020-10-10',
+    description: 'Bat le record français de spectateurs simultanés sur Twitch avec plus de 400 000 viewers lors d\'un événement gaming.',
+    source: 'Twitch'
+  },
+  {
+    id: 'n23',
+    influencerId: 'norman',
+    title: 'Vidéo virale "Les Mamans"',
+    type: 'milestone',
+    date: '2011-03-02',
+    description: 'La vidéo "Les Mamans" devient virale et propulse Norman au rang de star du YouTube français.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n24',
+    influencerId: 'natoo',
+    title: 'Lancement de sa marque de mode',
+    type: 'partnership',
+    date: '2023-06-15',
+    description: 'Natoo lance sa propre ligne de vêtements éco-responsables en collaboration avec une marque française.',
+    source: 'Instagram'
+  },
+  {
+    id: 'n25',
+    influencerId: 'natoo',
+    title: 'Premier rôle au cinéma',
+    type: 'news',
+    date: '2022-11-08',
+    description: 'Natoo décroche son premier rôle principal dans une comédie française qui sort en salles.',
+    source: 'Cinéma'
+  },
+  {
+    id: 'n26',
+    influencerId: 'pewdiepie',
+    title: '100 Million Subscribers Milestone',
+    type: 'milestone',
+    date: '2019-08-25',
+    description: 'PewDiePie becomes the first individual creator to reach 100 million subscribers on YouTube.',
+    source: 'YouTube'
+  },
+  {
+    id: 'n27',
+    influencerId: 'khabylame',
+    title: 'Most Followed Person on TikTok',
+    type: 'milestone',
+    date: '2022-06-22',
+    description: 'Khaby Lame surpasses Charli D\'Amelio to become the most-followed person on TikTok with 142 million followers.',
+    source: 'TikTok'
+  },
+  {
+    id: 'n28',
+    influencerId: 'charlidamelio',
+    title: 'First Person to Hit 100M on TikTok',
+    type: 'milestone',
+    date: '2020-11-22',
+    description: 'Charli D\'Amelio becomes the first person ever to reach 100 million followers on TikTok.',
+    source: 'TikTok'
+  },
+  {
+    id: 'n29',
+    influencerId: 'carryminati',
+    title: 'YouTube vs TikTok Controversy',
+    type: 'drama',
+    date: '2020-05-08',
+    description: 'CarryMinati\'s roast video becomes the most-liked non-music video on YouTube before being taken down, sparking massive debate.',
+    severity: 'medium',
+    source: 'YouTube'
+  },
+  {
+    id: 'n30',
+    influencerId: 'ibai',
+    title: 'La Velada del Año III',
+    type: 'news',
+    date: '2023-07-01',
+    description: 'Ibai organise La Velada del Año III, un événement de boxe qui bat tous les records d\'audience sur Twitch avec plus de 3 millions de spectateurs.',
+    source: 'Twitch'
   }
 ];
 
@@ -735,15 +1077,22 @@ export const relationships: Relationship[] = [
   { source: 'enjoyphoenix', target: 'Typology', type: 'brand', strength: 0.9 },
   { source: 'squeezie', target: 'Razer', type: 'brand', strength: 0.85 },
   { source: 'mcfly-carlito', target: 'Prime Video', type: 'brand', strength: 0.95 },
-  { source: 'mrbeast', target: 'YouTube Global', type: 'brand', strength: 1.0 },
-  { source: 'mrbeast', target: 'pewdiepie', type: 'friendship', strength: 0.7, label: 'Collaborations' },
+  { source: 'mrbeast', target: 'Night Media', type: 'agency', strength: 1.0 },
+  { source: 'mrbeast', target: 'KSI', type: 'collaboration', strength: 0.9, label: 'Frequent collaborator' },
+  { source: 'mrbeast', target: 'Feastables', type: 'brand', strength: 0.9, label: 'Founder' },
+  { source: 'mrbeast', target: 'Amazon Prime', type: 'partnership', strength: 0.8 },
+  { source: 'mrbeast', target: 'Team Trees', type: 'partnership', strength: 0.8, label: 'Environmental initiatives' },
   { source: 'pewdiepie', target: 'YouTube Global', type: 'brand', strength: 0.95 },
   { source: 'carryminati', target: 'YouTube Global', type: 'brand', strength: 0.92 },
   { source: 'ibai', target: 'Twitch Global', type: 'brand', strength: 0.9 },
   { source: 'ibai', target: 'squeezie', type: 'collaboration', strength: 0.4, label: 'Événements gaming' },
   { source: 'charlidamelio', target: 'TikTok Global', type: 'brand', strength: 1.0 },
   { source: 'khabylame', target: 'TikTok Global', type: 'brand', strength: 1.0 },
-  { source: 'charlidamelio', target: 'khabylame', type: 'friendship', strength: 0.5, label: 'TikTok Awards' }
+  { source: 'charlidamelio', target: 'khabylame', type: 'friendship', strength: 0.5, label: 'TikTok Awards' },
+  { source: 'inoxtag', target: 'Webedia', type: 'agency', strength: 1.0 },
+  { source: 'inoxtag', target: 'Nil Ojeda', type: 'collaboration', strength: 0.9, label: 'Frequent collaborator' },
+  { source: 'inoxtag', target: 'Socialveins', type: 'partnership', strength: 0.8 },
+  { source: 'inoxtag', target: 'MILFSHAKES', type: 'brand', strength: 0.7 }
 ];
 
 export const graphNodes: GraphNode[] = [
@@ -796,6 +1145,54 @@ export const graphNodes: GraphNode[] = [
     name: 'Twitch Global',
     type: 'brand' as const,
     size: 55
+  },
+  {
+    id: 'Night Media',
+    name: 'Night Media',
+    type: 'agency' as const,
+    size: 50
+  },
+  {
+    id: 'KSI',
+    name: 'KSI',
+    type: 'influencer' as const,
+    size: 60
+  },
+  {
+    id: 'Feastables',
+    name: 'Feastables',
+    type: 'brand' as const,
+    size: 45
+  },
+  {
+    id: 'Amazon Prime',
+    name: 'Amazon Prime',
+    type: 'brand' as const,
+    size: 50
+  },
+  {
+    id: 'Team Trees',
+    name: 'Team Trees',
+    type: 'brand' as const,
+    size: 40
+  },
+  {
+    id: 'Nil Ojeda',
+    name: 'Nil Ojeda',
+    type: 'influencer' as const,
+    size: 45
+  },
+  {
+    id: 'Socialveins',
+    name: 'Socialveins',
+    type: 'agency' as const,
+    size: 40
+  },
+  {
+    id: 'MILFSHAKES',
+    name: 'MILFSHAKES',
+    type: 'brand' as const,
+    size: 35
   }
 ];
 
@@ -852,6 +1249,114 @@ export const socialComments: SocialComment[] = [
     author: 'MarieB92',
     date: '2024-10-25',
     content: 'Fan depuis le début, tes vidéos m\'ont accompagné pendant toute ma jeunesse. Merci pour tout !',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-7',
+    influencerId: 'cyprien',
+    platform: 'YouTube',
+    author: 'JulienP',
+    date: '2024-10-20',
+    content: 'Cyprien est une légende du YouTube français. Ses sketches sont toujours hilarants et pertinents !',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-8',
+    influencerId: 'inoxtag',
+    platform: 'YouTube',
+    author: 'LucasM',
+    date: '2024-09-15',
+    content: 'Le documentaire Kaizen est incroyable ! J\'ai pleuré plusieurs fois. Merci Inox pour cette aventure inspirante !',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-9',
+    influencerId: 'inoxtag',
+    platform: 'Instagram',
+    author: 'ChloeD',
+    date: '2024-09-16',
+    content: 'Tu es une véritable source d\'inspiration pour toute une génération. Continue comme ça !',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-10',
+    influencerId: 'natoo',
+    platform: 'YouTube',
+    author: 'SophieL',
+    date: '2024-08-12',
+    content: 'Natoo, tes vidéos sont tellement drôles ! Tu arrives toujours à me faire rire même dans les moments difficiles.',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-11',
+    influencerId: 'enjoyphoenix',
+    platform: 'Instagram',
+    author: 'CamilleR',
+    date: '2024-07-18',
+    content: 'Tes conseils beauté sont toujours au top ! Merci pour ta bienveillance et ton authenticité.',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-12',
+    influencerId: 'mcfly-carlito',
+    platform: 'YouTube',
+    author: 'ThomasB',
+    date: '2024-06-22',
+    content: 'McFly et Carlito, vous êtes les meilleurs ! Vos vidéos sont toujours de qualité et on sent la bonne ambiance.',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-13',
+    influencerId: 'pewdiepie',
+    platform: 'YouTube',
+    author: 'BroArmy2024',
+    date: '2024-05-10',
+    content: 'Been watching since 2012. You\'re still the king of YouTube. Keep it up!',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-14',
+    influencerId: 'khabylame',
+    platform: 'TikTok',
+    author: 'SarahK',
+    date: '2024-04-15',
+    content: 'Your videos always make me laugh! Simple but so effective. Love your content!',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-15',
+    influencerId: 'charlidamelio',
+    platform: 'TikTok',
+    author: 'DanceQueen',
+    date: '2024-03-20',
+    content: 'You inspire so many people to dance! Your moves are incredible!',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-16',
+    influencerId: 'carryminati',
+    platform: 'YouTube',
+    author: 'RohanS',
+    date: '2024-02-28',
+    content: 'Carry bhai, your roasts are legendary! Keep making amazing content for us!',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-17',
+    influencerId: 'ibai',
+    platform: 'Twitch',
+    author: 'PabloM',
+    date: '2024-01-15',
+    content: '¡La Velada fue increíble! Gracias por crear estos eventos tan especiales para la comunidad.',
+    sentiment: 'positive'
+  },
+  {
+    id: 'comment-18',
+    influencerId: 'norman',
+    platform: 'YouTube',
+    author: 'AnthoV',
+    date: '2024-01-05',
+    content: 'Même après toutes ces années, tes vidéos restent cultes. Un vrai pionnier !',
     sentiment: 'positive'
   }
 ];
