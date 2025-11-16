@@ -69,6 +69,8 @@
   margin-bottom: var(--space-md);
   box-shadow: var(--shadow-soft);
   border: 4px solid var(--primary-light);
+  object-fit: cover;
+  object-position: center;
 }
 
 .panel-name {
