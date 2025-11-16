@@ -1,0 +1,324 @@
+.product-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.product-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.product-card.expanded {
+  padding: 24px;
+}
+
+.product-card-header {
+  margin-bottom: 16px;
+}
+
+.product-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.product-icon {
+  color: var(--primary-purple);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.product-card-title {
+  flex: 1;
+}
+
+.product-card-title h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 4px 0;
+}
+
+.product-brand {
+  font-size: 14px;
+  color: var(--text-subtle);
+  margin: 0;
+}
+
+.product-category {
+  font-size: 13px;
+  color: var(--text-subtle);
+  padding-left: 32px;
+  margin: 0;
+}
+
+.product-description {
+  font-size: 14px;
+  color: var(--text-body);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  padding-left: 32px;
+}
+
+/* OpenFoodFacts Section */
+.product-openfoodfacts {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.05));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.openfoodfacts-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.openfoodfacts-header svg {
+  color: var(--primary-purple);
+}
+
+.openfoodfacts-header h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.openfoodfacts-scores {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.score-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-base);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.score-label {
+  font-size: 11px;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.score-grade {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.score-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.openfoodfacts-allergens {
+  font-size: 13px;
+  color: var(--text-body);
+  padding: 8px 12px;
+  background: var(--bg-base);
+  border-radius: 6px;
+  border: 1px solid var(--accent-red);
+  border-left: 3px solid var(--accent-red);
+}
+
+.openfoodfacts-allergens strong {
+  color: var(--accent-red);
+}
+
+/* Quality Score */
+.product-quality {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.quality-icon {
+  color: var(--accent-yellow);
+}
+
+.quality-label {
+  color: var(--text-subtle);
+}
+
+.quality-value {
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-left: auto;
+}
+
+/* Sentiment Summary */
+.product-sentiment-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.sentiment-summary-icon {
+  color: var(--primary-purple);
+}
+
+.sentiment-summary-label {
+  color: var(--text-body);
+}
+
+.sentiment-summary-score {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+/* Reviews Section */
+.product-reviews {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.reviews-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 12px 0;
+}
+
+.reviews-header svg {
+  color: var(--primary-purple);
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-item {
+  padding: 12px;
+  background: var(--bg-base);
+  border-radius: 8px;
+  border-left: 3px solid var(--border);
+  transition: border-color 0.2s ease;
+}
+
+.review-item.positive {
+  border-left-color: var(--accent-teal);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.03), transparent);
+}
+
+.review-item.negative {
+  border-left-color: var(--accent-red);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.03), transparent);
+}
+
+.review-item.neutral {
+  border-left-color: var(--accent-blue);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), transparent);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.review-author-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sentiment-icon {
+  flex-shrink: 0;
+}
+
+.sentiment-icon.positive {
+  color: var(--accent-teal);
+}
+
+.sentiment-icon.negative {
+  color: var(--accent-red);
+}
+
+.sentiment-icon.neutral {
+  color: var(--accent-blue);
+}
+
+.review-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.review-date {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.review-comment {
+  font-size: 14px;
+  color: var(--text-body);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+  font-style: italic;
+}
+
+.review-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--primary-purple);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.review-link:hover {
+  color: var(--accent-blue);
+}
+
+.product-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-purple);
+  text-align: right;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}

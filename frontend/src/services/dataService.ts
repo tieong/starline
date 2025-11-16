@@ -35,19 +35,39 @@ function convertApiInfluencer(apiInf: ApiInfluencer): Influencer {
   // Determine niche based on bio or use default
   const niche = apiInf.bio ? [extractNicheFromBio(apiInf.bio)] : ['General'];
 
-  // Map trust_score (0-100) to influscoring (0-10)
+  // Map trust_score (0-100) to influscoring (0-100)
   const influscoring = {
-    overall: Math.round(apiInf.trust_score / 10),
-    reliability: Math.round(apiInf.trust_score / 10),
-    controversies: Math.max(0, 10 - Math.round(apiInf.trust_score / 10)),
-    authenticity: Math.round(apiInf.trust_score / 10),
-    reputation: Math.round(apiInf.trust_score / 10),
-    professionalism: Math.round(apiInf.trust_score / 10),
+    overall: apiInf.trust_score,
+    reliability: apiInf.trust_score,
+    controversies: Math.max(0, 100 - apiInf.trust_score),
+    authenticity: apiInf.trust_score,
+    reputation: apiInf.trust_score,
+    professionalism: apiInf.trust_score,
     trend: 'stable' as const,
   };
 
   // Build subscriber growth (mock data if not available)
   const subscriberGrowth = generateMockGrowth(totalFollowers);
+
+  // Store products with full data including reviews and OpenFoodFacts
+  const productsWithReviews = apiInf.products?.map(p => ({
+    id: p.id.toString(),
+    name: p.name,
+    brand: 'Brand', // Not available from API
+    category: p.category,
+    image: '/placeholder-product.jpg', // Not available from API
+    price: undefined, // Not available from API
+    promoCode: undefined,
+    influencerId: apiInf.id.toString(),
+    launchDate: new Date().toISOString(),
+    status: 'active' as const,
+    quality_score: p.quality_score,
+    description: p.description,
+    review_count: p.review_count,
+    sentiment_score: p.sentiment_score,
+    openfoodfacts_data: p.openfoodfacts_data,
+    reviews: p.reviews,
+  })) || [];
 
   return {
     id: apiInf.id.toString(),
@@ -78,6 +98,7 @@ function convertApiInfluencer(apiInf: ApiInfluencer): Influencer {
     subscriberGrowth,
     verified: apiInf.verified,
     country: apiInf.country,
+    productsWithReviews, // Add full product data to influencer object
   };
 }
 

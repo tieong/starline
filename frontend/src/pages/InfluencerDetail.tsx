@@ -27,6 +27,7 @@ import { InfluencerComparison } from '../components/InfluencerComparison';
 import { NetworkConnections } from '../components/NetworkConnections';
 import { SocialComments } from '../components/SocialComments';
 import { PlatformPresence } from '../components/PlatformPresence';
+import { ProductCard } from '../components/ProductCard';
 import './InfluencerDetail.css';
 
 export const InfluencerDetail = () => {
@@ -450,42 +451,30 @@ export const InfluencerDetail = () => {
         {/* Right Column */}
         <div className="detail-column-right">
           {/* Products Section */}
-          {influencerProducts.length > 0 && (
+          {(influencer?.productsWithReviews && influencer.productsWithReviews.length > 0 || influencerProducts.length > 0) && (
             <motion.section
               className="section products-section"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-                <div className="section-header">
-                  <Package className="section-icon" size={28} />
-                  <div className="section-header-text">
-                    <h2>Products & Sponsorships</h2>
-                    <p className="section-subtitle">{influencerProducts.length} product{influencerProducts.length > 1 ? 's' : ''}</p>
-                  </div>
+              <div className="section-header">
+                <Package className="section-icon" size={28} />
+                <div className="section-header-text">
+                  <h2>Products & Sponsorships</h2>
+                  <p className="section-subtitle">
+                    {(influencer?.productsWithReviews?.length || influencerProducts.length)} product
+                    {(influencer?.productsWithReviews?.length || influencerProducts.length) !== 1 ? 's' : ''}
+                  </p>
                 </div>
+              </div>
               <div className="products-list">
-                {influencerProducts.slice(0, 3).map((product, index) => (
-                  <motion.div
+                {(influencer?.productsWithReviews || influencerProducts).map((product) => (
+                  <ProductCard
                     key={product.id}
-                    className="product-item"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="product-compact-info">
-                      <div className="product-compact-header">
-                        <h4 className="product-compact-name">{product.name}</h4>
-                        <Tag variant={product.status === 'active' ? 'teal' : 'default'} size="small">
-                          {product.status === 'active' ? 'Active' : 'Ended'}
-                        </Tag>
-                      </div>
-                      <p className="product-compact-brand">{product.brand}</p>
-                      {product.price && typeof product.price === 'number' && (
-                        <p className="product-compact-price">${product.price.toFixed(2)}</p>
-                      )}
-                    </div>
-                  </motion.div>
+                    product={product}
+                    expanded={true}
+                  />
                 ))}
               </div>
             </motion.section>

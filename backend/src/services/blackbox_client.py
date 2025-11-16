@@ -142,8 +142,18 @@ If the influencer is not found, return:
             else:
                 json_str = response.strip()
 
-            return json.loads(json_str)
-        except json.JSONDecodeError:
+            result = json.loads(json_str)
+
+            # Log the response for debugging
+            platform_count = len(result.get("platforms", []))
+            logger.info(f"   📊 AI returned {platform_count} platforms")
+            if platform_count == 0:
+                logger.warning(f"   ⚠️  AI Response: {json_str[:500]}")
+
+            return result
+        except json.JSONDecodeError as e:
+            logger.error(f"   ❌ Failed to parse AI response: {str(e)}")
+            logger.error(f"   📄 Raw response: {response[:500]}")
             return {
                 "platforms": [],
                 "error": f"Failed to parse response: {response[:200]}"

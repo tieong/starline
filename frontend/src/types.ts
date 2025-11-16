@@ -14,6 +14,10 @@ export interface Influencer {
   subscriberGrowth?: SubscriberGrowthPoint[];
   networkConnections?: NetworkConnection[];
   platformPresence?: PlatformPresence[];
+  productsWithReviews?: Product[];
+  followersByPlatform?: Record<string, number>;
+  verified?: boolean;
+  country?: string;
 }
 
 export interface SubscriberGrowthPoint {
@@ -48,6 +52,32 @@ export interface SocialLinks {
   twitch?: string;
 }
 
+export interface ProductReview {
+  author: string;
+  comment: string;
+  platform: string;
+  sentiment: string;
+  url?: string;
+  date?: string;
+}
+
+export interface OpenFoodFactsData {
+  type?: string;
+  product_name?: string;
+  brands?: string;
+  barcode?: string;
+  nutriscore?: string;
+  nova_group?: number;
+  ecoscore?: string;
+  quality_score?: number;
+  is_healthy?: boolean;
+  nutriments?: any;
+  ingredients_text?: string;
+  allergens?: string[] | string;
+  image_url?: string;
+  url?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -59,6 +89,12 @@ export interface Product {
   influencerId: string;
   launchDate: string;
   status: 'active' | 'ended';
+  quality_score?: number;
+  description?: string;
+  review_count?: number;
+  sentiment_score?: number;
+  openfoodfacts_data?: OpenFoodFactsData;
+  reviews?: ProductReview[];
 }
 
 export interface NewsItem {

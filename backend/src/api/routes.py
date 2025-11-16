@@ -1135,7 +1135,11 @@ async def start_exploration(
         for conn in influencer_data.get("connections", []):
             entity_type = conn.get("entity_type", "influencer")
             entity_name = conn.get("name")
-            
+
+            # Skip connections without a name
+            if not entity_name:
+                continue
+
             # Create node ID based on type
             if entity_type == "influencer":
                 # For influencer connections, check if they exist in database
@@ -1257,7 +1261,11 @@ async def expand_node(
         for conn in influencer_data.get("connections", []):
             entity_type = conn.get("entity_type", "influencer")
             entity_name = conn.get("name")
-            
+
+            # Skip connections without a name
+            if not entity_name:
+                continue
+
             if entity_type == "influencer":
                 conn_influencer = supabase.table("influencers").select("id, name, trust_score, avatar_url, analysis_complete").ilike("name", entity_name).execute()
                 if conn_influencer.data and len(conn_influencer.data) > 0:

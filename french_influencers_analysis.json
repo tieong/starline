@@ -1,0 +1,343 @@
+[
+  {
+    "success": true,
+    "name": "Nabilla Vergara",
+    "data": {
+      "id": 43,
+      "name": "Nabilla",
+      "bio": "French-Swiss social media influencer, entrepreneur, and reality TV personality based in Dubai. Known for lifestyle, beauty, and family content.",
+      "country": "France",
+      "verified": null,
+      "trust_score": 100,
+      "overall_sentiment": null,
+      "avatar_url": "https://vlad-cerisier.fr/wp-content/uploads/2022/11/nabilla-ig.png",
+      "platforms": [
+        {
+          "platform": "instagram",
+          "username": "nabilla",
+          "followers": 8500000,
+          "verified": true,
+          "url": "https://www.instagram.com/nabilla/"
+        },
+        {
+          "platform": "twitter",
+          "username": "Nabilla",
+          "followers": 2700000,
+          "verified": true,
+          "url": "https://twitter.com/Nabilla"
+        },
+        {
+          "platform": "tiktok",
+          "username": "@nabillaofficiel",
+          "followers": 1200000,
+          "verified": true,
+          "url": "https://www.tiktok.com/@nabillaofficiel"
+        },
+        {
+          "platform": "youtube",
+          "username": "NabillaBenattiaOff",
+          "followers": 220000,
+          "verified": false,
+          "url": "https://www.youtube.com/@NabillaBenattiaOff"
+        }
+      ],
+      "timeline": [],
+      "products": [
+        {
+          "id": 19,
+          "name": "Nabilla Beauty",
+          "category": "cosmetics",
+          "quality_score": 70,
+          "description": "Nabilla Beauty is Nabilla Vergara's own makeup brand, launched in 2018, offering a range of cruelty-free beauty products such as matte liquid lipsticks, glosses, eyeliners, palettes, mascaras, blushes, and highlighters, designed for all skin tones and made in Italy.[1][2]",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        },
+        {
+          "id": 20,
+          "name": "Bitcoin Promotion (Sponsorship)",
+          "category": "finance/cryptocurrency (sponsored content)",
+          "quality_score": 70,
+          "description": "Nabilla Vergara was involved in a major paid sponsorship promoting Bitcoin to her followers on Snapchat, which became highly significant due to its large reach and subsequent regulatory attention in France.[3]",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        }
+      ],
+      "connections": [],
+      "news": [],
+      "last_analyzed": "2025-11-16T09:46:03.666378",
+      "analysis_complete": true
+    }
+  },
+  {
+    "success": false,
+    "name": "Angèle",
+    "error": "{\"detail\":\"Analysis failed for 'Angèle': Influencer 'Angèle' not found. Tried variations: Angèle, @angèle\"}"
+  },
+  {
+    "success": true,
+    "name": "Lena Mahfouf",
+    "data": {
+      "id": 40,
+      "name": "Lena Mahfouf",
+      "bio": "Léna Mahfouf, known as Léna Situations, is a French-Algerian lifestyle, fashion, and entrepreneurship influencer. She is renowned for her authentic vlogs, fashion inspiration, and positive engagement with her audience.",
+      "country": "France",
+      "verified": null,
+      "trust_score": 100,
+      "overall_sentiment": null,
+      "avatar_url": "https://cdn.prod.website-files.com/5fdb2fcbe8cb905cd95d758f/67b46b62dcc1370b0703c52c_Lena%20Mahfouf.png",
+      "platforms": [
+        {
+          "platform": "instagram",
+          "username": "lenamahfouf",
+          "followers": 4800000,
+          "verified": true,
+          "url": "https://www.instagram.com/lenamahfouf/"
+        },
+        {
+          "platform": "tiktok",
+          "username": "lenasituations",
+          "followers": 3500000,
+          "verified": true,
+          "url": "https://www.tiktok.com/@lenasituations"
+        },
+        {
+          "platform": "youtube",
+          "username": "@LenaSituations",
+          "followers": 3000000,
+          "verified": true,
+          "url": "https://www.youtube.com/@LenaSituations"
+        },
+        {
+          "platform": "twitter",
+          "username": "LenaSituations",
+          "followers": 1500000,
+          "verified": true,
+          "url": "https://twitter.com/LenaSituations"
+        }
+      ],
+      "timeline": [],
+      "products": [
+        {
+          "id": 21,
+          "name": "Hôtel Mahfouf",
+          "category": "merch/lifestyle",
+          "quality_score": 70,
+          "description": "Léna Mahfouf's own clothing and lifestyle brand, launched in June 2022, featuring fashion items, lifestyle products, and pop-up retail experiences such as cafés and themed stores in Paris. It blends fashion, hospitality, and creative expression, making it her signature entrepreneurial venture.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        },
+        {
+          "id": 22,
+          "name": "Dior",
+          "category": "fashion/brand sponsorship",
+          "quality_score": 70,
+          "description": "Major luxury brand partnership; Léna Mahfouf is a 'friend of the house' for Dior, creating frequent sponsored content and attending high-profile events like Paris Fashion Week. Her collaboration generated significant media impact and positioned her as a top influencer in the fashion industry.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        }
+      ],
+      "connections": [],
+      "news": [],
+      "last_analyzed": "2025-11-16T09:47:13.450776",
+      "analysis_complete": true
+    }
+  },
+  {
+    "success": true,
+    "name": "Marie Lopez",
+    "data": {
+      "id": 41,
+      "name": "Marie Lopez",
+      "bio": "Marie Lopez, known as EnjoyPhoenix, is a leading French digital creator and influencer specializing in beauty, lifestyle, and wellness content. She is based in Paris and is recognized for her authentic advice and entrepreneurial ventures.",
+      "country": "France",
+      "verified": null,
+      "trust_score": 65,
+      "overall_sentiment": null,
+      "avatar_url": null,
+      "platforms": [
+        {
+          "platform": "instagram",
+          "username": "enjoyphoenix",
+          "followers": 6100000,
+          "verified": true,
+          "url": "https://instagram.com/enjoyphoenix"
+        }
+      ],
+      "timeline": [],
+      "products": [
+        {
+          "id": 23,
+          "name": "Leaves and Clouds",
+          "category": "lifestyle",
+          "quality_score": 70,
+          "description": "Marie Lopez's own brand, launched in 2018, offering a curated selection of lifestyle, home decor, zero-waste beauty, hygiene, grocery, and stationery products, with a focus on items made in France and Europe, emphasizing nature and sustainability.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        },
+        {
+          "id": 24,
+          "name": "Lashilé Beauty (Hair Gummies Promotion)",
+          "category": "cosmetics",
+          "quality_score": 70,
+          "description": "Marie Lopez has a major partnership with Lashilé Beauty, promoting their clinically proven, sugar-free hair growth and strengthening gummies, which are designed to support hair health and are easy to take.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        }
+      ],
+      "connections": [],
+      "news": [],
+      "last_analyzed": "2025-11-16T09:47:54.797754",
+      "analysis_complete": true
+    }
+  },
+  {
+    "success": true,
+    "name": "Hugo Hilaire",
+    "data": {
+      "id": 45,
+      "name": "Hugo Hilaire",
+      "bio": "French dancer and content creator known for viral TikTok dance videos and sharing selfies and lifestyle content on Instagram.",
+      "country": "France",
+      "verified": null,
+      "trust_score": 70,
+      "overall_sentiment": null,
+      "avatar_url": "https://cdn-s-www.ledauphine.com/images/092AF915-8FAC-43D3-8F87-A03FDC6EAB35/NW_raw/hugo-hilaire-cumule-plus-de-597-000-abonnes-sur-les-reseaux-sociaux-photo-le-dl-e-m-1661854158.jpg",
+      "platforms": [
+        {
+          "platform": "tiktok",
+          "username": "@hugo.hilaire",
+          "followers": 5000000,
+          "verified": true,
+          "url": "https://www.tiktok.com/@hugo.hilaire"
+        },
+        {
+          "platform": "instagram",
+          "username": "hugo.hilaire",
+          "followers": 2000000,
+          "verified": false,
+          "url": "https://www.instagram.com/hugo.hilaire"
+        }
+      ],
+      "timeline": [],
+      "products": [
+        {
+          "id": 25,
+          "name": "Hugo Hilaire Green Screen Meme Template",
+          "category": "merch",
+          "quality_score": 70,
+          "description": "A digital green screen template featuring Hugo Hilaire dancing to a viral Brazilian song, used by fans and creators for meme content and video edits.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        },
+        {
+          "id": 26,
+          "name": "Fitout Clothing Collaboration",
+          "category": "merch",
+          "quality_score": 70,
+          "description": "A clothing collaboration promoted by Hugo Hilaire, featuring casual wear and accessories, often showcased in his TikTok dance videos and worn by other influencers.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        }
+      ],
+      "connections": [],
+      "news": [],
+      "last_analyzed": "2025-11-16T09:48:27.217516",
+      "analysis_complete": true
+    }
+  },
+  {
+    "success": false,
+    "name": "Giuseppa",
+    "error": "{\"detail\":\"Analysis failed for 'Giuseppa': [Errno -5] No address associated with hostname\"}"
+  },
+  {
+    "success": true,
+    "name": "Cédric Grolet",
+    "data": {
+      "id": 42,
+      "name": "Cédric Grolet",
+      "bio": "World-renowned French pastry chef known for trompe-l'œil patisserie and viral dessert creations. Shares recipes, behind-the-scenes, and pastry art.",
+      "country": "France",
+      "verified": null,
+      "trust_score": 80,
+      "overall_sentiment": null,
+      "avatar_url": null,
+      "platforms": [
+        {
+          "platform": "instagram",
+          "username": "@cedricgrolet",
+          "followers": 8400000,
+          "verified": true,
+          "url": "https://www.instagram.com/cedricgrolet/"
+        },
+        {
+          "platform": "tiktok",
+          "username": "@cedricgrolet",
+          "followers": 1000000,
+          "verified": true,
+          "url": "https://www.tiktok.com/@cedricgrolet"
+        }
+      ],
+      "timeline": [],
+      "products": [
+        {
+          "id": 17,
+          "name": "Cédric Grolet Fruits Sculptés",
+          "category": "food",
+          "quality_score": 70,
+          "description": "Hyper-realistic pastries crafted to look like real fruits, featuring chocolate shells and fruit-based mousses and jellies. These signature desserts are sold in Grolet's boutiques in Paris, London, and Monaco, and are internationally recognized for their artistry and flavor.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        },
+        {
+          "id": 18,
+          "name": "La Pâtisserie du Meurice par Cédric Grolet",
+          "category": "food",
+          "quality_score": 70,
+          "description": "Flagship pastry boutique located at Le Meurice hotel in Paris, offering Grolet's iconic trompe-l'œil desserts, viennoiseries, and entremets. The boutique is a destination for his most famous creations and seasonal specialties.",
+          "review_count": null,
+          "sentiment_score": null,
+          "openfoodfacts_data": null,
+          "reviews": []
+        }
+      ],
+      "connections": [],
+      "news": [],
+      "last_analyzed": "2025-11-16T09:45:46.867011",
+      "analysis_complete": true
+    }
+  },
+  {
+    "success": false,
+    "name": "Léa Elui",
+    "error": "{\"detail\":\"Analysis failed for 'Léa Elui': [Errno -5] No address associated with hostname\"}"
+  },
+  {
+    "success": false,
+    "name": "Pitch Addict",
+    "error": "{\"detail\":\"Analysis failed for 'Pitch Addict': [Errno -5] No address associated with hostname\"}"
+  },
+  {
+    "success": false,
+    "name": "YASS OOTD",
+    "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))"
+  }
+]
