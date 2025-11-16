@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3';
-import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, Maximize2, Home, Loader2 } from 'lucide-react';
 import { DataSourceToggle } from '../components/DataSourceToggle';
 import { dataService } from '../services/dataService';
+import { apiService } from '../services/api';
 import { useDataContext } from '../context/DataContext';
 import { GraphNode, Relationship, Influencer } from '../types';
 import { InfluencerInfoPanel } from '../components/InfluencerInfoPanel';
@@ -18,6 +19,9 @@ interface Node extends d3.SimulationNodeDatum {
   avatar?: string;
   score?: number;
   size: number;
+  explored?: boolean;
+  pending_name?: string;
+  influencer_id?: number;
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -43,6 +47,103 @@ export const NetworkGraph = () => {
   const [centralInfluencer, setCentralInfluencer] = useState<string | null>(id || null);
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(id ? '2d' : '3d');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  
+  // États pour l'exploration itérative
+  const [expandingNodes, setExpandingNodes] = useState<Set<string>>(new Set());
+  const [explorationMode, setExplorationMode] = useState(false);
+
+  // Fonction pour expandre un nœud (générer ses connexions)
+  const handleNodeExpansion = async (node: Node) => {
+    // Ne pas expanser si déjà en cours
+    if (expandingNodes.has(node.id)) {
+      console.log('[NetworkGraph] Node already expanding:', node.id);
+      return;
+    }
+
+    // Ne pas expanser si déjà exploré
+    if (node.explored) {
+      console.log('[NetworkGraph] Node already explored:', node.id);
+      return;
+    }
+
+    // Seulement les influenceurs peuvent être expandus
+    if (node.type !== 'influencer') {
+      console.log('[NetworkGraph] Cannot expand non-influencer node:', node.id);
+      return;
+    }
+
+    // En mode mock data, ne pas supporter l'expansion
+    if (useMockData) {
+      console.log('[NetworkGraph] Expansion not supported in mock data mode');
+      return;
+    }
+
+    console.log('[NetworkGraph] Expanding node:', node.name, node.id);
+    
+    // Marquer comme en cours d'expansion
+    setExpandingNodes(prev => new Set(prev).add(node.id));
+
+    try {
+      // Appeler l'API pour expandre le nœud
+      const result = await apiService.expandNode(
+        node.id,
+        node.pending_name || node.name
+      );
+
+      console.log('[NetworkGraph] Expansion result:', result);
+
+      // Mettre à jour le graphe avec les nouveaux nœuds et liens
+      setGraphNodes(prevNodes => {
+        const newNodes = [...prevNodes];
+        
+        // Marquer le nœud source comme exploré
+        const sourceNodeIndex = newNodes.findIndex(n => n.id === node.id);
+        if (sourceNodeIndex !== -1) {
+          newNodes[sourceNodeIndex] = {
+            ...newNodes[sourceNodeIndex],
+            explored: true,
+            influencer_id: result.influencer_data.id
+          };
+        }
+
+        // Ajouter les nouveaux nœuds (éviter les doublons)
+        result.new_nodes.forEach((newNode: any) => {
+          if (!newNodes.find(n => n.id === newNode.id)) {
+            newNodes.push(newNode);
+          }
+        });
+
+        return newNodes;
+      });
+
+      setRelationships(prevLinks => {
+        const newLinks = [...prevLinks];
+        
+        // Ajouter les nouveaux liens (éviter les doublons)
+        result.new_links.forEach((newLink: any) => {
+          const exists = newLinks.find(l => 
+            l.source === newLink.source && l.target === newLink.target
+          );
+          if (!exists) {
+            newLinks.push(newLink);
+          }
+        });
+
+        return newLinks;
+      });
+
+      console.log('[NetworkGraph] Successfully expanded node:', node.name);
+    } catch (error) {
+      console.error('[NetworkGraph] Failed to expand node:', error);
+    } finally {
+      // Retirer de la liste des nœuds en expansion
+      setExpandingNodes(prev => {
+        const next = new Set(prev);
+        next.delete(node.id);
+        return next;
+      });
+    }
+  };
 
   // Load graph data
   useEffect(() => {
@@ -254,10 +355,28 @@ export const NetworkGraph = () => {
         if (isConnected) return baseSize;
         return baseSize * 0.6; // Smaller for non-connected nodes
       })
-      .attr('fill', (d: Node) => colorMap[d.type])
+      .attr('fill', (d: Node) => {
+        // Nœuds non-explorés ont un remplissage semi-transparent
+        if (d.type === 'influencer' && !d.explored) {
+          return `${colorMap[d.type]}40`; // 25% opacity
+        }
+        return colorMap[d.type];
+      })
       .attr('stroke', (d: Node) => colorMap[d.type])
-      .attr('stroke-width', 2)
-      .style('cursor', 'pointer')
+      .attr('stroke-width', (d: Node) => {
+        // Nœuds non-explorés ont un contour plus épais
+        if (d.type === 'influencer' && !d.explored) return 3;
+        return 2;
+      })
+      .attr('stroke-dasharray', (d: Node) => {
+        // Nœuds non-explorés ont un contour en pointillé
+        if (d.type === 'influencer' && !d.explored) return '5,3';
+        return '0';
+      })
+      .style('cursor', (d: Node) => {
+        if (d.type === 'influencer' && !d.explored) return 'pointer';
+        return 'pointer';
+      })
       .style('filter', (d: Node) => {
         const color = colorMap[d.type];
         return `drop-shadow(0 0 ${d.id === centralNodeId ? '10px' : '6px'} ${color})`;
@@ -268,8 +387,15 @@ export const NetworkGraph = () => {
         const isConnected = isNodeConnected(d.id);
         return isConnected ? 0.85 : 0.2;
       })
-      .on('click', (event, d) => {
+      .on('click', async (event, d) => {
         event.stopPropagation();
+        
+        // Si le nœud n'est pas exploré et c'est un influenceur, lancer l'expansion
+        if (d.type === 'influencer' && !d.explored && !expandingNodes.has(d.id)) {
+          console.log('[NetworkGraph] Clicking unexplored node, expanding:', d.name);
+          await handleNodeExpansion(d);
+        }
+        
         // Set this node as the new center
         setCentralInfluencer(d.id);
         if (d.type === 'influencer') {
@@ -368,9 +494,29 @@ export const NetworkGraph = () => {
         return '0'; // Hidden for small nodes, shown on zoom
       });
 
+    // Ajouter un indicateur "+" pour les nœuds non-explorés
+    node.filter((d: Node) => d.type === 'influencer' && !d.explored)
+      .append('text')
+      .attr('class', 'node-expand-indicator')
+      .text('+')
+      .attr('y', 5)
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Inter, sans-serif')
+      .attr('font-size', 18)
+      .attr('font-weight', 'bold')
+      .attr('fill', 'white')
+      .style('pointer-events', 'none')
+      .style('opacity', 0.9);
+
     const nodeLabels = node.append('text')
       .attr('class', 'node-label')
-      .text((d: Node) => d.name)
+      .text((d: Node) => {
+        // Ajouter "🔍" pour les nœuds non-explorés
+        if (d.type === 'influencer' && !d.explored) {
+          return `${d.name} 🔍`;
+        }
+        return d.name;
+      })
       .attr('y', (d: Node) => (d.size * 0.5) + 38)
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Inter, sans-serif')
@@ -565,6 +711,12 @@ export const NetworkGraph = () => {
               2D network
             </button>
           </div>
+          {!useMockData && expandingNodes.size > 0 && (
+            <div className="exploration-status">
+              <Loader2 size={16} className="exploration-status-spinner" />
+              <span>Exploring {expandingNodes.size} node{expandingNodes.size > 1 ? 's' : ''}...</span>
+            </div>
+          )}
         </div>
 
         <div className="graph-controls">

@@ -287,6 +287,47 @@ class ApiService {
       }
     );
   }
+
+  /**
+   * Start graph exploration from an influencer name
+   */
+  async startExploration(name: string): Promise<{
+    status: string;
+    center_influencer_id: number;
+    center_influencer_name: string;
+    nodes: Array<any>;
+    links: Array<any>;
+    explored_count: number;
+    unexplored_count: number;
+  }> {
+    return await this.fetch(
+      `/api/explore/start`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }
+    );
+  }
+
+  /**
+   * Expand a node in the exploration graph
+   */
+  async expandNode(nodeId: string, influencerName?: string): Promise<{
+    status: string;
+    expanded_node_id: string;
+    expanded_node_name: string;
+    new_nodes: Array<any>;
+    new_links: Array<any>;
+    influencer_data: ApiInfluencer;
+  }> {
+    const params = new URLSearchParams();
+    if (influencerName) {
+      params.append('influencer_name', influencerName);
+    }
+    
+    const url = `/api/explore/expand/${encodeURIComponent(nodeId)}${params.toString() ? '?' + params.toString() : ''}`;
+    return await this.fetch(url, { method: 'POST' });
+  }
 }
 
 // Export singleton instance

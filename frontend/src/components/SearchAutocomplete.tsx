@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Sparkles } from 'lucide-react';
+import { Search, Loader2, Sparkles, Network } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Influencer } from '../types';
 import { apiService } from '../services/api';
 import { useDataContext } from '../context/DataContext';
+import { useNavigate } from 'react-router-dom';
 import './SearchAutocomplete.css';
 
 interface SearchAutocompleteProps {
@@ -11,15 +12,18 @@ interface SearchAutocompleteProps {
   onSelect: (influencer: Influencer) => void;
   onInfluencerDiscovered?: (influencer: Influencer) => void;
   placeholder?: string;
+  enableExploration?: boolean;
 }
 
 export const SearchAutocomplete = ({
   influencers,
   onSelect,
   onInfluencerDiscovered,
-  placeholder = "Search for an influencer..."
+  placeholder = "Search for an influencer...",
+  enableExploration = false
 }: SearchAutocompleteProps) => {
   const { useMockData } = useDataContext();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -89,6 +93,13 @@ export const SearchAutocomplete = ({
   }, [query, filteredInfluencers.length, useMockData, isAnalyzing, onInfluencerDiscovered]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen && e.key === 'Enter' && enableExploration && !useMockData && query.length >= 2) {
+      // Si pas de dropdown ouvert et exploration activée, démarrer l'exploration
+      e.preventDefault();
+      handleStartExploration();
+      return;
+    }
+
     if (!isOpen) return;
 
     switch (e.key) {
@@ -108,6 +119,9 @@ export const SearchAutocomplete = ({
           handleSelect(filteredInfluencers[selectedIndex]);
         } else if (filteredInfluencers.length > 0) {
           handleSelect(filteredInfluencers[0]);
+        } else if (enableExploration && !useMockData && query.length >= 2) {
+          // Si aucun résultat et exploration activée, démarrer l'exploration
+          handleStartExploration();
         }
         break;
       case 'Escape':
@@ -121,6 +135,13 @@ export const SearchAutocomplete = ({
     setQuery(influencer.name);
     setIsOpen(false);
     onSelect(influencer);
+  };
+
+  const handleStartExploration = () => {
+    if (query.trim().length < 2 || useMockData) return;
+    
+    // Naviguer vers la page d'exploration avec animation
+    navigate(`/explore/${encodeURIComponent(query.trim())}`);
   };
 
   const formatFollowers = (num: number) => {
@@ -212,6 +233,25 @@ export const SearchAutocomplete = ({
                   </div>
                 </motion.button>
               ))
+            )}
+            
+            {/* Option pour démarrer l'exploration si aucun résultat et mode exploration activé */}
+            {!isAnalyzing && filteredInfluencers.length === 0 && enableExploration && !useMockData && query.length >= 2 && (
+              <motion.button
+                className="search-autocomplete-item search-autocomplete-explore"
+                onClick={handleStartExploration}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ backgroundColor: 'var(--state-hover)' }}
+              >
+                <Network className="search-autocomplete-explore-icon" size={20} />
+                <div className="search-autocomplete-info">
+                  <div className="search-autocomplete-name">Generate exploration graph</div>
+                  <div className="search-autocomplete-meta">
+                    Explore "{query}" and their network with AI
+                  </div>
+                </div>
+              </motion.button>
             )}
           </motion.div>
         )}

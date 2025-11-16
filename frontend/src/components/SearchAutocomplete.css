@@ -207,6 +207,35 @@
   color: var(--text-muted);
 }
 
+/* Exploration Button */
+.search-autocomplete-explore {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(219, 39, 119, 0.08) 100%);
+  border-top: 1px solid var(--border-main);
+  padding: var(--space-lg);
+}
+
+.search-autocomplete-explore-icon {
+  color: var(--primary-purple);
+  flex-shrink: 0;
+}
+
+.search-autocomplete-explore .search-autocomplete-name {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
+.search-autocomplete-explore .search-autocomplete-meta {
+  color: var(--text-muted);
+}
+
+.search-autocomplete-explore:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(219, 39, 119, 0.12) 100%);
+}
+
+.search-autocomplete-explore:hover .search-autocomplete-name {
+  color: var(--primary-purple);
+}
+
 @media (max-width: 768px) {
   .search-autocomplete-input {
     height: 56px;

@@ -122,6 +122,7 @@ export const Home = () => {
             influencers={influencers}
             onSelect={handleSelectInfluencer}
             placeholder="Search for an influencer..."
+            enableExploration={true}
           />
         </motion.div>
 
