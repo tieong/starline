@@ -31,7 +31,6 @@ import { ProductCard } from '../components/ProductCard';
 import { ContributionModal } from '../components/ContributionModal';
 import { AuthModal } from '../components/AuthModal';
 import { EarlyAccessModal } from '../components/EarlyAccessModal';
-import { ExportReportModal } from '../components/ExportReportModal';
 import { SocialShare } from '../components/SocialShare';
 import './InfluencerDetail.css';
 
@@ -55,7 +54,6 @@ export const InfluencerDetail = () => {
   const [showContributionModal, setShowContributionModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showEarlyAccessModal, setShowEarlyAccessModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
 
   // Handler for contribution button
   const handleContributeClick = () => {
@@ -263,15 +261,6 @@ export const InfluencerDetail = () => {
                 >
                   <Plus size={18} />
                   <span>Contribute Insight</span>
-                </motion.button>
-                <motion.button
-                  className="export-button"
-                  onClick={() => setShowExportModal(true)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Package size={18} />
-                  <span>Export Report</span>
                 </motion.button>
                 <SocialShare influencerId={influencer.id} influencerName={influencer.name} />
                 {influencer.agency && (
@@ -615,14 +604,6 @@ export const InfluencerDetail = () => {
         source="influencer-detail"
       />
 
-      {/* Export Report Modal */}
-      {influencer && (
-        <ExportReportModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          influencer={influencer}
-        />
-      )}
 
     </div>
   );

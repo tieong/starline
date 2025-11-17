@@ -52,12 +52,18 @@ export const EarlyAccessModal = ({ isOpen, onClose, source = 'unknown' }: EarlyA
       console.log('Supabase client type:', typeof supabase);
       console.log('Has from method:', typeof supabase.from);
 
-      console.log('Starting Supabase insert...');
+      console.log('Starting direct fetch insert...');
 
-      // Simple direct approach without Promise.race
-      const { data, error: submitError } = await supabase
-        .from('early_access_requests')
-        .insert({
+      // Use direct fetch instead of Supabase client
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/early_access_requests`, {
+        method: 'POST',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
           email: formData.email,
           full_name: formData.fullName,
           company: formData.company || null,
@@ -66,15 +72,17 @@ export const EarlyAccessModal = ({ isOpen, onClose, source = 'unknown' }: EarlyA
           committed_to_beta: false,
           source,
         })
-        .select()
-        .single();
+      });
 
-      console.log('Supabase response received:', { data, error: submitError });
+      console.log('Fetch response status:', response.status);
 
-      if (submitError) {
-        console.error('Submit error:', submitError);
-        throw submitError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Fetch error:', errorData);
+        throw new Error(errorData.message || 'Failed to submit');
       }
+
+      console.log('Insert successful!');
 
       setIsSuccess(true);
       setTimeout(() => {
@@ -220,7 +228,7 @@ export const EarlyAccessModal = ({ isOpen, onClose, source = 'unknown' }: EarlyA
                 <CheckCircle size={64} className="success-icon" />
                 <h2>You're on the list!</h2>
                 <p>
-                  We'll send you an email at <strong>{formData.email}</strong> with your early access details within 24 hours.
+                  Thanks you! Will follow up at <strong>{formData.email}</strong>.
                 </p>
                 <p className="success-subtext">
                   Check your inbox for next steps and exclusive updates.
