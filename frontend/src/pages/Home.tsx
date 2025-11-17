@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SearchAutocomplete } from '../components/SearchAutocomplete';
 import { DataSourceToggle } from '../components/DataSourceToggle';
+import { EarlyAccessModal } from '../components/EarlyAccessModal';
 import { dataService } from '../services/dataService';
 import { useDataContext } from '../context/DataContext';
 import { Influencer } from '../types';
@@ -15,6 +16,7 @@ export const Home = () => {
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEarlyAccessModal, setShowEarlyAccessModal] = useState(false);
 
   // Load influencers when data source changes
   useEffect(() => {
@@ -184,16 +186,36 @@ export const Home = () => {
           )}
         </motion.div>
 
+        {/* Early Access CTA */}
+        <motion.div
+          className="early-access-cta"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <button className="cta-button" onClick={() => setShowEarlyAccessModal(true)}>
+            <Sparkles size={20} className="cta-icon" />
+            <span className="cta-text">Request Early Access</span>
+          </button>
+        </motion.div>
+
         {/* Footer */}
         <motion.div
           className="home-footer"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
         >
           <span className="home-footer-text">made with blackbox ai</span>
         </motion.div>
       </motion.div>
+
+      {/* Early Access Modal */}
+      <EarlyAccessModal
+        isOpen={showEarlyAccessModal}
+        onClose={() => setShowEarlyAccessModal(false)}
+        source="homepage"
+      />
     </div>
   );
 };

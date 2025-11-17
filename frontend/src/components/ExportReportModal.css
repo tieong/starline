@@ -1,0 +1,129 @@
+.export-report-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) !important;
+  background: var(--surface-card);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-main);
+  margin: 0 !important;
+  inset: 50% auto auto 50%;
+}
+
+.export-report-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.export-report-modal .header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.export-report-modal .download-icon {
+  color: var(--primary-purple);
+}
+
+.export-report-modal .modal-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.export-report-modal .modal-content {
+  padding: 32px;
+}
+
+.influencer-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-card-soft);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.influencer-preview .influencer-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.influencer-preview h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.influencer-preview p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-medium);
+}
+
+.export-report-modal .modal-subtitle {
+  color: var(--text-medium);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.export-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-form .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.export-form input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface-card-soft);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-strong);
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.export-form input:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+  margin: 0;
+}

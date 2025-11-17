@@ -1,0 +1,164 @@
+.early-access-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) !important;
+  background: var(--surface-card);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  max-width: 550px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-main);
+  margin: 0 !important;
+  inset: 50% auto auto 50%;
+}
+
+.early-access-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.early-access-modal .header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.early-access-modal .sparkles-icon {
+  color: var(--primary-purple);
+}
+
+.early-access-modal .modal-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.early-access-modal .modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+}
+
+.early-access-modal .modal-subtitle {
+  color: var(--text-medium);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+.early-access-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.early-access-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.early-access-form .form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.early-access-form input,
+.early-access-form select,
+.early-access-form textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface-card-soft);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-strong);
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.early-access-form input:focus,
+.early-access-form select:focus,
+.early-access-form textarea:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.early-access-form textarea {
+  resize: vertical;
+}
+
+.early-access-form .checkbox-group {
+  margin-top: 8px;
+}
+
+.early-access-form .checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.early-access-form .checkbox-item input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.early-access-form .checkbox-item label {
+  margin: 0;
+  cursor: pointer;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Success State */
+.success-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 32px;
+}
+
+.success-icon {
+  color: var(--accent-green);
+  margin-bottom: 24px;
+}
+
+.success-content h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 16px 0;
+}
+
+.success-content p {
+  font-size: 16px;
+  color: var(--text-medium);
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+.success-content strong {
+  color: var(--primary-purple);
+  font-weight: 600;
+}
+
+.success-subtext {
+  font-size: 14px;
+  color: var(--text-subtle);
+}

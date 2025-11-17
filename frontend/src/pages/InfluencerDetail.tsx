@@ -13,12 +13,14 @@ import {
   MessageCircle,
   Globe,
   Loader2,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import { DataSourceToggle } from '../components/DataSourceToggle';
 import { dataService } from '../services/dataService';
 import { apiService } from '../services/api';
 import { useDataContext } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Influencer, Product, NewsItem, SocialComment } from '../types';
 import { Tag } from '../components/Tag';
 import { InfluencerComparison } from '../components/InfluencerComparison';
@@ -26,12 +28,18 @@ import { NetworkGraphPreview } from '../components/NetworkGraphPreview';
 import { SocialComments } from '../components/SocialComments';
 import { PlatformPresence } from '../components/PlatformPresence';
 import { ProductCard } from '../components/ProductCard';
+import { ContributionModal } from '../components/ContributionModal';
+import { AuthModal } from '../components/AuthModal';
+import { EarlyAccessModal } from '../components/EarlyAccessModal';
+import { ExportReportModal } from '../components/ExportReportModal';
+import { SocialShare } from '../components/SocialShare';
 import './InfluencerDetail.css';
 
 export const InfluencerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { useMockData } = useDataContext();
+  const { isAuthenticated } = useAuth();
 
   const [influencer, setInfluencer] = useState<Influencer | null>(null);
   const [influencerProducts, setInfluencerProducts] = useState<Product[]>([]);
@@ -44,6 +52,19 @@ export const InfluencerDetail = () => {
   const [fetchingNews, setFetchingNews] = useState(false);
   const [fetchingTimeline, setFetchingTimeline] = useState(false);
   const [fetchingReputation, setFetchingReputation] = useState(false);
+  const [showContributionModal, setShowContributionModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showEarlyAccessModal, setShowEarlyAccessModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+
+  // Handler for contribution button
+  const handleContributeClick = () => {
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+    } else {
+      setShowContributionModal(true);
+    }
+  };
 
   // Handler to fetch news on-demand
   const handleFetchNews = async () => {
@@ -233,12 +254,33 @@ export const InfluencerDetail = () => {
                 <h1 className="hero-name">{influencer.name}</h1>
                 <p className="hero-handle">{influencer.handle}</p>
               </div>
-              {influencer.agency && (
-                <div className="hero-agency-badge">
-                  <span className="agency-label">Agency</span>
-                  <span className="agency-name">{influencer.agency}</span>
-                </div>
-              )}
+              <div className="hero-actions">
+                <motion.button
+                  className="contribute-button"
+                  onClick={handleContributeClick}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Plus size={18} />
+                  <span>Contribute Insight</span>
+                </motion.button>
+                <motion.button
+                  className="export-button"
+                  onClick={() => setShowExportModal(true)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Package size={18} />
+                  <span>Export Report</span>
+                </motion.button>
+                <SocialShare influencerId={influencer.id} influencerName={influencer.name} />
+                {influencer.agency && (
+                  <div className="hero-agency-badge">
+                    <span className="agency-label">Agency</span>
+                    <span className="agency-name">{influencer.agency}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <p className="hero-bio">{influencer.bio}</p>
@@ -548,6 +590,38 @@ export const InfluencerDetail = () => {
           </div>
           <PlatformPresence platforms={influencer.platformPresence} />
         </motion.section>
+      )}
+
+      {/* Contribution Modal */}
+      {id && (
+        <ContributionModal
+          isOpen={showContributionModal}
+          onClose={() => setShowContributionModal(false)}
+          influencerId={id}
+        />
+      )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        initialMode="login"
+      />
+
+      {/* Early Access Modal */}
+      <EarlyAccessModal
+        isOpen={showEarlyAccessModal}
+        onClose={() => setShowEarlyAccessModal(false)}
+        source="influencer-detail"
+      />
+
+      {/* Export Report Modal */}
+      {influencer && (
+        <ExportReportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          influencer={influencer}
+        />
       )}
 
     </div>

@@ -159,3 +159,129 @@ export interface SocialComment {
   content: string;
   sentiment: 'positive' | 'neutral' | 'negative';
 }
+
+// Contribution System Types
+export type ContributionType =
+  | 'timeline-event'
+  | 'brand-signal'
+  | 'network-insight'
+  | 'platform-correction'
+  | 'general-context';
+
+export type ContributionStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
+
+export interface BaseContribution {
+  id: string;
+  type: ContributionType;
+  influencerId: string;
+  userId: string;
+  submittedAt: string;
+  status: ContributionStatus;
+  confidence?: number; // 0-100
+  validationResult?: ValidationResult;
+}
+
+export interface TimelineEventContribution extends BaseContribution {
+  type: 'timeline-event';
+  eventType: 'viral-moment' | 'collaboration' | 'controversy' | 'milestone' | 'other';
+  title: string;
+  description: string;
+  date: string;
+  evidence: {
+    link?: string;
+    platform?: string;
+  };
+}
+
+export interface BrandSignalContribution extends BaseContribution {
+  type: 'brand-signal';
+  brandName: string;
+  category: 'food' | 'fashion' | 'tech' | 'beauty' | 'gaming' | 'lifestyle' | 'other';
+  evidence: {
+    productShown: boolean;
+    taggedBrand: boolean;
+    affiliateLink: boolean;
+    repeatedMentions: boolean;
+  };
+  postLink?: string;
+}
+
+export interface NetworkInsightContribution extends BaseContribution {
+  type: 'network-insight';
+  connectionType: 'collaboration' | 'friendship' | 'business' | 'family' | 'other';
+  targetId: string; // ID of the connected influencer/brand/agency
+  targetName: string;
+  targetType: 'influencer' | 'brand' | 'agency';
+  description: string;
+  strength?: number; // 1-10
+}
+
+export interface PlatformCorrectionContribution extends BaseContribution {
+  type: 'platform-correction';
+  correctionType: 'missing-platform' | 'incorrect-followers' | 'incorrect-handle' | 'other';
+  platform?: string;
+  currentValue?: string | number;
+  correctedValue: string | number;
+  evidence?: string;
+}
+
+export interface GeneralContextContribution extends BaseContribution {
+  type: 'general-context';
+  category: string;
+  content: string;
+  tags?: string[];
+}
+
+export type Contribution =
+  | TimelineEventContribution
+  | BrandSignalContribution
+  | NetworkInsightContribution
+  | PlatformCorrectionContribution
+  | GeneralContextContribution;
+
+export interface ValidationResult {
+  isValid: boolean;
+  issues: ValidationIssue[];
+  autoRouting: {
+    targetSection: 'timeline' | 'collabs' | 'network' | 'sentiment' | 'platform';
+    confidence: number;
+  };
+}
+
+export interface ValidationIssue {
+  type: 'duplicate' | 'contradiction' | 'impossible' | 'wrong-platform' | 'defamation' | 'unsafe';
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+}
+
+export interface UserReputation {
+  userId: string;
+  score: number; // 0-100
+  totalSubmissions: number;
+  approvedSubmissions: number;
+  flaggedSubmissions: number;
+  badges: Badge[];
+  joinedDate: string;
+  contributionHistory: {
+    month: string;
+    count: number;
+  }[];
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earnedAt: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  reputation: UserReputation;
+  createdAt: string;
+}

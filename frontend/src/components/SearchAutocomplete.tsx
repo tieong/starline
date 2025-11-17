@@ -56,7 +56,7 @@ export const SearchAutocomplete = ({
     // 3. No results found
     // 4. Not currently analyzing
     if (!useMockData && query.length >= 3 && filteredInfluencers.length === 0 && !isAnalyzing) {
-      debounceTimerRef.current = setTimeout(async () => {
+      debounceTimerRef.current = window.setTimeout(async () => {
         setIsAnalyzing(true);
         setAnalyzingName(query);
 

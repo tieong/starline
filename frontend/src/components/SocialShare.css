@@ -1,0 +1,30 @@
+.social-share {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--surface-card-soft);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  color: var(--text-medium);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.share-button:hover {
+  background: var(--surface-raised);
+  color: var(--text-strong);
+  border-color: var(--primary-purple);
+  transform: translateY(-2px);
+}
+
+.share-button:active {
+  transform: translateY(0);
+}
