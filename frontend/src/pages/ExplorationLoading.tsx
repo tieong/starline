@@ -31,7 +31,6 @@ export const ExplorationLoading = () => {
   const [currentStep, setCurrentStep] = useState('Analyzing influencer...');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
-  const [centerInfluencerId, setCenterInfluencerId] = useState<number | null>(null);
 
   // Lancer l'exploration
   useEffect(() => {
@@ -44,8 +43,7 @@ export const ExplorationLoading = () => {
 
         // Démarrer l'exploration
         const result = await apiService.startExploration(name);
-        
-        setCenterInfluencerId(result.center_influencer_id);
+
         setStatus('generating');
         setCurrentStep('Building graph...');
 

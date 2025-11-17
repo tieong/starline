@@ -128,6 +128,20 @@ function extractAgencyFromConnections(connections: ApiConnection[]): string | un
 }
 
 /**
+ * Map API relationship type to valid frontend Relationship type
+ */
+function mapRelationshipType(apiType: string): 'agency' | 'collaboration' | 'friendship' | 'brand' | 'partnership' {
+  const normalized = apiType.toLowerCase();
+  if (normalized === 'agency' || normalized === 'management') return 'agency';
+  if (normalized === 'collaboration' || normalized === 'collaborator') return 'collaboration';
+  if (normalized === 'friendship' || normalized === 'friend') return 'friendship';
+  if (normalized === 'brand' || normalized === 'sponsor' || normalized === 'sponsorship') return 'brand';
+  if (normalized === 'partnership' || normalized === 'partner') return 'partnership';
+  // Default to partnership for unknown types
+  return 'partnership';
+}
+
+/**
  * Generate mock subscriber growth data
  */
 function generateMockGrowth(currentFollowers: number): Array<{ date: string; followers: number }> {
@@ -462,7 +476,7 @@ class DataService {
               relationships.push({
                 source: nodeId,
                 target: connId,
-                type: conn.type || conn.entity_type,
+                type: mapRelationshipType(conn.type || conn.entity_type),
                 strength: conn.strength,
                 label: conn.description,
               });
@@ -546,7 +560,7 @@ class DataService {
               relationships.push({
                 source: nodeId,
                 target: connId,
-                type: conn.type || conn.entity_type,
+                type: mapRelationshipType(conn.type || conn.entity_type),
                 strength: conn.strength,
                 label: conn.description,
               });

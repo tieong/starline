@@ -1,4 +1,4 @@
-import { Influencer, Product, NewsItem, Relationship, GraphNode, SocialComment, NetworkConnection, PlatformPresence } from '../types';
+import { Influencer, Product, NewsItem, Relationship, GraphNode, SocialComment } from '../types';
 
 export const influencers: Influencer[] = [
   {

@@ -42,7 +42,6 @@ export const NetworkGraph = () => {
   const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(id || null);
   const [centralInfluencer, setCentralInfluencer] = useState<string | null>(id || null);
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(id ? '2d' : '3d');
@@ -147,7 +146,6 @@ export const NetworkGraph = () => {
   useEffect(() => {
     const loadGraphData = async () => {
       console.log('[NetworkGraph] Starting to load graph data, useMockData:', useMockData, 'id:', id);
-      setLoading(true);
       try {
         const [graphData, influencersData] = await Promise.all([
           dataService.getGraphData(useMockData, id),
@@ -165,8 +163,6 @@ export const NetworkGraph = () => {
         setInfluencers(influencersData);
       } catch (err) {
         console.error('Failed to load graph data:', err);
-      } finally {
-        setLoading(false);
       }
     };
 

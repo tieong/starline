@@ -94,10 +94,10 @@ export interface ApiNewsArticle {
 export interface ApiConnection {
   name: string;
   entity_type: string;
-  connection_type: string;
+  type: string;
   strength: number;
   description: string;
-  connected_influencer_id?: number;
+  entity_id?: number | string;
 }
 
 export interface ApiReputationComment {

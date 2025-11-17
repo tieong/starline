@@ -77,11 +77,6 @@ export const AllInfluencers = () => {
   const averageEngagementRate = (
     datasetForInsights.reduce((sum, inf) => sum + inf.engagementRate, 0) / datasetSize
   ).toFixed(2);
-  const totalFollowersDisplayed = new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1
-  }).format(datasetForInsights.reduce((sum, inf) => sum + inf.followers, 0));
-  const activeFilterLabel = selectedNiche ?? 'All niches';
 
   return (
     <div className="all-influencers">

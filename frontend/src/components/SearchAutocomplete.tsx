@@ -30,7 +30,7 @@ export const SearchAutocomplete = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingName, setAnalyzingName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const filteredInfluencers = influencers.filter(inf =>
     inf.name.toLowerCase().includes(query.toLowerCase()) ||

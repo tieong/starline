@@ -16,8 +16,6 @@ interface UseThreeAnimationOptions {
 
 export const useThreeAnimation = ({
   container,
-  onHover,
-  onClick,
   enablePostProcessing = true
 }: UseThreeAnimationOptions) => {
   const sceneRef = useRef<THREE.Scene | null>(null);

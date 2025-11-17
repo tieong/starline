@@ -111,7 +111,7 @@ export interface NewsItem {
 export interface Relationship {
   source: string;
   target: string;
-  type: 'agency' | 'collaboration' | 'friendship' | 'brand';
+  type: 'agency' | 'collaboration' | 'friendship' | 'brand' | 'partnership';
   strength: number;
   label?: string;
 }

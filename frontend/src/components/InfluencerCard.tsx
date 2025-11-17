@@ -17,12 +17,6 @@ export const InfluencerCard = ({ influencer, onClick, delay = 0 }: InfluencerCar
     return num.toString();
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'var(--accent-teal)';
-    if (score >= 70) return 'var(--accent-blue)';
-    if (score >= 50) return 'var(--accent-yellow)';
-    return 'var(--accent-red)';
-  };
 
   const getScoreGradient = (score: number) => {
     // Gradient animé selon le score - version lumineuse et colorée

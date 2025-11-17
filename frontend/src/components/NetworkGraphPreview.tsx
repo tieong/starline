@@ -78,8 +78,8 @@ export const NetworkGraphPreview = ({ influencerId }: NetworkGraphPreviewProps) 
 
         // Find direct connections
         relationships.forEach(rel => {
-          const sourceId = typeof rel.source === 'object' ? rel.source.id : rel.source;
-          const targetId = typeof rel.target === 'object' ? rel.target.id : rel.target;
+          const sourceId = rel.source;
+          const targetId = rel.target;
 
           if (sourceId === centralNodeId) connectedNodeIds.add(targetId);
           if (targetId === centralNodeId) connectedNodeIds.add(sourceId);
@@ -88,8 +88,8 @@ export const NetworkGraphPreview = ({ influencerId }: NetworkGraphPreviewProps) 
         // Filter nodes and links
         const filteredNodes = graphNodes.filter(n => connectedNodeIds.has(n.id));
         const filteredLinks = relationships.filter(rel => {
-          const sourceId = typeof rel.source === 'object' ? rel.source.id : rel.source;
-          const targetId = typeof rel.target === 'object' ? rel.target.id : rel.target;
+          const sourceId = rel.source;
+          const targetId = rel.target;
           return connectedNodeIds.has(sourceId) && connectedNodeIds.has(targetId);
         });
 

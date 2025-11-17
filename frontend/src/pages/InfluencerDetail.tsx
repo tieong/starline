@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Users,
   TrendingUp,
-  Shield,
   Package,
   Newspaper,
   Network,
@@ -22,9 +21,7 @@ import { apiService } from '../services/api';
 import { useDataContext } from '../context/DataContext';
 import { Influencer, Product, NewsItem, SocialComment } from '../types';
 import { Tag } from '../components/Tag';
-import { ScoreGauge } from '../components/ScoreGauge';
 import { InfluencerComparison } from '../components/InfluencerComparison';
-import { NetworkConnections } from '../components/NetworkConnections';
 import { NetworkGraphPreview } from '../components/NetworkGraphPreview';
 import { SocialComments } from '../components/SocialComments';
 import { PlatformPresence } from '../components/PlatformPresence';
@@ -112,12 +109,13 @@ export const InfluencerDetail = () => {
         setInfluencer(influencerData);
 
         // Load related data and influencers for comparison
+        const influencerIdNum = typeof influencerId === 'string' ? parseInt(influencerId) : influencerId;
         const [products, news, comments, influencersForComparison, timeline] = await Promise.all([
           dataService.getProducts(useMockData, influencerId),
           dataService.getNewsItems(useMockData, influencerId),
           dataService.getSocialComments(useMockData, influencerId),
           dataService.getInfluencers(useMockData),
-          useMockData ? Promise.resolve([]) : apiService.getInfluencerTimeline(influencerId).catch(() => []),
+          useMockData ? Promise.resolve([]) : apiService.getInfluencerTimeline(influencerIdNum).catch(() => []),
         ]);
 
         setInfluencerProducts(products);
@@ -179,18 +177,6 @@ export const InfluencerDetail = () => {
     return num.toString();
   };
 
-  const getNewsIcon = (type: string) => {
-    switch (type) {
-      case 'drama':
-        return '⚠️';
-      case 'partnership':
-        return '🤝';
-      case 'milestone':
-        return '🎉';
-      default:
-        return '📰';
-    }
-  };
 
   const getSeverityColor = (severity?: string) => {
     switch (severity) {

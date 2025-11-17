@@ -51,7 +51,7 @@ const CONFIG = {
   },
   visual: {
     nodeScale: 0.12,
-    linkOpacity: 0.7,
+    linkOpacity: 0.95,
     hoverScale: 1.4,
     animationSpeed: 0.008,
   },
@@ -210,7 +210,6 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const timeRef = useRef<number>(0);
-  const tooltipRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<THREE.Points | null>(null);
   const nodeMaterialsRef = useRef<Map<string, THREE.ShaderMaterial>>(new Map());
   const nodeLabelsRef = useRef<HTMLDivElement[]>([]);
@@ -312,7 +311,6 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
     const gridSizes = new Float32Array(gridCount);
 
     const gridSpacing = 50;
-    let index = 0;
 
     for (let i = 0; i < gridCount; i++) {
       const i3 = i * 3;
@@ -369,8 +367,10 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
 
     // Add geometric grid lines for brutalist structure
     const gridHelper = new THREE.GridHelper(800, 20, 0x000000, 0xeeeeee);
-    gridHelper.material.opacity = 0.1;
-    gridHelper.material.transparent = true;
+    if ((gridHelper as any).material) {
+      (gridHelper as any).material.opacity = 0.1;
+      (gridHelper as any).material.transparent = true;
+    }
     gridHelper.position.y = -150;
     scene.add(gridHelper);
 
@@ -433,7 +433,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
 
       nodeMaterialsRef.current.set(nodeData.id, material);
 
-      const mesh = new THREE.Mesh(geometry, material) as NodeMesh;
+      const mesh = new THREE.Mesh(geometry, material);
 
       // Position in structured grid with offset
       const angle = (index / graphNodes.length) * Math.PI * 2;
@@ -460,7 +460,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
         mesh.add(wireframeMesh);
       }
 
-      mesh.nodeData = {
+      (mesh as unknown as NodeMesh).nodeData = {
         id: nodeData.id,
         type: nodeData.type,
         name: nodeData.name,
@@ -474,8 +474,8 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
       mesh.receiveShadow = true;
 
       scene.add(mesh);
-      nodes.push(mesh);
-      nodeMap.set(nodeData.id, mesh);
+      nodes.push(mesh as unknown as NodeMesh);
+      nodeMap.set(nodeData.id, mesh as unknown as NodeMesh);
     });
 
     // Create links with brutalist line style
@@ -577,7 +577,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
     }
 
     // Update positions with geometric constraints
-    nodes.forEach((node, index) => {
+    nodes.forEach((node) => {
       // Centering force
       const centerForce = node.position.clone()
         .multiplyScalar(-CONFIG.physics.centeringStrength * maxDelta);
@@ -696,7 +696,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
   }, []);
 
   // Handle click
-  const handleClick = useCallback((event: MouseEvent) => {
+  const handleClick = useCallback(() => {
     if (hoveredNodeRef.current && hoveredNodeRef.current.nodeData.type === 'influencer') {
       // Stop auto rotation on selection
       if (controlsRef.current) {
@@ -836,8 +836,10 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
       label.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
       label.style.transition = 'opacity 0.2s ease, background 0.2s ease, transform 0.2s ease, border-color 0.2s ease';
       label.style.opacity = '0';
-      
-      containerRef.current.appendChild(label);
+
+      if (containerRef.current) {
+        containerRef.current.appendChild(label);
+      }
       nodeLabelsRef.current.push(label);
     });
   }, []);
@@ -862,7 +864,7 @@ export const ThreeDInfluencerMap = ({ onSelectInfluencer }: ThreeDInfluencerMapP
     const components = initScene();
     if (!components) return;
 
-    const { nodes, nodeMap } = createNodesAndLinks() || {};
+    createNodesAndLinks();
 
     // Start animation
     timeRef.current = Date.now() * 0.001;

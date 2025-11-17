@@ -6,12 +6,18 @@ declare module 'three' {
     userData: Record<string, any>;
     add(...objects: Object3D[]): void;
     remove(...objects: Object3D[]): void;
+    lookAt(x: number, y: number, z: number): void;
     lookAt(vector: Vector3): void;
     clone(): Object3D;
+    getWorldPosition(target: Vector3): Vector3;
+    castShadow: boolean;
+    receiveShadow: boolean;
+    traverse(callback: (object: Object3D) => void): void;
   }
 
   export class Scene extends Object3D {
     background: Color | null;
+    fog: Fog | null;
     clear(): void;
   }
 
@@ -32,6 +38,13 @@ declare module 'three' {
     setLength(length: number): this;
     copy(vec: Vector3): this;
     clone(): Vector3;
+    add(v: Vector3): this;
+    sub(v: Vector3): this;
+    multiplyScalar(scalar: number): this;
+    subVectors(a: Vector3, b: Vector3): this;
+    normalize(): this;
+    length(): number;
+    project(camera: Camera): this;
   }
 
   export class Vector2 {
@@ -51,14 +64,44 @@ declare module 'three' {
     constructor(color: number | string);
   }
 
+  export class Fog {
+    constructor(color: number, near?: number, far?: number);
+  }
+
   export class BufferGeometry {
     setFromPoints(points: Vector3[]): BufferGeometry;
     setAttribute(name: string, attribute: BufferAttribute): void;
+    getAttribute(name: string): BufferAttribute;
+    attributes: {
+      [name: string]: BufferAttribute;
+      position?: BufferAttribute;
+    };
+    clone(): BufferGeometry;
     dispose(): void;
   }
 
   export class SphereGeometry extends BufferGeometry {
     constructor(radius?: number, widthSegments?: number, heightSegments?: number);
+  }
+
+  export class IcosahedronGeometry extends BufferGeometry {
+    constructor(radius?: number, detail?: number);
+  }
+
+  export class BoxGeometry extends BufferGeometry {
+    constructor(width?: number, height?: number, depth?: number);
+  }
+
+  export class TetrahedronGeometry extends BufferGeometry {
+    constructor(radius?: number, detail?: number);
+  }
+
+  export class OctahedronGeometry extends BufferGeometry {
+    constructor(radius?: number, detail?: number);
+  }
+
+  export class GridHelper extends Object3D {
+    constructor(size?: number, divisions?: number, colorCenterLine?: number, colorGrid?: number);
   }
 
   export class Material {
@@ -74,6 +117,10 @@ declare module 'three' {
   }
 
   export class LineBasicMaterial extends Material {
+    constructor(parameters?: Record<string, any>);
+  }
+
+  export class LineDashedMaterial extends Material {
     constructor(parameters?: Record<string, any>);
   }
 
@@ -100,6 +147,7 @@ declare module 'three' {
     constructor(geometry?: TGeometry, material?: TMaterial);
     geometry: TGeometry;
     material: TMaterial;
+    computeLineDistances(): this;
   }
 
   export class LineSegments<TGeometry extends BufferGeometry = BufferGeometry, TMaterial extends Material = Material> extends Line<TGeometry, TMaterial> {}
@@ -112,11 +160,23 @@ declare module 'three' {
 
   export class DirectionalLight extends Object3D {
     constructor(color: number | string, intensity?: number);
+    castShadow: boolean;
+    shadow: {
+      mapSize: {
+        width: number;
+        height: number;
+      };
+    };
   }
 
   export class HemisphereLight extends Object3D {
     constructor(skyColor: number | string, groundColor: number | string, intensity?: number);
   }
+
+  export const PCFSoftShadowMap: number;
+  export const NoToneMapping: number;
+  export const ACESFilmicToneMapping: number;
+  export const SRGBColorSpace: number;
 
   export class WebGLRenderer {
     constructor(parameters?: Record<string, any>);
@@ -126,6 +186,13 @@ declare module 'three' {
     setClearColor(color: string | number, alpha?: number): void;
     render(scene: Scene, camera: Camera): void;
     dispose(): void;
+    shadowMap: {
+      enabled: boolean;
+      type: number;
+    };
+    toneMapping: number;
+    toneMappingExposure: number;
+    outputColorSpace: number;
   }
 
   export interface Intersection {
@@ -138,7 +205,11 @@ declare module 'three' {
   }
 
   export class BufferAttribute {
-    constructor(array: ArrayLike<number>, itemSize: number);
+    constructor(array: Float32Array | number[], itemSize: number);
+    array: Float32Array | number[];
+    count: number;
+    needsUpdate: boolean;
+    setXYZ(index: number, x: number, y: number, z: number): this;
   }
 
   export class WireframeGeometry extends BufferGeometry {
@@ -152,6 +223,12 @@ declare module 'three' {
   }
 
   export const AdditiveBlending: number;
+  export const NormalBlending: number;
+
+  export class QuadraticBezierCurve3 {
+    constructor(v0: Vector3, v1: Vector3, v2: Vector3);
+    getPoints(divisions: number): Vector3[];
+  }
 }
 
 declare module 'three/examples/jsm/controls/OrbitControls.js' {
@@ -162,8 +239,12 @@ declare module 'three/examples/jsm/controls/OrbitControls.js' {
     enableDamping: boolean;
     dampingFactor: number;
     rotateSpeed: number;
+    zoomSpeed: number;
     minDistance: number;
     maxDistance: number;
+    enablePan: boolean;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
     update(): void;
     dispose(): void;
   }
