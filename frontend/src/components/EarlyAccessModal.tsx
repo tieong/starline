@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import './EarlyAccessModal.css';
 
 interface EarlyAccessModalProps {
@@ -40,20 +39,6 @@ export const EarlyAccessModal = ({ isOpen, onClose, source = 'unknown' }: EarlyA
     setIsSubmitting(true);
 
     try {
-      console.log('Submitting early access request...', {
-        email: formData.email,
-        full_name: formData.fullName,
-        role: formData.role,
-      });
-
-      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      console.log('Has Supabase key:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-      console.log('Supabase client:', supabase);
-      console.log('Supabase client type:', typeof supabase);
-      console.log('Has from method:', typeof supabase.from);
-
-      console.log('Starting direct fetch insert...');
-
       // Use direct fetch instead of Supabase client
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/early_access_requests`, {
         method: 'POST',
@@ -74,15 +59,10 @@ export const EarlyAccessModal = ({ isOpen, onClose, source = 'unknown' }: EarlyA
         })
       });
 
-      console.log('Fetch response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Fetch error:', errorData);
         throw new Error(errorData.message || 'Failed to submit');
       }
-
-      console.log('Insert successful!');
 
       setIsSuccess(true);
       setTimeout(() => {
